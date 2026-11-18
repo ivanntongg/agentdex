@@ -31,7 +31,9 @@
   --font-body:"Pixelify Sans","Trebuchet MS",system-ui,sans-serif;
   color-scheme:dark;
 }
-html,body{background:var(--bg);color:var(--ink)}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink);margin:0}
+img{max-width:100%}
 body{font-family:var(--font-body);font-size:16px;line-height:1.35;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 32px;
   background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:6px 6px}
@@ -50,6 +52,8 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .chip{font-family:var(--font-display);font-size:12px;letter-spacing:.06em;padding:6px 10px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .chip b{font-weight:700;font-variant-numeric:tabular-nums}
 .chip.needs{background:#4a3a10;box-shadow:inset 0 0 0 2px var(--spark);color:var(--spark)}
+.chip.mode.live{color:var(--good);box-shadow:inset 0 0 0 2px #4f8f68}
+.chip.mode.lost{color:var(--bad)}
 .chip.needs.zero{background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);color:var(--muted)}
 .dot{width:8px;height:8px;background:currentColor;display:inline-block}
 
@@ -179,6 +183,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
     <div class="hud" aria-live="polite">
       <span class="chip" style="color:var(--good)"><span class="dot"></span><b id="cWork">0</b> WORKING</span>
       <span class="chip"><span class="dot" style="color:#8f8bc0"></span><b id="cIdle">0</b> IDLE</span>
+      <span class="chip mode" id="mode" title="Demo runs in your browser. Live follows the Agentdex server.">DEMO</span>
       <button class="chip needs" id="cNeeds"><b id="cNeedN">0</b> NEED YOU</button>
       <span class="chip"><span id="clock">DAY 1 09:41</span></span>
     </div>
@@ -353,6 +358,7 @@ let clock=9*60+41,day=1,paused=false,frame=0;
 const logs=[];
 const queue=[];
 let selId=null,tab='party',dexSel='bytle',view='list';
+let LIVE=false;
 const fx=[];
 const TREES=[[0,8],[0,24],[0,40],[0,88],[0,104],[0,120],[208,8],[224,8],[208,24],[224,24],[208,40],[224,40],[216,88],[224,104],[216,120],[224,128]];
 const me={x:120,y:76,dir:'down',moving:false,target:null,follow:null};
@@ -404,7 +410,7 @@ function log(msg,cls=''){logs.unshift({t:hhmm(),msg,cls});if(logs.length>40)logs
 
 /* ---------- movement ---------- */
 function goTo(a,b,intent){
-  const t=spot(a,b);a.dest=b;a.intent=intent;a.phase='walk';
+  const t=spot(a,b);a.dest=b;a.intent=intent;if(!LIVE)a.phase='walk';
   const lane=CX+OFFS[a.slot%6]/4;
   a.path=Math.abs(a.y-t.y)<2?[t]:[{x:lane,y:a.y},{x:lane,y:t.y},t];
 }
@@ -415,6 +421,7 @@ function step(a){
   else{a.x+=dx/d*sp;a.y+=dy/d*sp}
 }
 function arrive(a){
+  if(LIVE){a.loc=a.dest;refresh();return}
   a.loc=a.dest;const s=SPEC[a.sp];
   switch(a.intent){
     case 'work':a.phase='work';a.workLeft=5+(Math.random()*5|0);break;
@@ -428,7 +435,7 @@ function arrive(a){
 
 /* ---------- simulation ---------- */
 function tick(){
-  if(paused)return;
+  if(paused||LIVE)return;
   clock++;if(clock>=24*60){clock=0;day++}
   for(const a of party){
     if(a.path.length)continue;
@@ -496,7 +503,7 @@ function gainXP(a,n){
 let typing=null,choice=0,current=null;
 function dlgContent(q){
   const a=byId(q.id);
-  if(q.kind==='ap'){const ap=a.task.ap;return{meta:`${a.nick} · Lv ${a.lv} · ${a.task.t}`,html:`<span class="hl">${esc(a.nick)}</span> wants to use <span class="hl">${esc(ap.m)}</span> on ${esc(ap.on)}!`,ch:['YES','NO']}}
+  if(q.kind==='ap'){const ap=q.tool?{m:q.tool,on:q.target}:a.task.ap;return{meta:`${a.nick} · Lv ${a.lv} · ${q.taskTitle||(a.task?a.task.t:'Request')}`,html:`<span class="hl">${esc(a.nick)}</span> wants to use <span class="hl">${esc(ap.m)}</span> on ${esc(ap.on)}!`,ch:['YES','NO']}}
   if(q.kind==='evo'){const e=SPEC[a.sp].evo;return{meta:`${a.nick} · Lv ${a.lv} · Upgrade`,html:`What? <span class="hl">${esc(a.nick)}</span> is evolving into <span class="hl">${SPEC[e.to].name}</span>. Bigger brain, more permissions. Allow it?`,ch:['YES','NO']}}
   if(q.kind==='act'){
     const mood={OK:'is hard at work.',SLP:'is dozing.',PAR:'is waiting on your answer.',CNF:'is going in circles.',PSN:'is burning through its budget.',FNT:'is out cold.'}[a.status];
@@ -505,6 +512,10 @@ function dlgContent(q){
 }
 function hearts(a){const n=a.friend||0;return'♥'.repeat(n)+'♡'.repeat(5-n)}
 function doAct(a,i){
+  if(LIVE&&i<2){
+    if(i===0){fx.push({type:'heart',id:a.id,t:0});if(a.status!=='FNT')fx.push({type:'hop',id:a.id,t:0})}
+    else fx.push({type:'poke',id:a.id,t:0});
+    api(`api/agents/${a.id}/actions`,{action:i===0?'pet':'poke'});return}
   if(i===0){ // PET
     fx.push({type:'heart',id:a.id,t:0});
     if(a.status==='FNT'){log(`${a.nick} is out cold. A pet won't fix this; try a reset.`);return}
@@ -554,6 +565,10 @@ function answer(i){
   const q=queue.shift();current=null;$('#dlg').hidden=true;
   const a=q.id?byId(q.id):null;
   const yes=i===0;
+  if(LIVE&&(q.kind==='ap'||q.kind==='evo')){
+    if(q.kind==='evo'&&yes&&a)fx.push({type:'evo',id:a.id,t:0});
+    api(`api/approvals/${q.apId}`,{decision:yes?'yes':'no'});
+    refresh();setTimeout(showDialog,reduce?0:250);return}
   if(q.kind==='act'&&a){doAct(a,i)}
   else if(q.kind==='ap'&&a){
     const ap=a.task.ap;
@@ -733,9 +748,9 @@ function hpClass(a){const p=a.hp/a.hpMax;return p>.5?'hp-g':p>.2?'hp-y':'hp-r'}
 function taskLine(a){
   if(a.status==='FNT')return'<em>Fainted. Heading to the CENTER</em>';
   if(a.reviewing){const t=byId(a.reviewing);return`Reviewing ${esc(t?t.nick:'')}'s work <em>· GYM</em>`}
-  if(a.status==='PAR')return`Waiting on you: ${esc(a.task.ap.m)} <em>· ${esc(a.loc)}</em>`;
-  if(a.task)return`${esc(a.task.t)} <em>· ${a.phase==='walk'?'walking to '+a.dest:a.loc}</em>`;
-  if(a.phase==='walk')return`<em>Walking to ${a.dest}</em>`;
+  if(a.status==='PAR')return`Waiting on you: ${esc(a.task&&a.task.ap?a.task.ap.m:'approval')} <em>· ${esc(a.loc)}</em>`;
+  if(a.task)return`${esc(a.task.t)} <em>· ${a.path.length?'walking to '+a.dest:a.loc}</em>`;
+  if(a.path.length)return`<em>Walking to ${a.dest}</em>`;
   return`<em>Idle at ${a.loc}</em>`;
 }
 function slotHTML(a,clickable=true){
@@ -778,6 +793,7 @@ function renderPane(){
     if(party.length>=6)h+='<p class="boxnote">Party is full. Send an agent to the box first.</p>';
     p.innerHTML=h;
     p.querySelectorAll('[data-wd]').forEach(b=>b.onclick=()=>{
+      if(LIVE){api(`api/agents/${b.dataset.wd}/actions`,{action:'unbox'});tab='party';view='list';renderPane();return}
       const i=box.findIndex(a=>a.id===+b.dataset.wd);const a=box.splice(i,1)[0];addToParty(a);
       log(`${a.nick} left the box and joined your party.`);fx.push({type:'spawn',id:a.id,t:0});tab='party';view='list';renderPane()});
   }
@@ -821,6 +837,11 @@ function sumHTML(a){
 function bindSum(){
   $('#back').onclick=()=>{view='list';renderPane()};
   const a=byId(selId);
+  if(LIVE){
+    $('#reset').onclick=()=>api(`api/agents/${a.id}/actions`,{action:'reset'});
+    $('#tobox').onclick=()=>{api(`api/agents/${a.id}/actions`,{action:'box'});selId=null;view='list';renderPane()};
+    return;
+  }
   $('#reset').onclick=()=>{if(a.reviewing)return;const r=party.find(x=>x.reviewing===a.id);if(r)r.reviewing=null;
     a.task=null;a.status='OK';log(`You sent ${a.nick} to the CENTER for a reset.`);goTo(a,'CENTER','heal');renderPane()};
   $('#tobox').onclick=()=>{
@@ -837,6 +858,7 @@ function addToParty(a){
 }
 function spawn(k){
   if(party.length>=6)return;
+  if(LIVE){api('api/agents',{species:k}).then(r=>{if(r&&r.agent){selId=r.agent.id;tab='party';view='list';renderPane()}});return}
   const a=mkAgent(k,null,5);addToParty(a);
   fx.push({type:'spawn',id:a.id,t:0});
   log(`You spawned ${SPEC[k].name} at the CENTER! It joined your party at Lv 5.`,'ok');
@@ -851,12 +873,14 @@ function refresh(){
   const work=party.filter(a=>a.task&&a.status!=='FNT'||a.reviewing).length;
   const idle=party.filter(a=>a.phase==='idle'&&!a.reviewing&&a.status==='SLP').length;
   $('#cWork').textContent=work;$('#cIdle').textContent=idle;
-  $('#cNeedN').textContent=queue.length;$('#cNeeds').classList.toggle('zero',!queue.length);
+  const needs=queue.filter(q=>q.kind!=='act').length;
+  $('#cNeedN').textContent=needs;$('#cNeeds').classList.toggle('zero',!needs);
   $('#clock').textContent=`DAY ${day} ${hhmm()}`;
   if(tab!=='dex')renderPane();
 }
 
-/* ---------- opening scene ---------- */
+/* ---------- demo mode: everything simulated in the browser ---------- */
+function startDemo(){
 log('Good morning, Professor. 5 agents in your party, 1 in the box.');
 log('Walk up to an agent and press Z (or tap it) to pet, poke or check on it.');
 const patch=party[0],rollo=party[3],scout=party[1];
@@ -868,7 +892,84 @@ log('ROLLO needs you: it wants to use DEPLOY on api-prod.','need');
 renderPane();refresh();
 setTimeout(showDialog,600);
 setInterval(tick,1300);
-requestAnimationFrame(draw);
+}
+/* ---------- live mode: the Agentdex server is the source of truth ---------- */
+let TOKEN=null;
+try{const q=new URLSearchParams(location.search).get('token');if(q)localStorage.setItem('agentdex-token',q);TOKEN=localStorage.getItem('agentdex-token')}catch{}
+async function api(path,body){
+  try{
+    const r=await fetch(path,{method:'POST',headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:JSON.stringify(body||{})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){log(r.status===401?'The server needs a token. Open the page with ?token=YOUR_TOKEN once.':(j.error||'The server refused that.'),'bad');return null}
+    return j;
+  }catch{log('Could not reach the Agentdex server.','bad');return null}
+}
+const evTime=ts=>{const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const toTask=t=>t?{t:t.title,review:t.review?1:0,ap:t.approval?{m:t.approval.tool,on:t.approval.target}:undefined}:null;
+function syncAgent(sa){
+  let a=party.find(x=>x.id===sa.id)||box.find(x=>x.id===sa.id);
+  if(!a)a={id:sa.id,path:[],x:0,y:0,slot:0};
+  Object.assign(a,{sp:sa.species,nick:sa.nick,lv:sa.lv,xp:sa.xp,hp:sa.hp,hpMax:sa.hpMax,status:sa.status,phase:sa.phase,
+    task:toTask(sa.task),moves:sa.moves,friend:sa.bond,reviewing:sa.reviewingId,workLeft:0});
+  seen.add(sa.species);
+  const pi=party.indexOf(a),bi=box.indexOf(a);
+  if(sa.boxed){if(pi>=0)party.splice(pi,1);if(bi<0)box.push(a);a.path=[];a.loc=a.dest=sa.loc;return a}
+  if(bi>=0)box.splice(bi,1);
+  if(pi<0){const used=new Set(party.map(x=>x.slot));let s=0;while(used.has(s))s++;a.slot=s;party.push(a);a.path=[];place(a,sa.loc);a.dest=sa.loc;return a}
+  if(sa.loc!==(a.dest||a.loc))goTo(a,sa.loc,'live');
+  return a;
+}
+function syncApprovals(list){
+  const keep=queue.filter(q=>q.kind==='act'||list.some(s=>s.id===q.apId));
+  for(const s of list)if(!keep.some(q=>q.apId===s.id))keep.push({kind:s.kind==='tool'?'ap':'evo',id:s.agentId,apId:s.id,tool:s.tool,target:s.target,taskTitle:s.taskTitle});
+  queue.length=0;queue.push(...keep);
+  if(current&&current.apId&&!list.some(s=>s.id===current.apId)){clearInterval(typing);typing=null;current=null;$('#dlg').hidden=true}
+  showDialog();
+}
+function addLog(ev){logs.unshift({t:evTime(ev.ts),msg:ev.message,cls:ev.tone==='info'?'':ev.tone});if(logs.length>60)logs.pop()}
+function hydrate(s){
+  const ids=new Set(s.agents.map(a=>a.id));
+  for(const list of [party,box])for(let i=list.length-1;i>=0;i--)if(!ids.has(list[i].id))list.splice(i,1);
+  s.agents.forEach(syncAgent);
+  logs.length=0;s.log.slice().reverse().forEach(addLog);renderLog();
+  if(selId&&!byId(selId))selId=null;
+  syncApprovals(s.approvals);
+  setMode('live');renderPane();refresh();
+}
+function onChange(p){
+  const ev=p.event;
+  p.agents.forEach(syncAgent);
+  if(ev.type==='agent.spawned'||ev.type==='agent.unboxed'){const a=byId(ev.agentId);if(a)fx.push({type:'spawn',id:a.id,t:0})}
+  if(ev.type==='approval.resolved'&&ev.data.kind==='evolve'&&ev.data.to&&!fx.some(f=>f.type==='evo'&&f.id===ev.agentId))fx.push({type:'evo',id:ev.agentId,t:0});
+  if(ev.message){addLog(ev);renderLog()}
+  syncApprovals(p.approvals);
+  refresh();
+}
+function setMode(m){const el=$('#mode');el.textContent=m==='live'?'LIVE':m==='lost'?'RECONNECTING':'DEMO';el.className='chip mode '+(m==='demo'?'':m)}
+function nowClock(){const d=new Date();clock=d.getHours()*60+d.getMinutes()}
+function startLive(s){
+  LIVE=true;nowClock();setInterval(()=>{nowClock();refresh()},15000);
+  party.length=0;box.length=0;queue.length=0;
+  hydrate(s);
+  log(s.adapter==='simulator'?'Connected to the Agentdex server. The simulator is driving the agents.':'Connected to the Agentdex server. Waiting for your agents to report in.','ok');
+  log('Walk up to an agent and press Z (or tap it) to pet, poke or check on it.');
+  const es=new EventSource('api/events');
+  es.addEventListener('snapshot',e=>hydrate(JSON.parse(e.data)));
+  es.addEventListener('change',e=>onChange(JSON.parse(e.data)));
+  es.onerror=()=>setMode('lost');
+}
+async function boot(){
+  requestAnimationFrame(draw);
+  if(/^https?:$/.test(location.protocol)){
+    try{
+      const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),1500);
+      const r=await fetch('api/state',{signal:ctl.signal,cache:'no-store'});clearTimeout(tm);
+      if(r.ok&&(r.headers.get('content-type')||'').includes('json')){startLive(await r.json());return}
+    }catch{}
+  }
+  startDemo();
+}
+boot();
 })();
 </script>
 </body>

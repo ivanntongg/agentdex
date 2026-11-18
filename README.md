@@ -6,13 +6,40 @@ You play the Professor: walk around town, pet and poke your agents, and answer t
 
 ## Run it
 
-It is a single static file with no build step.
+Needs Node 20 or newer. No dependencies to install.
 
 ```bash
-python3 -m http.server 8000
+npm start
 ```
 
-Then open http://localhost:8000. Opening `index.html` directly in a browser also works.
+Open http://localhost:8787. The header shows **LIVE**: the server owns the agents and a built-in simulator drives them.
+
+Opening `index.html` straight from disk still works. The header then shows **DEMO** and everything runs in the browser.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `8787` | Port to listen on |
+| `HOST` | `127.0.0.1` | Set `0.0.0.0` to reach it from your phone on the same network |
+| `AGENTDEX_SIM` | on | `0` turns the simulator off so a real runtime can drive the town |
+| `AGENTDEX_TOKEN` | none | If set, every POST needs `Authorization: Bearer <token>`. Set it whenever `HOST` is not localhost |
+
+```bash
+npm test
+```
+
+## Connect a real agent runtime
+
+Your runtime posts events (`task.started`, `task.progress`, `approval.requested`, ...) to `POST /api/ingest` and listens to `GET /api/events` for your answers. The full protocol, with a curl example, is in [docs/EVENTS.md](docs/EVENTS.md).
+
+## Project layout
+
+| Path | What it is |
+|---|---|
+| `index.html` | The town. Live mode when served by the server, demo mode otherwise |
+| `server/store.js` | The world state. Every change is an event; this validates and applies it |
+| `server/simulator.js` | Fake runtime that only speaks the public event API |
+| `server/app.js` | HTTP API and the live event stream |
+| `server/test/` | Store rules and HTTP tests |
 
 ## Controls
 
@@ -61,11 +88,11 @@ Design rule: every movement on the map is a real event (a task taken, a handoff,
 
 ## Status
 
-Prototype. Agent activity is simulated in the browser; no real agents are connected yet. All creatures, names and art are original.
+Prototype. The server, event protocol and live town work end to end; agent activity comes from the built-in simulator until a real runtime posts events. All creatures, names and art are original.
 
 ## Roadmap
 
-1. Connect a real agent backend (state endpoint plus an event stream).
+1. ~~Backend skeleton: state endpoint, event stream, ingest API.~~ Done. Next: a first real runtime adapter.
 2. Commission creature art: 6 creatures at 32x32 with 2-frame walk cycles.
 3. WhatsApp approvals: PAR, FNT and evolution requests as messages with YES / NO buttons, with a PIN step for high-risk moves.
 4. Review "battle" view: work faces the reviewer, issues found land as hits.
