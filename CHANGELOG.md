@@ -2,6 +2,14 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.9.0 · Light mode and a rounder town
+
+- **Light mode**, now the default. Dark mode follows your system setting, and the sun / moon button in the top bar switches between them. Your choice is remembered.
+- **Rounder, softer look** that still feels like a handheld: panels with rounded borders and solid shadows, buttons that press down when clicked, pill-shaped tabs and chips, and a rounded screen bezel. The pixel town, sprites and pixel signs are unchanged.
+- **Calmer colors:** every color is defined once, yellow is used only for things you can press, and headings are plain text instead of yellow.
+- The paperclip and the theme button are small pixel icons, so they look the same on Windows, Mac and phones.
+- The working and idle counts share one chip in the top bar.
+
 ## 0.8.0 · Team chat, files and memory
 
 - **Team chat** under the map: your jobs, agents' answers, results and YES / NO questions (with buttons) in one conversation, saved with the town. The **field log** moved to the right, under the menu.

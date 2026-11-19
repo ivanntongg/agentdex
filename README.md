@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
-![Version 0.8.0](https://img.shields.io/badge/version-0.8.0-5462a6)
+![Version 0.9.0](https://img.shields.io/badge/version-0.9.0-5462a6)
 ![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
 
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
