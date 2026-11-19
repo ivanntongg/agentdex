@@ -2,6 +2,10 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.9.1 · Favicon
+
+- The browser tab now shows a pixel BYTLE on a yellow tile, so Agentdex is easy to find among your tabs. Built into the page, so it also works offline. The source is `docs/icon.svg`.
+
 ## 0.9.0 · Light mode and a rounder town
 
 - **Light mode**, now the default. Dark mode follows your system setting, and the sun / moon button in the top bar switches between them. Your choice is remembered.
