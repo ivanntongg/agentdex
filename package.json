@@ -1,8 +1,24 @@
 {
   "name": "agentdex",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "A GBA-style pixel town for managing AI agents.",
+  "description": "A pixel town where your AI agents live, work, and ask before they act. Real Claude agents, YES/NO approvals, WhatsApp remote control.",
+  "keywords": [
+    "ai-agents",
+    "claude",
+    "anthropic",
+    "human-in-the-loop",
+    "pixel-art",
+    "whatsapp"
+  ],
+  "homepage": "https://github.com/ivanntongg/agentdex#readme",
+  "bugs": {
+    "url": "https://github.com/ivanntongg/agentdex/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ivanntongg/agentdex.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=20"

@@ -1,0 +1,30 @@
+name: Idea or request
+description: Something Agentdex should do, or do better.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the job or the moment where Agentdex gets in your way, before the solution.
+      placeholder: I want SCOUT's research to go straight to QUILL so it gets written up without me copying files around.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: How you picture it working in the town, the SETUP screen, or WhatsApp.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - The town and game
+        - Real agents
+        - Approvals and safety
+        - SETUP screen
+        - WhatsApp
+        - Connecting other agents (event API)
+        - Docs
+        - Something else

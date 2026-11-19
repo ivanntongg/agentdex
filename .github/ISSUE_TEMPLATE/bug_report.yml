@@ -1,0 +1,59 @@
+name: Something is broken
+description: Agentdex did something wrong, crashed, or would not start.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Never paste your Claude API key, WhatsApp token or app secret here.** If you copy terminal output, check it first.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, and what went wrong?
+      placeholder: I gave SCOUT a task and it fainted with "rejected the key", but SETUP says CONNECTED.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: How were you running it?
+      options:
+        - npm run real (real agents)
+        - npm start (practice mode)
+        - Desktop icon
+        - Opened index.html as a file
+        - npm run agents (separate runtime)
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Computer
+      options: [Mac, Windows, Linux]
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      description: Run `node -v` in a terminal.
+      placeholder: v22.11.0
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal output or field log
+      description: The last lines from the terminal window, or what the field log in the town says.
+      render: text
+  - type: checkboxes
+    id: whatsapp
+    attributes:
+      label: WhatsApp
+      options:
+        - label: This is about the WhatsApp remote control
