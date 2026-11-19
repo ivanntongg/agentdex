@@ -178,6 +178,19 @@ export function createClaudeCode({ bin = 'claude', workspace, url, token = null,
     return { output, tokens: ((u.input_tokens || 0) + (u.output_tokens || 0)) / 1000 };
   }
 
+  // A conversation turn: read-only tools, no hook needed because nothing can be written.
+  async function chat({ prompt, systemPrompt, model, effort, signal }) {
+    const result = await run([
+      ...baseArgs(prompt, { model, effort }),
+      '--tools', 'Read,Glob,Grep',
+      '--permission-mode', 'acceptEdits', '--permission-prompts', 'none',
+      '--max-turns', '8',
+      '--append-system-prompt', systemPrompt,
+    ], { signal });
+    if (result.is_error || (result.subtype && result.subtype !== 'success' && result.subtype !== 'error_max_turns')) throw new ClaudeCodeError(friendlyError(result.result || result.subtype));
+    return String(result.result || '').trim();
+  }
+
   // A short real call, used by SETUP's TEST button.
   async function check({ model } = {}) {
     const result = await run([...baseArgs('Reply with the single word OK.', { model }), '--tools', '', '--max-turns', '1']);
@@ -185,5 +198,5 @@ export function createClaudeCode({ bin = 'claude', workspace, url, token = null,
     return result;
   }
 
-  return { runTask, structured, check };
+  return { runTask, structured, check, chat };
 }

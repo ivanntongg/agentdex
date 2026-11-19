@@ -32,6 +32,11 @@ if (flag('--json-schema') !== undefined) {
   process.exit(0);
 }
 
+if (prompt && prompt.startsWith('Conversation so far:')) {
+  out({ type: 'result', subtype: 'success', is_error: false, result: 'I am about halfway through.\nTASK: Finish the comparison table', usage: { input_tokens: 300, output_tokens: 40 } });
+  process.exit(0);
+}
+
 if (prompt === 'Reply with the single word OK.') {
   out({ type: 'result', subtype: 'success', is_error: false, result: 'OK', usage: { input_tokens: 10, output_tokens: 1 } });
   process.exit(0);

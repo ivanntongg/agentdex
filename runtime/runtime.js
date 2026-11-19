@@ -3,7 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { SPECIES } from '../server/species.js';
 import { FILE_TOOLS, WorkspaceError } from './workspace.js';
-import { REVIEWER_SYSTEM, REVIEW_SCHEMA, systemPrompt, usesWeb } from './roles.js';
+import { REVIEWER_SYSTEM, REVIEW_SCHEMA, systemPrompt, usesWeb, chatPrompt, splitTask } from './roles.js';
 import { ClaudeCodeError, ClaudeCodeStopped } from './claude-code.js';
 
 const WEB_SEARCH = { type: 'web_search_20260209', name: 'web_search', max_uses: 5 };
@@ -21,6 +21,7 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
   const waiters = new Map();     // approvalId -> resolve(decision)
   const early = new Map();       // approvalId -> decision that arrived before we waited
   const idle = new Set();        // resolvers for whenIdle()
+  const chats = new Map();       // id -> recent chat entries
 
   // Only the server's fallbacks setting differs from a plain request; see README for why it is on.
   const request = (params, signal) => {
@@ -31,12 +32,18 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     );
   };
 
-  function onSnapshot(s) { for (const a of s.agents) agents.set(a.id, a); }
+  function onSnapshot(s) {
+    for (const a of s.agents) agents.set(a.id, a);
+    for (const [id, list] of Object.entries(s.chats || {})) chats.set(Number(id), list);
+  }
+  const remember = (agentId, entry) => { if (!entry) return; if (!chats.has(agentId)) chats.set(agentId, []); const l = chats.get(agentId); if (!l.some((e) => e.id === entry.id)) l.push(entry); if (l.length > 60) l.shift(); };
 
   function onChange({ event, agents: touched }) {
     for (const a of touched) agents.set(a.id, a);
     switch (event.type) {
       case 'task.assigned': enqueue(event.agentId, event.data); break;
+      case 'chat.sent': remember(event.agentId, event.data.entry); replyTo(event.agentId, event.data.entry); break;
+      case 'chat.replied': remember(event.agentId, event.data.entry); break;
       case 'approval.resolved': {
         const resolve = waiters.get(event.data.approvalId);
         if (resolve) { waiters.delete(event.data.approvalId); resolve(event.data.decision); }
@@ -72,14 +79,17 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     finally { running.delete(agentId); pump(agentId); }
   }
 
+  function errorReason(err) {
+    if (err instanceof ClaudeCodeError) return err.message;
+    if (err instanceof Anthropic.AuthenticationError) return 'The Claude API rejected the key. Check it on the SETUP screen.';
+    if (err instanceof Anthropic.RateLimitError) return 'The Claude API is rate limiting us. Try again in a minute.';
+    if (err instanceof Anthropic.APIError) return `Claude API error ${err.status ?? ''}: ${err.message}`.slice(0, 200);
+    return `Runtime error: ${err?.message || err}`.slice(0, 200);
+  }
+
   async function reportFailure(agentId, err) {
     if (err instanceof Stopped || err instanceof ClaudeCodeStopped || err?.name === 'AbortError' || err instanceof Anthropic.APIUserAbortError) return;
-    let reason;
-    if (err instanceof ClaudeCodeError) reason = err.message;
-    else if (err instanceof Anthropic.AuthenticationError) reason = 'The Claude API rejected the key. Check ANTHROPIC_API_KEY.';
-    else if (err instanceof Anthropic.RateLimitError) reason = 'The Claude API is rate limiting us. Try again in a minute.';
-    else if (err instanceof Anthropic.APIError) reason = `Claude API error ${err.status ?? ''}: ${err.message}`.slice(0, 200);
-    else reason = `Runtime error: ${err?.message || err}`.slice(0, 200);
+    const reason = errorReason(err);
     log(`[${agents.get(agentId)?.nick || agentId}] ${reason}`);
     await dex.emit('agent.fainted', agentId, { reason }).catch(() => {});
   }
@@ -211,6 +221,61 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     }
     await dex.emit('task.finished', agentId, { xp: 60, note: summary });
     log(`[${agent.nick}] finished: ${summary}`);
+  }
+
+  // ---------- talking (no task) ----------
+  async function chatContext(agent) {
+    let recent = [];
+    try { recent = (await dex.state()).log.filter((e) => e.type === 'task.finished' && e.agentId === agent.id).slice(-3).map((e) => `- ${e.message}`); } catch { /* context is optional */ }
+    const now = agent.status === 'PAR' ? 'waiting for the user to answer a YES / NO request'
+      : agent.status === 'FNT' ? 'fainted and waiting for a reset'
+      : agent.task ? `working on the task "${agent.task.title}"` : 'free, with no task';
+    return `About you right now: you are ${now}. HP (context left for tasks) ${Math.round(agent.hp)} of ${agent.hpMax}.${recent.length ? `\nYour recent finished work:\n${recent.join('\n')}` : ''}`;
+  }
+
+  async function replyTo(agentId, entry) {
+    const agent = agents.get(agentId);
+    if (!agent || !entry) return;
+    const via = entry.via;
+    try {
+      const cfg = current();
+      const system = `${chatPrompt(SPECIES[agent.species], agent.nick)}\n\n${await chatContext(agent)}`;
+      const history = (chats.get(agentId) || []).slice(-20);
+      let text;
+      if (cfg.engine === 'claude-code') {
+        const transcript = history.map((e) => `${e.from === 'you' ? 'User' : agent.nick}: ${e.text}`).join('\n\n');
+        text = await cfg.claudeCode.chat({ prompt: `Conversation so far:\n\n${transcript}\n\nReply to the user's last message.`, systemPrompt: system, model: cfg.model, effort: cfg.effort });
+      } else {
+        if (!cfg.anthropic) throw new Error('Add your Claude API key on the SETUP screen to talk to agents.');
+        const messages = history.map((e) => ({ role: e.from === 'you' ? 'user' : 'assistant', content: e.text }));
+        while (messages.length && messages[0].role !== 'user') messages.shift();
+        text = await chatLoop(system, messages);
+      }
+      const { reply, task } = splitTask(text);
+      await dex.emit('chat.replied', agentId, { text: reply, suggestedTask: task, via });
+    } catch (err) {
+      log(`[${agent.nick}] chat failed: ${err.message}`);
+      await dex.emit('chat.failed', agentId, { reason: errorReason(err).replace(/^Runtime error: /, ''), via }).catch(() => {});
+    }
+  }
+
+  // Messages API conversation with read-only file tools. Nothing here can write.
+  async function chatLoop(system, messages) {
+    const tools = FILE_TOOLS.filter((t) => t.name !== 'write_file');
+    for (let turn = 0; turn < 8; turn++) {
+      const res = await request({ system, tools, messages });
+      messages.push({ role: 'assistant', content: res.content });
+      const uses = res.content.filter((b) => b.type === 'tool_use');
+      if (res.stop_reason === 'pause_turn') continue;
+      if (!uses.length || res.stop_reason === 'refusal') return res.content.filter((b) => b.type === 'text').map((b) => b.text).join(' ').trim();
+      const results = [];
+      for (const b of uses) {
+        try { results.push({ type: 'tool_result', tool_use_id: b.id, content: await workspace.tools[b.name](b.input || {}) }); }
+        catch (err) { results.push({ type: 'tool_result', tool_use_id: b.id, content: err.message, is_error: true }); }
+      }
+      messages.push({ role: 'user', content: results });
+    }
+    return 'I looked around but ran out of steps. Ask me something more specific?';
   }
 
   // Same flow as runTask, but each round of work is one `claude -p` run (see claude-code.js).

@@ -66,6 +66,20 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .screen canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer;filter:saturate(.8) contrast(.88) brightness(.96)}
 .bl{position:absolute;transform:translate(-50%,-100%);font-family:var(--font-pixel);font-size:clamp(8px,1.55cqw,13px);letter-spacing:.06em;background:rgba(28,23,51,.86);color:#fff;padding:.25em .55em .3em;pointer-events:none;white-space:nowrap;line-height:1}
 .bl small{color:#cfc9f5;font-size:.82em;margin-left:.4em;text-transform:lowercase}
+.talk{display:grid;gap:8px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);padding:10px}
+.talk-h{font-weight:700;font-size:14px;color:var(--spark)}
+.talk-log{display:grid;gap:8px;max-height:280px;overflow-y:auto;padding:2px}
+.talk-empty{margin:0;font-size:14px;color:var(--muted)}
+.tb{max-width:88%;padding:8px 10px;font-size:14.5px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;display:grid;gap:6px}
+.tb.you{justify-self:end;background:#3a3474;color:#fff}
+.tb.agent{justify-self:start;background:var(--paper);color:var(--paper-ink);box-shadow:inset 0 0 0 2px var(--frame-a)}
+.tb.agent b{color:#b0371f}
+.tb.typing{color:var(--paper-ink);letter-spacing:.2em}
+.tb small{font-size:12.5px;color:#5e5a80}
+.tb .btn{justify-self:start;font-size:12px;padding:6px 10px}
+.talk form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.talk input{font:inherit;font-size:15px;color:var(--ink);background:#1c1940;border:0;box-shadow:inset 0 0 0 2px #4b4596;padding:8px 10px;min-width:0}
+.talk input:focus-visible{outline:2px solid var(--spark)}
 .cmdbar{margin-top:12px;display:grid;gap:6px}
 .cmdbar form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .cmdbar label{font-weight:700;font-size:14px;color:var(--spark)}
@@ -280,7 +294,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
       <div class="cmdbar">
         <label for="cmdText">Tell your team</label>
         <form id="cmdForm" autocomplete="off">
-          <input id="cmdText" maxlength="240" placeholder="e.g. compare 3 note-taking apps, or quill write 5 video titles. Press / to jump here">
+          <input id="cmdText" maxlength="240" placeholder="compare 3 note apps · quill write 5 titles · @scout how is it going? · press / to jump here">
           <button class="btn primary" type="submit">SEND</button>
         </form>
         <div class="cmd-reply" id="cmdReply" hidden></div>
@@ -765,7 +779,8 @@ const GLYPH={
   z:{c:'#6a6aa0',r:["xxxxx","...x.","..x..",".x...","xxxxx"]},
   '?':{c:'#c0447c',r:[".xxx.","...x.","..x..",".....","..x.."]},
   p:{c:'#7b4bc4',r:["..x..",".xxx.","xxxxx","xxxxx",".xxx."]},
-  x:{c:'#c8323e',r:["x...x",".x.x.","..x..",".x.x.","x...x"]}};
+  x:{c:'#c8323e',r:["x...x",".x.x.","..x..",".x.x.","x...x"]},
+  c:{c:'#3d4fa8',r:[".....","x.x.x",".....","xxx..","....."]}};
 function bubble(x,y,key){
   const bx=Math.round(x)-4,by=Math.round(y);
   R(bx,by,9,8,K);R(bx+1,by+1,7,6,'#fff');R(bx+4,by+8,1,1,K);
@@ -809,6 +824,7 @@ function draw(){
     else if(a.status==='CNF')bubble(x,top,'?');
     else if(a.status==='PSN')bubble(x,top,'p');
     else if(a.status==='FNT')bubble(x,top,'x');
+    else if(a.chatting)bubble(x,top,'c');
     else if(busy&&!walking){const n=reduce?3:((frame>>4)%3)+1;for(let i=0;i<n;i++)R(x-4+i*3,y-20,2,2,'#fff'),R(x-4+i*3,y-18,2,1,K)}
     if(a.id===selId||a===reach){const cy=top-8-(reduce?0:((frame>>4)&1));["xxxxxxx",".xxxxx.","..xxx..","...x..."].forEach((r,j)=>[...r].forEach((c,i)=>{if(c==='x')R(x-3+i,cy+j,1,1,'#ffd23f')}));R(x-3,cy-1,7,1,K)}
   }
@@ -867,10 +883,12 @@ function renderPane(){
   if(tab==='party'){
     if(view==='sum'&&byId(selId)){
       const ta=$('#giveTitle'),keep=ta?{v:ta.value,f:document.activeElement===ta,s:ta.selectionStart,e:ta.selectionEnd,r:$('#giveReview').checked}:null;
+      const tk=$('#talkText'),tkeep=tk?{v:tk.value,f:document.activeElement===tk}:null;
       const ri=$('#renameInput'),rkeep=ri&&!$('#renameForm').hidden?{v:ri.value,f:document.activeElement===ri}:null;
       p.innerHTML=sumHTML(byId(selId));bindSum();
       const nt=$('#giveTitle');if(keep&&nt){nt.value=keep.v;$('#giveReview').checked=keep.r;if(keep.f){nt.focus();nt.setSelectionRange(keep.s,keep.e)}}
       if(rkeep){$('#renameForm').hidden=false;const nr=$('#renameInput');nr.value=rkeep.v;if(rkeep.f)nr.focus()}
+      const nk=$('#talkText');if(tkeep&&nk&&!nk.disabled){nk.value=tkeep.v;if(tkeep.f)nk.focus()}
       return}
     view='list';
     let h=`<div class="pane-h"><span>Party ${party.length}/6</span><span>HP is context left</span></div>`;
@@ -931,6 +949,11 @@ function sumHTML(a){
     <div class="moves">${a.moves.map(m=>`<div class="mv">${m.n}<span>PP ${m.pp}/${m.max}</span></div>`).join('')}</div>
     <p class="memo" style="margin:0">${s.memo}</p>
   </div>
+  <div class="talk">
+    <div class="talk-h">Talk to ${esc(a.nick)}</div>
+    <div class="talk-log" id="talkLog">${(chatLog.get(a.id)||[]).map(talkBubble).join('')||'<p class="talk-empty">Ask anything. Talking never starts work by itself; you choose when it becomes a task.</p>'}${a.chatting?'<div class="tb agent typing" aria-label="Thinking">...</div>':''}</div>
+    <form id="talkForm" autocomplete="off"><label class="sr" for="talkText">Message to ${esc(a.nick)}</label><input id="talkText" maxlength="2000" placeholder="Say something to ${esc(a.nick)}" ${a.chatting?'disabled':''}><button class="btn" type="submit" ${a.chatting?'disabled':''}>SAY</button></form>
+  </div>
   ${LIVE&&!SPEC[a.sp].reviewer?`<form class="give" id="give">
     <label for="giveTitle">Give a task</label>
     <textarea id="giveTitle" rows="2" maxlength="200" placeholder="e.g. Compare 3 note-taking apps for a student" required></textarea>
@@ -947,6 +970,13 @@ function sumHTML(a){
 function bindSum(){
   $('#back').onclick=()=>{view='list';renderPane()};
   const a=byId(selId);
+  const tl=$('#talkLog');if(tl)tl.scrollTop=tl.scrollHeight;
+  $('#talkForm').onsubmit=async e=>{e.preventDefault();const i=$('#talkText'),text=i.value.trim();if(!text)return;
+    if(LIVE){i.disabled=true;const r=await api(`api/agents/${a.id}/chat`,{text});if(r)i.value='';else i.disabled=false;return}
+    i.value='';demoChat(a,text)};
+  tl&&tl.querySelectorAll('[data-task]').forEach(b=>b.onclick=async()=>{const title=b.dataset.task;b.disabled=true;
+    if(LIVE){await api(`api/agents/${a.id}/tasks`,{title,review:party.some(x=>SPEC[x.sp].reviewer&&x.status!=='FNT')});return}
+    if(a.phase==='idle'&&!a.path.length)startTask(a,{t:title});else log(`${a.nick} is busy. Try again when it is free.`)});
   const rf=$('#renameForm');
   $('#renameBtn').onclick=()=>{rf.hidden=false;const i=$('#renameInput');i.focus();i.select()};
   $('#renameCancel').onclick=()=>{rf.hidden=true};
@@ -1032,7 +1062,7 @@ function syncAgent(sa){
   let a=party.find(x=>x.id===sa.id)||box.find(x=>x.id===sa.id);
   if(!a)a={id:sa.id,path:[],x:0,y:0,slot:0};
   Object.assign(a,{sp:sa.species,nick:sa.nick,lv:sa.lv,xp:sa.xp,hp:Math.round(sa.hp),hpMax:sa.hpMax,status:sa.status,phase:sa.phase,
-    task:toTask(sa.task),moves:sa.moves,friend:sa.bond,reviewing:sa.reviewingId,workLeft:0});
+    task:toTask(sa.task),moves:sa.moves,friend:sa.bond,reviewing:sa.reviewingId,workLeft:0,chatting:Boolean(sa.chatting)});
   seen.add(sa.species);
   const pi=party.indexOf(a),bi=box.indexOf(a);
   if(sa.boxed){if(pi>=0)party.splice(pi,1);if(bi<0)box.push(a);a.path=[];a.loc=a.dest=sa.loc;return a}
@@ -1054,6 +1084,7 @@ function hydrate(s){
   for(const list of [party,box])for(let i=list.length-1;i>=0;i--)if(!ids.has(list[i].id))list.splice(i,1);
   s.agents.forEach(syncAgent);
   logs.length=0;s.log.slice().reverse().forEach(addLog);renderLog();
+  chatLog.clear();for(const [id,list] of Object.entries(s.chats||{}))chatLog.set(Number(id),list);
   if(selId&&!byId(selId))selId=null;
   syncApprovals(s.approvals);
   setMode('live');renderPane();refresh();
@@ -1064,6 +1095,8 @@ function onChange(p){
   if(ev.type==='agent.spawned'||ev.type==='agent.unboxed'){const a=byId(ev.agentId);if(a)fx.push({type:'spawn',id:a.id,t:0})}
   if(ev.type==='approval.resolved'&&ev.data.kind==='evolve'&&ev.data.to&&!fx.some(f=>f.type==='evo'&&f.id===ev.agentId))fx.push({type:'evo',id:ev.agentId,t:0});
   if(ev.message){addLog(ev);renderLog()}
+  if((ev.type==='chat.sent'||ev.type==='chat.replied')&&ev.data.entry)pushChat(ev.agentId,ev.data.entry);
+  if(ev.agentId===cmdChatFor&&(ev.type==='chat.replied'||ev.type==='chat.failed')){const o=$('#cmdReply');const who=byId(ev.agentId);o.hidden=false;o.classList.toggle('bad',ev.type==='chat.failed');o.textContent=ev.type==='chat.replied'?`${who?who.nick:'Agent'}: ${ev.data.entry.text}${ev.data.entry.suggestedTask?'\n(Open its summary to turn this into a task.)':''}`:ev.message;cmdChatFor=null}
   syncApprovals(p.approvals);
   refresh();
   if(setupAvailable&&(ev.type==='task.finished'||ev.type==='agent.fainted'))checkSetup(false);
@@ -1270,6 +1303,18 @@ $('#setupClose').onclick=closeSetup;
 $('#setup').addEventListener('click',e=>{if(e.target.id==='setup')closeSetup()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#setup').hidden){e.preventDefault();e.stopImmediatePropagation();closeSetup()}},true);
 
+/* ---------- talking ---------- */
+const chatLog=new Map();let cmdChatFor=null;
+function pushChat(id,entry){if(!chatLog.has(id))chatLog.set(id,[]);const l=chatLog.get(id);if(!l.some(e=>e.id===entry.id))l.push(entry);if(l.length>60)l.shift()}
+function talkBubble(e){return `<div class="tb ${e.from==='you'?'you':'agent'}"><span>${esc(e.text)}</span>${e.from!=='you'&&e.suggestedTask?`<small>Suggested task: ${esc(e.suggestedTask)}</small><button class="btn primary" type="button" data-task="${esc(e.suggestedTask)}">DO IT AS A TASK</button>`:''}</div>`}
+let demoChatId=1;
+function demoChat(a,text){
+  pushChat(a.id,{id:demoChatId++,from:'you',text});a.chatting=true;log(`You to ${a.nick}: "${text}"`);renderPane();
+  setTimeout(()=>{const job=Object.values(DEMO_SKILLS).some(r=>r.test(text.toLowerCase()));
+    const reply=a.task?`I'm on "${a.task.t}" right now. This is the demo, so my answers are canned; real agents answer properly.`:job?"I can do that. Press DO IT AS A TASK and I'll start.":"I'm free. Ask me something, or give me a task. (Demo agents give canned answers.)";
+    pushChat(a.id,{id:demoChatId++,from:'agent',text:reply,suggestedTask:job?text:null});a.chatting=false;log(`${a.nick}: "${reply}"`);renderPane()},1500);
+}
+
 /* ---------- command bar ---------- */
 function nameProblem(nick,a){
   if(!/^[A-Z0-9][A-Z0-9_-]{1,11}$/.test(nick))return'A name is one word of 2 to 12 letters or numbers (dashes and underscores are fine).';
@@ -1281,11 +1326,12 @@ const DEMO_SKILLS={RESEARCH:/\b(research|compare|find|search|look|investigate|an
 function demoCommand(text){
   const lower=text.toLowerCase(),[first,...rest]=text.split(/\s+/);
   const byNick=w=>party.find(a=>a.nick.toUpperCase()===String(w||'').replace(/^@/,'').replace(/[:,.!]$/,'').toUpperCase());
-  if(['help','?'].includes(lower))return'Type a job (compare 3 note apps), start with a name (quill write 5 titles), or: status, yes, no, reset scout, rename scout to max.';
+  if(['help','?'].includes(lower))return'Type a job (compare 3 note apps), start with a name (quill write 5 titles), talk with @ (@scout how is it going?), or: status, yes, no, reset scout, rename scout to max.';
   if(lower==='status')return party.map(a=>`${a.nick}: ${a.status==='PAR'?'waiting for your OK':a.task?'working on "'+a.task.t+'"':'free'}`).join('\n');
   if(lower==='yes'||lower==='no'){if(current&&current.kind!=='act'){answer(lower==='yes'?0:1);return'Answered.'}return'Nothing is waiting for an answer.'}
   if(first.toLowerCase()==='reset'&&rest[0]){const a=byNick(rest[0]);if(!a)return`No agent called ${rest[0]}.`;a.task=null;a.status='OK';goTo(a,'CENTER','heal');return`Resetting ${a.nick}.`}
   if(first.toLowerCase()==='rename'&&rest.length>=2){const a=byNick(rest[0]);if(!a)return`No agent called ${rest[0]}.`;const nick=String(rest[1].toLowerCase()==='to'?rest[2]||'':rest[1]).toUpperCase();const err=nameProblem(nick,a);if(err)return err;const old=a.nick;a.nick=nick;log(`${old} is now called ${nick}.`,'ok');refresh();return`${old} is now called ${nick}.`}
+  if(first.startsWith('@')){const t=byNick(first);if(!t)return`No agent called ${first.slice(1)}.`;const said=rest.join(' ').trim();if(!said)return`What do you want to say to ${t.nick}?`;demoChat(t,said);return`${t.nick} is thinking about it. The answer appears in its chat.`}
   let a=byNick(first),title=a?rest.join(' '):text;
   if(a&&SPEC[a.sp].reviewer)return`${a.nick} only reviews other agents' work.`;
   if(!a){const skill=Object.keys(DEMO_SKILLS).find(k=>DEMO_SKILLS[k].test(lower));
@@ -1302,7 +1348,7 @@ $('#cmdForm').onsubmit=async e=>{
   let reply,bad=false;
   if(LIVE){
     try{const r=await fetch('api/command',{method:'POST',headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:JSON.stringify({text})});
-      const j=await r.json().catch(()=>({}));reply=r.ok?j.reply:(j.error||'That did not work.');bad=!r.ok}
+      const j=await r.json().catch(()=>({}));reply=r.ok?j.reply:(j.error||'That did not work.');bad=!r.ok;if(r.ok&&j.chat)cmdChatFor=j.agentId}
     catch{reply='Could not reach Agentdex. Is its window still open?';bad=true}
   }else reply=demoCommand(text);
   btn.disabled=false;out.hidden=false;out.textContent=reply;out.classList.toggle('bad',bad);

@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
-![Version 0.6.0](https://img.shields.io/badge/version-0.6.0-5462a6)
+![Version 0.7.0](https://img.shields.io/badge/version-0.7.0-5462a6)
 ![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
 
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
@@ -127,12 +127,22 @@ Under the map is one box for everything. Press **/** anywhere in the town to jum
 |---|---|
 | `compare 3 note-taking apps` | No name: the best-suited free agent takes it (research goes to SCOUT, writing to QUILL, code to PATCH) |
 | `quill write 5 video titles` | Start with a name to choose the agent |
+| `@scout how is it going?` | Talk to an agent, without giving it a task |
 | `status` | What everyone is doing |
 | `yes` / `no` | Answers the open request |
 | `reset scout` | Clears an agent that fainted or got stuck |
 | `rename scout to max` | Gives an agent a new name (one word, 2 to 12 letters or numbers) |
 
 You can also rename an agent with **RENAME** on its summary. The same commands work from WhatsApp.
+
+## Talk to your agents
+
+Open an agent's summary and use **Talk to SCOUT**, or type `@scout` followed by your message anywhere commands work, including WhatsApp. Talking is not working:
+
+- The agent answers in its own voice, knows what it is doing and what it finished recently, and can **read** files in the workspace to answer you. It cannot change anything in a chat.
+- If you ask for work, it says how it would do it and offers **DO IT AS A TASK**. Nothing starts until you press it.
+- A speech bubble shows on the map while it thinks; the conversation also appears in the field log.
+- Each message uses a little of your plan or API credit, like a short chat on claude.ai.
 
 ## Your Claude plan usage
 
@@ -193,6 +203,7 @@ Leave your computer running Agentdex at home and message your agents from your p
 |---|---|
 | `compare 3 note apps` | The best-suited free agent gets it |
 | `scout compare 3 note apps` | SCOUT gets it (start with any agent's name) |
+| `@scout what did you find?` | Talk to SCOUT; the reply comes back to your phone |
 | `status` | What everyone is doing, plus questions waiting for you |
 | Tap **YES** / **NO** | Answers an agent's question (typing `yes` or `no` works too) |
 | `reset scout` | Clears an agent that fainted or got stuck |

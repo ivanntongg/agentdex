@@ -1,6 +1,7 @@
 // A fake agent runtime. It only talks to the store through events, exactly like a real
 // runtime adapter would, so the town cannot tell the difference.
 import { SPECIES } from './species.js';
+import { guessSkill } from './commands.js';
 
 const POOL = {
   CODE: [
@@ -158,6 +159,19 @@ export function createSimulator({ tickMs = 1300, random = Math.random } = {}) {
     },
     onAssigned(a, task) {
       if (a.phase === 'idle' && sim(a).wait === 0 && !SPECIES[a.species].reviewer) startTask(a, { title: task.title, review: task.review });
+    },
+    onChat(a, entry) {
+      const s = sim(a);
+      const reply = () => {
+        const now = store.resolveAgent(a.id, { required: false });
+        if (!now || !now.chatting) return;
+        const job = guessSkill(entry.text) ? entry.text : null;
+        const text = now.task
+          ? `I'm on "${now.task.title}", about ${Math.max(1, s.workLeft)} steps left. I'm a practice agent, so my answers are canned; real agents answer properly.`
+          : job ? "I can do that. Press DO IT AS A TASK and I'll start." : "I'm free right now. Ask me something, or give me a task. (I'm a practice agent; real agents answer properly.)";
+        emit('chat.replied', a.id, { text, suggestedTask: job, via: entry.via });
+      };
+      if (tickMs > 0) setTimeout(reply, tickMs * 2); else reply();
     },
     onRemoved(a) { sims.delete(a.id); },
   };

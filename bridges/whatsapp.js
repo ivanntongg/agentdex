@@ -87,6 +87,16 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
   async function onChange({ event, agents: touched, approvals: open }) {
     for (const a of touched) agents.set(a.id, a);
     approvals = open;
+    // Replies to chats that started on WhatsApp go back to WhatsApp.
+    if ((event.type === 'chat.replied' || event.type === 'chat.failed') && event.data?.via === 'whatsapp') {
+      const a = agents.get(event.agentId);
+      const task = event.data.entry?.suggestedTask;
+      const body = event.type === 'chat.replied'
+        ? `${a ? a.nick : 'Agent'}: ${event.data.entry.text}${task && a ? `\n\nTo make it a task, send:\n${a.nick.toLowerCase()} ${task}` : ''}`
+        : event.message;
+      await everyone((to) => text(to, body));
+      return;
+    }
     if (!NOTIFY.has(event.type)) return;
     if (event.type === 'approval.requested') {
       const ap = open.find((x) => x.id === event.data.approvalId);
@@ -113,6 +123,7 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
     '• status: what everyone is doing',
     '• compare 3 note apps: the best-suited free agent takes it',
     '• scout compare 3 note apps: start with a name to choose the agent',
+    '• @scout how is it going?: talk to an agent without giving it a task',
     '• yes / no: answer the open request (or tap the buttons)',
     '• reset scout: clear an agent that fainted or got stuck',
     '• rename scout to max: give an agent a new name',
@@ -159,7 +170,7 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
     // Everything else (tasks with or without a name, reset, rename) goes through the same
     // command handler as the town's command bar.
     try {
-      const r = await dex.post('/api/command', { text: body });
+      const r = await dex.post('/api/command', { text: body, via: 'whatsapp' });
       return text(from, r.reply || 'Done.');
     } catch (err) {
       return text(from, `Could not do that: ${err.message}`);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createStore } from '../store.js';
 import { createApp } from '../app.js';
 import { guessSkill, pickAgent } from '../commands.js';
+import { createSimulator } from '../simulator.js';
 
 async function boot() {
   const store = createStore();
@@ -89,4 +90,40 @@ test('renaming, from the summary or the command bar', async () => {
     assert.match((await t.say('rename ink patch')).reply, /already called PATCH/);
     assert.match((await t.say('rename nobody to x1')).reply, /No agent called nobody/);
   } finally { await t.close(); }
+});
+
+test('talking: @mentions start a chat, not a task, with clear limits', async () => {
+  const t = await boot();
+  try {
+    const r = await t.say('@scout how is the research going?');
+    assert.match(r.reply, /SCOUT is thinking about it/);
+    assert.equal(r.chat, true);
+    assert.equal(t.assigned().length, 0, 'talking never creates a task');
+    const sent = t.store.snapshot().log.find((e) => e.type === 'chat.sent');
+    assert.equal(sent.data.entry.text, 'how is the research going?');
+    assert.equal(t.store.resolveAgent('scout').chatting, true);
+    assert.match((await t.say('@scout hello?')).reply, /still answering/);
+    t.store.apply({ type: 'chat.replied', agentId: 'scout', data: { text: 'Halfway there.', suggestedTask: 'Finish the comparison' } });
+    const scout = t.store.resolveAgent('scout');
+    assert.equal(scout.chatting, false);
+    const thread = t.store.snapshot().chats[scout.id];
+    assert.deepEqual(thread.map((e) => [e.from, e.text]), [['you', 'how is the research going?'], ['agent', 'Halfway there.']]);
+    assert.equal(thread[1].suggestedTask, 'Finish the comparison');
+    assert.match((await t.say('@nobody hi')).reply, /No agent called nobody/);
+    assert.match((await t.say('@quill')).reply, /What do you want to say to QUILL/);
+    const direct = await t.post('/api/agents/quill/chat', { text: '' });
+    assert.equal(direct.status, 400);
+  } finally { await t.close(); }
+});
+
+test('practice agents answer chats too, and spot a job in what you said', () => {
+  const store = createStore();
+  store.apply({ type: 'agent.spawned', data: { species: 'fennook', nick: 'SCOUT', ref: 'scout', silent: true } });
+  const sim = createSimulator({ tickMs: 0, random: () => 0.99 });
+  sim.start(store);
+  const sent = store.apply({ type: 'chat.sent', agentId: 'scout', data: { text: 'compare 3 note apps please' } });
+  sim.onChat(store.resolveAgent('scout'), sent.data.entry);
+  const reply = store.snapshot().log.find((e) => e.type === 'chat.replied');
+  assert.match(reply.data.entry.text, /DO IT AS A TASK|practice agent/);
+  sim.stop();
 });

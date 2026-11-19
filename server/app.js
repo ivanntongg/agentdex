@@ -7,6 +7,7 @@
 //   POST /api/agents/:id/actions         { action: pet | poke | reset | box | unbox }
 //   POST /api/agents/:id/tasks           { title, details?, review? }   give an agent work
 //   POST /api/command                    { text }   one sentence from the command bar or WhatsApp
+//   POST /api/agents/:id/chat            { text }   talk to an agent (no task); the reply arrives as chat.replied
 //   POST /api/ingest                     one event or an array, from a real agent runtime
 //   GET  /                               the town (index.html)
 import { createServer } from 'node:http';
@@ -67,12 +68,17 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     adapter?.onAssigned?.(a, event.data);
     return event;
   }
+  function chat(a, text, via) {
+    const event = store.apply({ type: 'chat.sent', agentId: a.id, data: { text, via } });
+    adapter?.onChat?.(a, event.data.entry);
+    return event;
+  }
   function reset(a) {
     if (a.boxed) throw new StoreError(409, `${a.nick} is in the box`);
     if (adapter?.onReset) { adapter.onReset(a); return null; }
     return store.apply({ type: 'agent.reset', agentId: a.id });
   }
-  const commands = createCommands({ store, actions: { resolve, assign, reset, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
+  const commands = createCommands({ store, actions: { resolve, assign, reset, chat, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
 
   const routes = [
     ['GET', /^\/api\/state$/, (req, res) => send(res, 200, { ...store.snapshot(), adapter: adapter ? adapter.name : null })],
@@ -89,9 +95,14 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
       send(res, 200, { event: resolve(Number(id), decision) });
     }],
 
+    ['POST', /^\/api\/agents\/([^/]+)\/chat$/, async (req, res, [, id]) => {
+      const { text, via } = await readJSON(req);
+      send(res, 200, { event: chat(store.resolveAgent(decodeURIComponent(id)), text, via) });
+    }],
+
     ['POST', /^\/api\/command$/, async (req, res) => {
-      const { text, review } = await readJSON(req);
-      send(res, 200, await commands.run(text, { review }));
+      const { text, review, via } = await readJSON(req);
+      send(res, 200, await commands.run(text, { review, via }));
     }],
 
     ['POST', /^\/api\/agents$/, async (req, res) => {
