@@ -1,0 +1,75 @@
+# Agentdex event protocol
+
+The server owns the world. Everything that happens to an agent is an **event**. The town never guesses: an agent walks because an `agent.moved` event arrived, an exclamation bubble appears because an `approval.requested` event arrived.
+
+There are two sources of events:
+
+- **The built-in simulator** (on by default) sends random but plausible events, so the town is alive without a real runtime.
+- **Your agent runtime** posts events to `POST /api/ingest`. Turn the simulator off with `AGENTDEX_SIM=0` when you do this.
+
+The simulator only uses the public event API, so anything it does, your runtime can do too. `server/simulator.js` is the reference implementation.
+
+## Endpoints
+
+| Method | Path | Body | What it does |
+|---|---|---|---|
+| GET | `/api/state` | | Full snapshot: agents, open approvals, recent log |
+| GET | `/api/events` | | Server-Sent Events. One `snapshot`, then a `change` for every event |
+| POST | `/api/ingest` | an event, or an array of up to 100 | Apply events from your runtime |
+| POST | `/api/approvals/:id` | `{"decision":"yes"\|"no"}` | Answer an approval |
+| POST | `/api/agents` | `{"species":"fennook","nick":"SCOUT"}` | Spawn into the party |
+| POST | `/api/agents/:id/actions` | `{"action":"pet"\|"poke"\|"reset"\|"box"\|"unbox"}` | Player actions |
+
+If `AGENTDEX_TOKEN` is set, every POST needs `Authorization: Bearer <token>`. To give the page the token, open it once with `?token=<token>`; it is kept in that browser.
+
+## Event shape
+
+```json
+{ "type": "task.started", "agentId": "ops-1", "data": { "title": "Deploy api v2.3" } }
+```
+
+`agentId` is the server's numeric id or the `ref` you gave the agent when you spawned it. Use `ref` so your runtime can keep its own ids.
+
+The server adds `id` (sequence number), `ts`, a human `message` for the field log and a `tone` (`info`, `ok`, `bad`, `need`, `lvl`).
+
+## Event types
+
+| Type | data | Effect |
+|---|---|---|
+| `agent.spawned` | `species`, `nick?`, `ref?`, `lv?`, `boxed?` | New agent. Fails with 409 when the party has 6 |
+| `agent.moved` | `to` (LAB, MART, WORKSHOP, CENTER, GYM), `reason?` | The agent walks there. Logged only with a `reason` |
+| `task.started` | `title`, `review?`, `approval?: {tool, target}` | Status OK, phase work |
+| `task.progress` | `tokens`, `tool?` | HP drops by `tokens` (thousands). At 0 the agent faints |
+| `task.handoff` | `reviewerId?` | Logged handoff before a review |
+| `review.started` | `reviewerId` | The reviewer is busy with this agent |
+| `review.finished` | `reviewerId?`, `result: approved\|changes`, `issues?` | Frees the reviewer, +25 XP to it |
+| `approval.requested` | `tool`, `target` (or `kind: "evolve"`) | Status PAR. Shows the YES / NO dialog |
+| `approval.resolved` | `approvalId`, `decision` | Normally sent by the page, not by you |
+| `task.finished` | `xp?` (default 60) or `outcome: "declined"` | Back to idle. May trigger level ups and an evolution request |
+| `agent.status` | `status: OK\|SLP\|CNF\|PSN`, `reason?` | Confused (looping) or poisoned (spending fast) |
+| `agent.fainted` | `reason?` | Status FNT |
+| `agent.reset` | | Full HP and PP, back at the CENTER |
+| `agent.boxed` / `agent.unboxed` | | Move between party and box |
+| `agent.interacted` | `action: pet\|poke`, `message?` | Pet raises the bond. Poke is up to your runtime |
+
+## Hearing the player's answers
+
+When the player answers an approval, the server applies `approval.resolved` and tells the active adapter (`onApproval`). With a real runtime, watch `GET /api/events` for `approval.resolved` events and continue or cancel the work in your runtime. Then send `task.finished`.
+
+## Try it with curl
+
+```bash
+AGENTDEX_SIM=0 npm start
+```
+
+```bash
+curl -s localhost:8787/api/ingest -H 'content-type: application/json' -d '[
+  {"type":"agent.spawned","data":{"species":"gearbo","nick":"ROLLO","ref":"ops-1"}},
+  {"type":"agent.moved","agentId":"ops-1","data":{"to":"WORKSHOP"}},
+  {"type":"task.started","agentId":"ops-1","data":{"title":"Deploy api v2.3"}},
+  {"type":"task.progress","agentId":"ops-1","data":{"tokens":12,"tool":"MONITOR"}},
+  {"type":"approval.requested","agentId":"ops-1","data":{"tool":"DEPLOY","target":"api-prod"}}
+]'
+```
+
+ROLLO appears at the CENTER, walks to the WORKSHOP and asks you to deploy.
