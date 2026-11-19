@@ -9,6 +9,7 @@ All notable changes to Agentdex. Newest first.
 - An Agentdex hook asks you YES / NO before every write outside `drafts/`, exactly like API-key mode. Writes outside the workspace are refused.
 - HP follows Claude Code's real token counts; reviews use Claude Code too.
 - Clear messages when Claude Code is missing, not signed in, or at its usage limit.
+- Desktop launchers in `launchers/` for Windows (`Agentdex.bat`) and Mac (`Agentdex.command`): find the folder, install on first run, open the browser, and reuse a running Agentdex.
 - Easier to read: the town uses Atkinson Hyperlegible Next for all text, keeping the pixel font only for the logo, map signs, creature names and status codes. Labels are in sentence case and filler lines are gone.
 
 ## 0.4.0 · SETUP screen and WhatsApp

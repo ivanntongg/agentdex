@@ -1073,8 +1073,8 @@ function renderSetup(note){
   const body=$('#setupBody');
   if(!setupAvailable){
     body.innerHTML=`<div class="scard"><h3>Setup is off in this mode</h3>
-      <p>${LIVE?'Agentdex is running with practice agents (npm start). Setup and real agents start together.':'This page was opened as a file, so it runs a demo inside your browser.'}</p>
-      <p>To use real agents: close this, then double-click your <b>Agentdex</b> desktop icon, or run <code>npm run real</code> in the agentdex folder. Then open <b>http://localhost:8787</b> and press SETUP again.</p></div>`;
+      <p>${LIVE?'Agentdex is running with practice agents (npm start). Setup and real agents start together.':'This copy of Agentdex is a demo that runs only inside your browser. Real agents need Agentdex running on your computer.'}</p>
+      <p>To use real agents, install Agentdex from <a href="https://github.com/ivanntongg/agentdex#install" target="_blank" rel="noopener">github.com/ivanntongg/agentdex</a>, start it with the <b>Agentdex</b> shortcut or <code>npm run real</code>, open <b>http://localhost:8787</b> and press SETUP there.</p></div>`;
     return;
   }
   const s=setupState,st=s.settings,c=s.claude,w=s.whatsapp;
