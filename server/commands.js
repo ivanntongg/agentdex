@@ -19,6 +19,7 @@ export const HELP = [
   'Tell your team what to do in one sentence.',
   '• compare 3 note-taking apps: the best-suited free agent takes it',
   '• quill write 5 video titles: start with a name to choose the agent',
+  '• @scout how is it going?: talk to an agent without giving it a task',
   '• status: what everyone is doing',
   '• yes / no: answer the open request',
   '• reset scout: clear an agent that fainted or got stuck',
@@ -69,7 +70,7 @@ export function createCommands({ store, actions }) {
     return [`Party (${lines.length})`, ...lines, open ? `${open} request(s) need your YES or NO.` : 'Nothing needs you.'].join('\n');
   }
 
-  async function run(input, { review } = {}) {
+  async function run(input, { review, via } = {}) {
     const text = String(input || '').trim();
     if (!text) return { reply: 'Type what you want done, for example: compare 3 note-taking apps.' };
     const lower = text.toLowerCase();
@@ -85,6 +86,15 @@ export function createCommands({ store, actions }) {
     }
 
     const [first, ...rest] = text.split(/\s+/);
+    // @scout how is it going?  -> talk, not a task
+    if (first.startsWith('@')) {
+      const a = byName(first);
+      if (!a) return { reply: `No agent called ${first.slice(1) || '?'} in your party. Send "status" to see names.` };
+      const said = rest.join(' ').trim();
+      if (!said) return { reply: `What do you want to say to ${a.nick}? For example: @${a.nick.toLowerCase()} what did you find?` };
+      try { await actions.chat(a, said, via); } catch (err) { return { reply: err.message }; }
+      return { reply: `${a.nick} is thinking about it. The answer appears in its chat${via === 'whatsapp' ? ' and here' : ''}.`, agentId: a.id, chat: true };
+    }
     // rename scout to max  |  rename scout max
     if (first.toLowerCase() === 'rename' && rest.length >= 2) {
       const a = byName(rest[0]);

@@ -142,3 +142,19 @@ test('the 24-hour WhatsApp window is explained instead of failing silently', asy
     assert.match(t.bridge.health().lastError, /Send the bot any message/);
   } finally { await t.close(); }
 });
+
+test('talking from WhatsApp: @mention there, reply comes back there', async () => {
+  const t = await setup();
+  try {
+    await t.deliver(says('@scout what did you find?'));
+    const sent = await t.until(() => t.store.snapshot().log.find((e) => e.type === 'chat.sent'));
+    assert.equal(sent.data.via, 'whatsapp');
+    await t.dex.emit('chat.replied', 'scout', { text: 'Notion and Obsidian look best.', suggestedTask: 'Write the comparison', via: 'whatsapp' });
+    const msg = await t.until(() => t.sent.find((s) => /SCOUT: Notion and Obsidian look best\./.test(s.body.text?.body || '')));
+    assert.match(msg.body.text.body, /To make it a task, send:\nscout Write the comparison/);
+    await t.dex.emit('chat.sent', 'scout', { text: 'from the town' });
+    await t.dex.emit('chat.replied', 'scout', { text: 'town only reply' });
+    await new Promise((r) => setTimeout(r, 200));
+    assert.ok(!t.sent.some((s) => /town only reply/.test(s.body.text?.body || '')), 'chats from the town stay in the town');
+  } finally { await t.close(); }
+});

@@ -2,6 +2,12 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.7.0 · Talk to your agents
+
+- **Talk, don't task:** each agent's summary has a chat thread, and `@scout ...` works in the command bar and on WhatsApp. Agents answer in their own voice, know their current and recent work, and can read workspace files, but cannot change anything in a chat.
+- **DO IT AS A TASK:** when you ask for work in a chat, the agent suggests a task; nothing starts until you press the button.
+- A speech bubble shows on the map while an agent is answering. Practice and demo agents reply too, with canned answers.
+
 ## 0.6.0 · Command bar, renaming and plan usage
 
 - **Tell your team:** one box under the map. Type a job and the best-suited free agent takes it, or start with a name to choose. Also `status`, `yes`, `no`, `reset`, `rename`. Press **/** to jump to it. WhatsApp uses the same commands, so jobs without a name work from your phone too.

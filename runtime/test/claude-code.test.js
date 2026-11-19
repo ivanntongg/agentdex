@@ -200,3 +200,18 @@ test('plan usage is read from what Claude Code reports, and odd shapes are ignor
   assert.equal(planUsageFrom(null), null);
   assert.deepEqual(planUsageFrom({ unifiedWindows: { five_hour: {} } }).windows, []);
 });
+
+test('talking through Claude Code: read-only, no hook, reply and suggested task', async () => {
+  const t = await setup();
+  try {
+    await post(t.url, '/api/agents/scout/chat', { text: 'how far along are you?' });
+    const s = await t.until((st) => st.log.some((e) => e.type === 'chat.replied') && st);
+    const reply = s.log.find((e) => e.type === 'chat.replied').data.entry;
+    assert.equal(reply.text, 'I am about halfway through.');
+    assert.equal(reply.suggestedTask, 'Finish the comparison table');
+    const args = t.fakeEntries().find((e) => e.args && e.args[1] && e.args[1].startsWith('Conversation so far:')).args;
+    assert.equal(args[args.indexOf('--tools') + 1], 'Read,Glob,Grep');
+    assert.ok(!args.includes('--settings'), 'no write tools, so no approval hook is needed');
+    assert.ok(args.includes('--restricted'));
+  } finally { await t.close(); }
+});

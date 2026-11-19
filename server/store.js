@@ -6,6 +6,7 @@ import { SPECIES, BUILDINGS, PARTY_MAX, hpMaxFor, xpToNext } from './species.js'
 export const EVENT_TYPES = [
   'agent.spawned', 'agent.moved', 'agent.status', 'agent.fainted', 'agent.reset',
   'agent.boxed', 'agent.unboxed', 'agent.interacted', 'agent.leveled', 'agent.renamed',
+  'chat.sent', 'chat.replied', 'chat.failed',
   'task.assigned', 'task.started', 'task.progress', 'task.handoff', 'task.finished',
   'review.started', 'review.finished',
   'approval.requested', 'approval.resolved',
@@ -21,6 +22,9 @@ const clone = (o) => structuredClone(o);
 export function createStore() {
   const agents = new Map();
   const approvals = new Map();
+  const chats = new Map(); // agentId -> [{ id, from: 'you' | 'agent', text, ts, via, suggestedTask }]
+  let nextChatId = 1;
+  const CHAT_LIMIT = 60;
   const log = [];
   const subscribers = new Set();
   let seq = 0;
@@ -48,12 +52,20 @@ export function createStore() {
       agents: [...agents.values()].map(clone),
       approvals: [...approvals.values()].map(clone),
       log: log.slice(-100).map(clone),
+      chats: Object.fromEntries([...chats].map(([id, list]) => [id, list.map(clone)])),
     };
   }
 
   function subscribe(fn) {
     subscribers.add(fn);
     return () => subscribers.delete(fn);
+  }
+
+  function pushChat(agentId, entry) {
+    if (!chats.has(agentId)) chats.set(agentId, []);
+    const list = chats.get(agentId);
+    list.push(entry);
+    if (list.length > CHAT_LIMIT) list.splice(0, list.length - CHAT_LIMIT);
   }
 
   function dropApprovalsFor(agentId) {
@@ -97,7 +109,7 @@ export function createStore() {
           lv, xp: data.xp || 0, hp: Math.min(hpMax, data.hp ?? hpMax), hpMax,
           status: 'SLP', phase: 'idle', loc: BUILDINGS.includes(data.loc) ? data.loc : (boxed ? SPECIES[sp].home : 'CENTER'),
           task: null, moves: SPECIES[sp].moves.map(([n, pp]) => ({ n, pp, max: pp })),
-          boxed, bond: 0, reviewingId: null, evolveAsked: false,
+          boxed, bond: 0, reviewingId: null, evolveAsked: false, chatting: false,
         };
         agents.set(a.id, a);
         event.agentId = a.id;
@@ -266,7 +278,7 @@ export function createStore() {
       case 'agent.reset': {
         releaseReviewer(a, touched);
         dropApprovalsFor(a.id);
-        a.hp = a.hpMax; a.status = 'SLP'; a.phase = 'idle'; a.task = null; a.loc = 'CENTER'; a.reviewingId = null;
+        a.hp = a.hpMax; a.status = 'SLP'; a.phase = 'idle'; a.task = null; a.loc = 'CENTER'; a.reviewingId = null; a.chatting = false;
         a.moves.forEach((m) => { m.pp = m.max; });
         event.message = `${a.nick}'s session was reset at the CENTER. Context cleared, HP restored.`;
         event.tone = 'ok';
@@ -277,7 +289,7 @@ export function createStore() {
         if (a.boxed) throw new StoreError(409, `${a.nick} is already in the box`);
         releaseReviewer(a, touched);
         dropApprovalsFor(a.id);
-        Object.assign(a, { boxed: true, task: null, phase: 'idle', status: 'SLP', reviewingId: null });
+        Object.assign(a, { boxed: true, task: null, phase: 'idle', status: 'SLP', reviewingId: null, chatting: false });
         event.message = `${a.nick} went into the BOX. It stops running and costs nothing.`;
         break;
       }
@@ -298,6 +310,38 @@ export function createStore() {
         }
         event.message = data.message || null;
         event.tone = data.tone || 'info';
+        break;
+      }
+
+      case 'chat.sent': {
+        const text = String(data.text || '').trim().slice(0, 2000);
+        if (!text) throw new StoreError(400, 'Say something first.');
+        if (a.boxed) throw new StoreError(409, `${a.nick} is in the box. Move it to the party to talk.`);
+        if (a.chatting) throw new StoreError(409, `${a.nick} is still answering your last message.`);
+        const entry = { id: nextChatId++, from: 'you', text, ts: event.ts, via: data.via === 'whatsapp' ? 'whatsapp' : 'town' };
+        pushChat(a.id, entry);
+        a.chatting = true;
+        event.data = { entry, via: entry.via };
+        event.message = `You to ${a.nick}: "${text.length > 120 ? text.slice(0, 119) + '…' : text}"`;
+        break;
+      }
+
+      case 'chat.replied': {
+        const text = String(data.text || '').trim().slice(0, 4000) || '...';
+        const task = data.suggestedTask ? String(data.suggestedTask).trim().slice(0, 200) : null;
+        const entry = { id: nextChatId++, from: 'agent', text, ts: event.ts, via: data.via === 'whatsapp' ? 'whatsapp' : 'town', suggestedTask: task || null };
+        pushChat(a.id, entry);
+        a.chatting = false;
+        event.data = { entry, via: entry.via };
+        event.message = `${a.nick}: "${text.length > 160 ? text.slice(0, 159) + '…' : text}"`;
+        break;
+      }
+
+      case 'chat.failed': {
+        a.chatting = false;
+        event.message = `${a.nick} couldn't reply. ${data.reason || ''}`.trim();
+        event.tone = 'bad';
+        event.data = { reason: data.reason || null, via: data.via === 'whatsapp' ? 'whatsapp' : 'town' };
         break;
       }
 
@@ -353,5 +397,5 @@ export function createStore() {
     }
   }
 
-  return { apply, snapshot, subscribe, resolveAgent, party, agents, approvals };
+  return { apply, snapshot, subscribe, resolveAgent, party, agents, approvals, chats };
 }

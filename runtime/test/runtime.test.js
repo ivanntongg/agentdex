@@ -179,3 +179,23 @@ test('the workspace refuses paths that escape it', async () => {
   assert.equal(await ws.needsApproval('draftsy/a.md'), true);
   assert.equal(await ws.needsApproval('src/a.js'), true);
 });
+
+test('talking to an agent over the API: read-only tools, and a suggested task', async () => {
+  let toolsOffered = null;
+  const t = await setup((body) => {
+    toolsOffered = body.tools.map((x) => x.name);
+    const turn = body.messages.filter((m) => m.role === 'assistant').length;
+    if (turn === 0) return { content: [toolUse('c1', 'list_files', { path: '.' })], stop_reason: 'tool_use' };
+    return { content: [text('Nothing in the workspace yet. I can research note apps for you.\nTASK: Compare 3 free note-taking apps')], stop_reason: 'end_turn' };
+  });
+  try {
+    await post(t.url, '/api/agents/patch/chat', { text: 'what have you got so far?' });
+    const s = await t.until((st) => st.log.some((e) => e.type === 'chat.replied') && st);
+    const reply = s.log.find((e) => e.type === 'chat.replied').data.entry;
+    assert.equal(reply.text, 'Nothing in the workspace yet. I can research note apps for you.');
+    assert.equal(reply.suggestedTask, 'Compare 3 free note-taking apps');
+    assert.deepEqual(toolsOffered, ['list_files', 'read_file'], 'no write tool in a chat');
+    assert.equal(s.log.filter((e) => e.type === 'task.assigned').length, 0);
+    assert.equal(s.agents.find((a) => a.ref === 'patch').chatting, false);
+  } finally { await t.close(); }
+});
