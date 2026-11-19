@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node --test server/test/*.test.js runtime/test/*.test.js",
+    "test": "node --test server/test/*.test.js runtime/test/*.test.js bridges/test/*.test.js",
     "real": "node runtime/index.js --with-server",
     "agents": "node runtime/index.js"
   },

@@ -15,7 +15,10 @@ import { StoreError } from './store.js';
 
 const MAX_BODY = 64 * 1024;
 
-export function createApp({ store, adapter = null, token = null, indexPath = null }) {
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+// setup (optional): { status(), save(body), testClaude(), testWhatsApp() } for the SETUP screen.
+export function createApp({ store, adapter = null, token = null, indexPath = null, setup = null }) {
   const clients = new Set();
 
   store.subscribe((payload) => {
@@ -128,6 +131,20 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
       send(res, 200, { events });
     }],
 
+    ['GET', /^\/api\/setup$/, async (req, res) => {
+      if (!setup) return send(res, 404, { error: 'Setup is available when Agentdex runs with real agents (npm run real).' });
+      send(res, 200, await setup.status());
+    }],
+    ['POST', /^\/api\/setup$/, async (req, res) => {
+      if (!setup) throw new StoreError(404, 'Setup is available when Agentdex runs with real agents (npm run real).');
+      await setup.save(await readJSON(req));
+      send(res, 200, await setup.status());
+    }],
+    ['POST', /^\/api\/setup\/test-(claude|whatsapp)$/, async (req, res, [, what]) => {
+      if (!setup) throw new StoreError(404, 'Setup is available when Agentdex runs with real agents (npm run real).');
+      send(res, 200, what === 'claude' ? await setup.testClaude() : await setup.testWhatsApp());
+    }],
+
     ['GET', /^\/(index\.html)?$/, async (req, res) => {
       if (!indexPath) return send(res, 404, { error: 'No page configured' });
       const html = await readFile(indexPath);
@@ -139,6 +156,7 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     try {
+      if (url.pathname.startsWith('/api/setup') && !LOOPBACK.has(req.socket.remoteAddress)) return send(res, 403, { error: 'Setup only works from the computer Agentdex runs on.' });
       if (req.method === 'POST' && !authorized(req)) return send(res, 401, { error: 'Missing or wrong bearer token' });
       for (const [method, re, handler] of routes) {
         const m = url.pathname.match(re);

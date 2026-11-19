@@ -1,3 +1,5 @@
 node_modules/
 workspace/
 .env
+agentdex.config.json
+agentdex.config.json.tmp

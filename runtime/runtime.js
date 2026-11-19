@@ -10,7 +10,10 @@ const MOVE_FOR_TOOL = { list_files: 'READ', read_file: 'READ', write_file: 'EDIT
 
 class Stopped extends Error {}
 
-export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-5-5', effort = 'medium', maxTurns = 30, log = console.log }) {
+// Pass either a fixed client (anthropic, model, effort) or settings(): { anthropic, model, effort },
+// read before every request so changes on the SETUP screen apply straight away.
+export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-5-5', effort = 'medium', settings = null, maxTurns = 30, log = console.log }) {
+  const current = settings || (() => ({ anthropic, model, effort }));
   const agents = new Map();      // id -> latest agent snapshot from the server
   const queues = new Map();      // id -> [task]
   const running = new Map();     // id -> AbortController
@@ -19,10 +22,13 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
   const idle = new Set();        // resolvers for whenIdle()
 
   // Only the server's fallbacks setting differs from a plain request; see README for why it is on.
-  const request = (params, signal) => anthropic.beta.messages.create(
-    { model, max_tokens: 16000, output_config: { effort, ...(params.output_config || {}) }, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default', ...omit(params, 'output_config') },
-    { signal },
-  );
+  const request = (params, signal) => {
+    const cfg = current();
+    return cfg.anthropic.beta.messages.create(
+      { model: cfg.model, max_tokens: 16000, output_config: { effort: cfg.effort, ...(params.output_config || {}) }, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default', ...omit(params, 'output_config') },
+      { signal },
+    );
+  };
 
   function onSnapshot(s) { for (const a of s.agents) agents.set(a.id, a); }
 
@@ -167,6 +173,10 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     const agent = agents.get(agentId);
     if (!agent || agent.boxed) return;
     const species = SPECIES[agent.species];
+    if (!current().anthropic) {
+      await dex.emit('agent.interacted', agentId, { action: 'poke', tone: 'bad', message: `${agent.nick} can't start "${task.title}" yet: add your Claude API key on the SETUP screen, then give the task again.` });
+      return;
+    }
     if (agent.loc !== species.home) await dex.emit('agent.moved', agentId, { to: species.home });
     await dex.emit('task.started', agentId, { title: task.title, review: task.review });
     log(`[${agent.nick}] started: ${task.title}`);
