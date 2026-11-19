@@ -2,6 +2,12 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.7.1 · Your town is saved
+
+- Closing Agentdex no longer resets the town. Names, levels, XP, bond, HP, party and box, chat threads and the field log are saved to `agentdex.state.json` shortly after every change, and again on Ctrl+C or when the window closes.
+- On restart a "Welcome back" line confirms the restore. Tasks that were running when Agentdex closed are listed so you can give them again.
+- A save file that cannot be read is kept aside, and the town starts fresh instead of failing.
+
 ## 0.7.0 · Talk to your agents
 
 - **Talk, don't task:** each agent's summary has a chat thread, and `@scout ...` works in the command bar and on WhatsApp. Agents answer in their own voice, know their current and recent work, and can read workspace files, but cannot change anything in a chat.

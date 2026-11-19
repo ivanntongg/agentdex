@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
-![Version 0.7.0](https://img.shields.io/badge/version-0.7.0-5462a6)
+![Version 0.7.1](https://img.shields.io/badge/version-0.7.1-5462a6)
 ![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
 
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
@@ -221,6 +221,7 @@ Your computer, the Agentdex window and the ngrok window must stay on. WhatsApp o
 - **Agents only touch the workspace folder.** Paths that try to escape it, including through symlinks, are refused.
 - **With your Claude plan, Claude Code runs in its restricted mode:** no shell or code-running tools, no MCP servers, your own Claude Code settings are not loaded, and an Agentdex hook asks you before every write outside drafts.
 - **Nothing outside `workspace/drafts` is written without your YES.** If you say NO, the agent is told and works around it.
+- **Your town is saved.** Names, levels, bond, party and box, chats and the field log are kept in `agentdex.state.json` in the agentdex folder and come back when you restart. A task that was running when you closed Agentdex cannot continue; the field log lists it so you can give it again.
 - **Your settings stay on your computer.** `agentdex.config.json` is readable only by your user account, is ignored by Git, and keys are never shown in full again.
 - **The town is private.** It only listens on your own computer (`localhost`), and the SETUP screen only answers requests from that computer.
 - **WhatsApp exposes only its own webhook**, on a separate port (8788). Every request must carry Meta's signature, and only the phone number you entered can give orders.
@@ -271,6 +272,7 @@ Everything a user needs is on the SETUP screen. Environment variables also work;
 | `AGENTDEX_EFFORT` | `medium` | Effort level (SETUP offers low, medium, high) |
 | `AGENTDEX_WORKSPACE` | `./workspace` | The only folder agents can touch |
 | `AGENTDEX_CONFIG` | `./agentdex.config.json` | Where SETUP saves settings |
+| `AGENTDEX_STATE` | `./agentdex.state.json` | Where the town is saved (real mode) |
 | `PORT` | `8787` | Town port |
 | `HOST` | `127.0.0.1` | Set `0.0.0.0` to reach the town from other devices on your network |
 | `AGENTDEX_TOKEN` | none | If set, every POST needs `Authorization: Bearer <token>`. Set it whenever `HOST` is not localhost |

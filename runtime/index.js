@@ -8,7 +8,7 @@
 //   WHATSAPP_APP_SECRET, WHATSAPP_ALLOWED
 // and these only as variables:
 //   PORT (8787), HOST (127.0.0.1), AGENTDEX_TOKEN, AGENTDEX_URL, AGENTDEX_WORKSPACE (./workspace),
-//   AGENTDEX_CONFIG (./agentdex.config.json), WHATSAPP_PORT (8788),
+//   AGENTDEX_CONFIG (./agentdex.config.json), AGENTDEX_STATE (./agentdex.state.json, the saved town), WHATSAPP_PORT (8788),
 //   AGENTDEX_BRAIN (api | claude-code), AGENTDEX_CLAUDE_BIN (path to the claude command, default "claude")
 import Anthropic from '@anthropic-ai/sdk';
 import { fileURLToPath } from 'node:url';
@@ -129,7 +129,16 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
     const { createApp } = await import('../server/app.js');
     const port = Number(env.PORT || 8787);
     const host = env.HOST || '127.0.0.1';
-    const app = createApp({ store: createStore(), token, setup, indexPath: fileURLToPath(new URL('../index.html', import.meta.url)) });
+    const { createPersistence } = await import('../server/persist.js');
+    const store = createStore();
+    // The town is saved next to the app, so closing Agentdex keeps names, levels, chats and the log.
+    const persistence = createPersistence({ store, path: env.AGENTDEX_STATE || 'agentdex.state.json' });
+    const restored = persistence.load();
+    if (restored.loaded) console.log(`Restored your town (${store.agents.size} agents).`);
+    const save = () => { persistence.flush(); };
+    for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK']) process.once(sig, () => { save(); process.exit(0); });
+    process.once('exit', save);
+    const app = createApp({ store, token, setup, indexPath: fileURLToPath(new URL('../index.html', import.meta.url)) });
     await new Promise((resolve, reject) => { app.once('error', reject); app.listen(port, host, resolve); }).catch((err) => {
       throw new Error(err.code === 'EADDRINUSE' ? `Port ${port} is already in use. Agentdex may already be running in another window.` : err.message);
     });

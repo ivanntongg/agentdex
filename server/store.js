@@ -397,5 +397,52 @@ export function createStore() {
     }
   }
 
-  return { apply, snapshot, subscribe, resolveAgent, party, agents, approvals, chats };
+  // Everything needed to bring the town back after a restart.
+  function serialize() {
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      counters: { seq, nextAgentId, nextApprovalId, nextChatId },
+      agents: [...agents.values()].map(clone),
+      chats: Object.fromEntries([...chats].map(([id, list]) => [id, list.map(clone)])),
+      log: log.map(clone),
+    };
+  }
+
+  // Loads a saved town. Work that was running cannot continue (its process is gone), so agents
+  // come back free and the log says what was interrupted. Open approvals are dropped with it.
+  // Returns the titles of interrupted tasks.
+  function restore(saved) {
+    if (!saved || saved.version !== 1 || !Array.isArray(saved.agents)) throw new Error('Not an Agentdex save file');
+    agents.clear(); approvals.clear(); chats.clear(); log.length = 0;
+    const interrupted = [];
+    for (const raw of saved.agents) {
+      if (!raw || !SPECIES[raw.species] || !Number.isInteger(raw.id)) continue;
+      const a = clone(raw);
+      if (a.task) interrupted.push({ nick: a.nick, title: a.task.title });
+      Object.assign(a, { task: null, phase: 'idle', status: a.status === 'FNT' ? 'FNT' : 'SLP', reviewingId: null, chatting: false });
+      agents.set(a.id, a);
+    }
+    for (const [id, list] of Object.entries(saved.chats || {})) {
+      if (agents.has(Number(id)) && Array.isArray(list)) chats.set(Number(id), list.slice(-CHAT_LIMIT));
+    }
+    for (const e of (saved.log || []).slice(-LOG_LIMIT)) log.push(e);
+    const c = saved.counters || {};
+    const maxId = Math.max(0, ...agents.keys());
+    seq = Math.max(Number(c.seq) || 0, ...log.map((e) => e.id || 0));
+    nextAgentId = Math.max(Number(c.nextAgentId) || 1, maxId + 1);
+    nextApprovalId = Number(c.nextApprovalId) || 1;
+    nextChatId = Number(c.nextChatId) || 1;
+    return interrupted;
+  }
+
+  // Adds a line to the field log without changing any agent (used after a restore).
+  function note(message, tone = 'info') {
+    const event = { id: ++seq, ts: new Date().toISOString(), type: 'town.note', agentId: null, data: {}, message, tone };
+    log.push(event);
+    if (log.length > LOG_LIMIT) log.shift();
+    for (const fn of subscribers) { try { fn({ event: clone(event), agents: [], approvals: [...approvals.values()].map(clone) }); } catch { /* ignore */ } }
+  }
+
+  return { apply, snapshot, subscribe, resolveAgent, party, agents, approvals, chats, serialize, restore, note };
 }
