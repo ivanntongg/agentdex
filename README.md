@@ -86,37 +86,14 @@ git pull
 npm install
 ```
 
-<details>
-<summary><strong>Optional: a desktop icon that starts everything with a double-click</strong></summary>
+### Desktop shortcut
 
-These assume you cloned Agentdex into your home folder (where the terminal starts).
+Agentdex comes with a launcher that starts everything and opens your browser. It finds the agentdex folder by itself, installs on first run, and if Agentdex is already running it just opens the town.
 
-**Mac:** paste this whole block into Terminal. It creates `Agentdex.command` on your Desktop.
+- **Windows:** open the `agentdex\launchers` folder, right-click **Agentdex.bat**, choose **Send to**, then **Desktop (create shortcut)**. Double-click the new shortcut on your Desktop. If Windows says it "protected your PC", choose **More info**, then **Run anyway**.
+- **Mac:** open the `agentdex/launchers` folder in Finder and double-click **Agentdex.command**. To keep it handy, drag it to your Dock while holding **Cmd + Option**.
 
-```bash
-cat > ~/Desktop/Agentdex.command <<'EOF'
-#!/bin/zsh -l
-cd ~/agentdex || { echo "Agentdex folder not found in your home folder."; read; exit 1; }
-(sleep 3; open http://localhost:8787) &
-npm run real
-EOF
-chmod +x ~/Desktop/Agentdex.command
-```
-
-**Windows:** paste this whole block into PowerShell. It creates `Agentdex.bat` on your Desktop. If Windows says it "protected your PC", choose **More info**, then **Run anyway**.
-
-```powershell
-@'
-@echo off
-title Agentdex
-cd /d "%USERPROFILE%\agentdex" || (echo Agentdex folder not found in your user folder. & pause & exit /b 1)
-start "" /min powershell -NoProfile -Command "Start-Sleep 3; Start-Process 'http://localhost:8787'"
-call npm run real
-pause
-'@ | Set-Content -Encoding ASCII "$([Environment]::GetFolderPath('Desktop'))\Agentdex.bat"
-```
-
-</details>
+Close the window it opens to stop Agentdex. Because the shortcut points into the agentdex folder, it keeps working after updates.
 
 ---
 
