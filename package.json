@@ -1,6 +1,6 @@
 {
   "name": "agentdex",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "description": "A pixel town where your AI agents live, work, and ask before they act. Real Claude agents, YES/NO approvals, WhatsApp remote control.",
   "keywords": [
