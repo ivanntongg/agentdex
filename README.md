@@ -1,5 +1,10 @@
 # Agentdex
 
+[![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
+![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
+![Version 0.4.0](https://img.shields.io/badge/version-0.4.0-5462a6)
+![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
+
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
 
 ![The Agentdex town: agents walking between buildings, a party list with HP bars, and an agent asking "ROLLO wants to use DEPLOY on api-prod!" with YES / NO](docs/town.png)
@@ -287,6 +292,10 @@ Next:
 3. Creature art: 6 creatures at 32×32 with walk cycles.
 4. Review "battle" view: the work faces the reviewer, issues land as hits.
 5. Sound: short chimes for approvals and level-ups.
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Found a security problem? Please report it privately as described in [SECURITY.md](SECURITY.md). What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Status
 
