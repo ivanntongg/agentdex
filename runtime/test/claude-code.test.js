@@ -13,7 +13,7 @@ import { createApp } from '../../server/app.js';
 import { createAgentdexClient } from '../agentdex.js';
 import { createWorkspace } from '../workspace.js';
 import { createRuntime } from '../runtime.js';
-import { createClaudeCode, ClaudeCodeError } from '../claude-code.js';
+import { createClaudeCode, ClaudeCodeError, resolveClaude } from '../claude-code.js';
 
 const FAKE = fileURLToPath(new URL('./fake-claude.mjs', import.meta.url));
 const HOOK = fileURLToPath(new URL('../cc-hook.js', import.meta.url));
@@ -129,7 +129,7 @@ test('running out of HP stops Claude Code and faints the agent', async () => {
 test('a missing claude command gives an install hint', async () => {
   const workspace = await createWorkspace(await mkdtemp(path.join(os.tmpdir(), 'agentdex-cc-')));
   const cc = createClaudeCode({ bin: 'definitely-not-claude-xyz', workspace, url: 'http://127.0.0.1:1' });
-  await assert.rejects(cc.check(), /not installed/);
+  await assert.rejects(cc.check(), /cannot find Claude Code/);
 });
 
 test('the hook on its own: drafts allowed, outside and symlink escapes denied, no link denied', async () => {
@@ -149,4 +149,32 @@ test('the hook on its own: drafts allowed, outside and symlink escapes denied, n
   assert.equal(run(path.join(ws, 'link/x.txt')).permissionDecision, 'deny');
   assert.match(run(path.join(ws, 'notes/a.md')).permissionDecisionReason, /Could not reach Agentdex/);
   assert.equal(run(path.join(ws, 'drafts/c.md'), {}).permissionDecision, 'deny', 'no Agentdex link, no writes');
+});
+
+test('finding Claude Code on Windows: PATH, the native install folder, then npm', () => {
+  const home = 'C:\\Users\\Ivan Tong';
+  const has = (...files) => (f) => files.includes(f);
+  const base = { platform: 'win32', nodePath: 'C:\\node\\node.exe' };
+
+  // On PATH as claude.exe.
+  let r = resolveClaude({ ...base, env: { PATH: 'C:\\Tools;C:\\bin', USERPROFILE: home }, exists: has('C:\\bin\\claude.exe') });
+  assert.deepEqual(r, { command: 'C:\\bin\\claude.exe', prefix: [] });
+
+  // Just installed with the native installer: not on this window's PATH yet, but in ~/.local/bin.
+  r = resolveClaude({ ...base, env: { PATH: 'C:\\Tools', USERPROFILE: home }, exists: has(`${home}\\.local\\bin\\claude.exe`) });
+  assert.equal(r.command, `${home}\\.local\\bin\\claude.exe`);
+
+  // Installed with npm: claude.cmd cannot be started directly, so run its cli.js with Node.
+  const npmDir = `${home}\\AppData\\Roaming\\npm`;
+  const cli = `${npmDir}\\node_modules\\@anthropic-ai\\claude-code\\cli.js`;
+  r = resolveClaude({ ...base, env: { PATH: 'C:\\Tools', USERPROFILE: home, APPDATA: `${home}\\AppData\\Roaming` }, exists: has(`${npmDir}\\claude.cmd`, cli) });
+  assert.deepEqual(r, { command: 'C:\\node\\node.exe', prefix: [cli] });
+
+  // Nothing found: fall back to plain "claude" (the error then explains what to do).
+  r = resolveClaude({ ...base, env: { PATH: 'C:\\Tools', USERPROFILE: home }, exists: () => false });
+  assert.deepEqual(r, { command: 'claude', prefix: [] });
+
+  // Mac and Linux, and an explicit AGENTDEX_CLAUDE_BIN, are used as given.
+  assert.deepEqual(resolveClaude({ platform: 'darwin' }), { command: 'claude', prefix: [] });
+  assert.deepEqual(resolveClaude({ bin: 'D:\\apps\\claude.exe', platform: 'win32' }), { command: 'D:\\apps\\claude.exe', prefix: [] });
 });

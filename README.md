@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
-![Version 0.5.0](https://img.shields.io/badge/version-0.5.0-5462a6)
+![Version 0.5.1](https://img.shields.io/badge/version-0.5.1-5462a6)
 ![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
 
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
@@ -42,7 +42,7 @@ cd agentdex
 ```
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 3. Start it
@@ -78,13 +78,17 @@ When SETUP says **CONNECTED**, close it. Four agents are waiting at the CENTER.
 
 ### Update later
 
+Stop Agentdex first (close its window), then in the agentdex folder:
+
 ```bash
 git pull
 ```
 
 ```bash
-npm install
+npm ci
 ```
+
+If `git pull` says your local changes to `package-lock.json` would be overwritten, run `git restore package-lock.json` and pull again. That file only lists package versions.
 
 ### Desktop shortcut
 
@@ -199,7 +203,7 @@ Your computer, the Agentdex window and the ngrok window must stay on. WhatsApp o
 | SETUP says the key was rejected | Copy the key again from the Claude Console and paste it, then SAVE & TEST |
 | An agent "can't start yet" | Open SETUP and add your Claude key, or switch to **My Claude plan** |
 | "Claude Code is not signed in" | Open a terminal, run `claude`, sign in, then press SAVE & TEST again |
-| "Claude Code is not installed" | [Install Claude Code](https://code.claude.com/docs/en/setup), open a new terminal, then press SAVE & TEST |
+| "Agentdex cannot find Claude Code" | Open a **new** terminal and run `claude --version`. If it fails, [install Claude Code](https://code.claude.com/docs/en/setup). If it works, close Agentdex and start it again from that new window |
 | "Your Claude plan has hit its usage limit" | Wait for it to reset (claude.ai shows when), or switch to an API key in SETUP |
 | An agent faints with "rate limiting" or a credit message | Wait a minute or add credit in the Claude Console, then RESET SESSION |
 | The agent "works" but no files appear | You started with `npm start` (pretend agents). Use `npm run real` |

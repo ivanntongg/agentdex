@@ -11,12 +11,36 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import os from 'node:os';
+import { existsSync } from 'node:fs';
 
 const HOOK = fileURLToPath(new URL('./cc-hook.js', import.meta.url));
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 const MOVE_FOR_TOOL = { Read: 'READ', Glob: 'READ', Grep: 'READ', Write: 'EDIT', Edit: 'EDIT', MultiEdit: 'EDIT', WebSearch: 'SEARCH', WebFetch: 'FETCH' };
 
 export class ClaudeCodeError extends Error {}
+
+// Finds how to start Claude Code. On Windows, Node can only start .exe files directly, a window
+// opened before an install does not see the new PATH, and npm installs a claude.cmd wrapper.
+// So look for claude.exe on PATH and in the native installer's folder, then fall back to running
+// the npm package's cli.js with Node. Checked on every run, so a fresh install is picked up
+// without restarting Agentdex.
+export function resolveClaude({ bin = 'claude', platform = process.platform, env = process.env, exists = existsSync, nodePath = process.execPath } = {}) {
+  if (bin !== 'claude' || platform !== 'win32') return { command: bin, prefix: [] };
+  const win = path.win32;
+  const dirs = String(env.PATH || env.Path || '').split(';').map((d) => d.trim().replace(/^"|"$/g, '')).filter(Boolean);
+  const home = env.USERPROFILE || os.homedir();
+  for (const d of [...dirs, win.join(home, '.local', 'bin')]) {
+    const exe = win.join(d, 'claude.exe');
+    if (exists(exe)) return { command: exe, prefix: [] };
+  }
+  const npmDirs = [...dirs, ...(env.APPDATA ? [win.join(env.APPDATA, 'npm')] : [])];
+  for (const d of npmDirs) {
+    const cli = win.join(d, 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js');
+    if (exists(win.join(d, 'claude.cmd')) && exists(cli)) return { command: nodePath, prefix: [cli] };
+  }
+  return { command: bin, prefix: [] };
+}
 export class ClaudeCodeStopped extends Error {}
 
 // Turns Claude Code's own error text into something a person can act on.
@@ -24,7 +48,7 @@ export function friendlyError(text) {
   const t = String(text || '');
   if (/not logged in|log ?in|\/login|authenticat|oauth|invalid api key/i.test(t)) return 'Claude Code is not signed in. Open a terminal, run claude, and sign in with your Claude account. Then try again.';
   if (/usage limit|limit reached|rate.?limit|too many requests|quota/i.test(t)) return 'Your Claude plan has hit its usage limit for now. It resets after a while; claude.ai shows when.';
-  if (/ENOENT|not found|not recognized/i.test(t)) return 'Claude Code is not installed on this computer, or Agentdex cannot find it. Install it, then press TEST in SETUP.';
+  if (/ENOENT|not found|not recognized/i.test(t)) return 'Agentdex cannot find Claude Code. Open a new PowerShell or Terminal window and run claude --version. If that fails, install Claude Code; if it works, close Agentdex and start it again from that new window.';
   return `Claude Code stopped: ${t.slice(0, 180)}`;
 }
 
@@ -38,7 +62,8 @@ export function createClaudeCode({ bin = 'claude', workspace, url, token = null,
     return new Promise((resolve, reject) => {
       let child;
       try {
-        child = spawnImpl(bin, args, { cwd: workspace.root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+        const { command, prefix } = resolveClaude({ bin });
+        child = spawnImpl(command, [...prefix, ...args], { cwd: workspace.root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
       } catch (err) { reject(new ClaudeCodeError(friendlyError(err.code || err.message))); return; }
       let result = null;
       let stopped = false;

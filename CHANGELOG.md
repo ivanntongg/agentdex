@@ -2,6 +2,12 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.5.1 · Windows fixes
+
+- Agentdex now finds Claude Code on Windows even when it was installed after Agentdex started (native installer folder), or installed through npm.
+- Clearer message when Claude Code cannot be found, with the exact check to run.
+- Installs and updates use `npm ci`, so `git pull` no longer stops on a changed `package-lock.json`.
+
 ## 0.5.0 · Use your Claude plan
 
 - **My Claude plan** option in SETUP: agents run through the official Claude Code app on your computer, signed in with your own Pro or Max plan. No API key needed. Agentdex never sees or stores your login.
