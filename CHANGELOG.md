@@ -2,6 +2,10 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.5.2 · Claude Code installed with npm on Windows
+
+- Finds Claude Code 2.1 and later installed with `npm install -g`: the real program now lives at `node_modules\@anthropic-ai\claude-code\bin\claude.exe` inside npm's folder. Falls back to the package's `cli-wrapper.cjs` (or `cli.js` on older versions) when needed.
+
 ## 0.5.1 · Windows fixes
 
 - Agentdex now finds Claude Code on Windows even when it was installed after Agentdex started (native installer folder), or installed through npm.
