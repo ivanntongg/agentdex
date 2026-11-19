@@ -59,7 +59,21 @@ export function friendlyError(text) {
   return `Claude Code stopped: ${t.slice(0, 180)}`;
 }
 
-export function createClaudeCode({ bin = 'claude', workspace, url, token = null, maxTurns = 30, spawnImpl = spawn }) {
+// Claude Code reports plan usage in rate_limit_event messages. This turns one into
+// { status, windows: [{ key, label, used (percent), resetsAt (ISO) }] }, or null.
+export function planUsageFrom(info) {
+  if (!info || typeof info !== 'object') return null;
+  const LABELS = { five_hour: '5-hour window', seven_day: 'This week', seven_day_opus: 'This week (Opus)', seven_day_sonnet: 'This week (Sonnet)' };
+  const iso = (s) => (Number.isFinite(s) ? new Date(s * 1000).toISOString() : null);
+  let entries = Object.entries(info.unifiedWindows || {});
+  if (!entries.length && info.rateLimitType) entries = [[info.rateLimitType, { utilization: info.utilization, resetsAt: info.resetsAt, status: info.status }]];
+  const windows = entries
+    .filter(([, w]) => w && Number.isFinite(w.utilization))
+    .map(([key, w]) => ({ key, label: LABELS[key] || key.replace(/_/g, ' '), used: Math.max(0, Math.min(100, Math.round(w.utilization * 100))), resetsAt: iso(w.resetsAt), status: w.status || null }));
+  return { status: info.status || null, windows, at: new Date().toISOString() };
+}
+
+export function createClaudeCode({ bin = 'claude', workspace, url, token = null, maxTurns = 30, spawnImpl = spawn, onPlanUsage = () => {} }) {
   const hookSettings = JSON.stringify({
     hooks: { PreToolUse: [{ matcher: 'Write|Edit|MultiEdit|NotebookEdit', hooks: [{ type: 'command', command: `"${process.execPath}" "${HOOK}"`, timeout: 3600 }] }] },
   });
@@ -81,6 +95,7 @@ export function createClaudeCode({ bin = 'claude', workspace, url, token = null,
         let ev;
         try { ev = JSON.parse(line); } catch { return; }
         if (ev.type === 'result') result = ev;
+        if (ev.type === 'rate_limit_event') { const u = planUsageFrom(ev.rate_limit_info); if (u) { try { onPlanUsage(u); } catch { /* display only */ } } }
         try { onEvent(ev, stop); } catch { /* a reporting hiccup must not end the task */ }
       });
       child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-2000); });

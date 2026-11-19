@@ -18,8 +18,9 @@ The simulator only uses the public event API, so anything it does, your runtime 
 | POST | `/api/ingest` | an event, or an array of up to 100 | Apply events from your runtime |
 | POST | `/api/approvals/:id` | `{"decision":"yes"\|"no"}` | Answer an approval |
 | POST | `/api/agents/:id/tasks` | `{"title":"...","review":true}` | Give an agent a task |
+| POST | `/api/command` | `{"text":"compare 3 note apps"}` | One sentence from the command bar: routes a task to the best agent, or runs status / yes / no / reset / rename. Returns `{ reply }` |
 | POST | `/api/agents` | `{"species":"fennook","nick":"SCOUT"}` | Spawn into the party |
-| POST | `/api/agents/:id/actions` | `{"action":"pet"\|"poke"\|"reset"\|"box"\|"unbox"}` | Player actions |
+| POST | `/api/agents/:id/actions` | `{"action":"pet"\|"poke"\|"reset"\|"rename"\|"box"\|"unbox"}` (rename also takes `nick`) | Player actions |
 
 If `AGENTDEX_TOKEN` is set, every POST needs `Authorization: Bearer <token>`. To give the page the token, open it once with `?token=<token>`; it is kept in that browser.
 
@@ -52,6 +53,7 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 | `agent.fainted` | `reason?` | Status FNT |
 | `agent.reset` | | Full HP and PP, back at the CENTER |
 | `agent.boxed` / `agent.unboxed` | | Move between party and box |
+| `agent.renamed` | `nick` | New name: one word, 2 to 12 letters, digits, `-` or `_`; unique |
 | `agent.interacted` | `action: pet\|poke`, `message?` | Pet raises the bond. Poke is up to your runtime |
 
 ## Hearing the player's answers

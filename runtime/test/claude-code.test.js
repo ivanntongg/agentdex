@@ -13,7 +13,7 @@ import { createApp } from '../../server/app.js';
 import { createAgentdexClient } from '../agentdex.js';
 import { createWorkspace } from '../workspace.js';
 import { createRuntime } from '../runtime.js';
-import { createClaudeCode, ClaudeCodeError, resolveClaude } from '../claude-code.js';
+import { createClaudeCode, ClaudeCodeError, resolveClaude, planUsageFrom } from '../claude-code.js';
 
 const FAKE = fileURLToPath(new URL('./fake-claude.mjs', import.meta.url));
 const HOOK = fileURLToPath(new URL('../cc-hook.js', import.meta.url));
@@ -29,7 +29,8 @@ async function setup(scenario = 'normal') {
   const fakeLog = path.join(dir, 'fake.log');
   const env = { FAKE_SCENARIO: scenario, FAKE_LOG: fakeLog, AGENTDEX_HOOK_POLL_MS: '50' };
   const spawnImpl = (bin, args, opts) => spawn(process.execPath, [FAKE, ...args], { ...opts, env: { ...opts.env, ...env } });
-  const claudeCode = createClaudeCode({ workspace, url, spawnImpl });
+  const plans = [];
+  const claudeCode = createClaudeCode({ workspace, url, spawnImpl, onPlanUsage: (u) => plans.push(u) });
   const runtime = createRuntime({ dex, workspace, log: () => {}, settings: () => ({ engine: 'claude-code', claudeCode, model: 'claude-opus-5-5', effort: 'low' }) });
   const ctl = new AbortController();
   dex.subscribe({ onSnapshot: runtime.onSnapshot, onChange: runtime.onChange, signal: ctl.signal });
@@ -45,7 +46,7 @@ async function setup(scenario = 'normal') {
   await until(() => runtime.agents.size === 2);
   const fakeEntries = () => (existsSync(fakeLog) ? readFileSync(fakeLog, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : []);
   const close = async () => { ctl.abort(); await new Promise((r) => app.close(r)); };
-  return { store, dex, url, workspace, claudeCode, until, fakeEntries, close };
+  return { store, dex, url, workspace, claudeCode, until, fakeEntries, plans, close };
 }
 const post = (url, p, body) => fetch(url + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json());
 
@@ -75,6 +76,9 @@ test('a task through Claude Code: drafts free, other writes wait for YES, escape
     for (const f of ['--restricted', '--strict-mcp-config', '--no-session-persistence', '--permission-prompts']) assert.ok(taskArgs.includes(f), f);
     assert.equal(taskArgs[taskArgs.indexOf('--tools') + 1], 'Read,Write,Edit,Glob,Grep,WebSearch,WebFetch', 'research agents get web tools, never Bash');
     assert.equal(taskArgs[taskArgs.indexOf('--effort') + 1], 'low');
+    const plan = t.plans.at(-1);
+    assert.deepEqual(plan.windows.map((w) => [w.label, w.used]), [['5-hour window', 29], ['This week', 16]]);
+    assert.equal(plan.windows[0].resetsAt, new Date(1795090200 * 1000).toISOString());
   } finally { await t.close(); }
 });
 
@@ -185,4 +189,14 @@ test('finding Claude Code on Windows: PATH, the native install folder, then npm'
   // Mac and Linux, and an explicit AGENTDEX_CLAUDE_BIN, are used as given.
   assert.deepEqual(resolveClaude({ platform: 'darwin' }), { command: 'claude', prefix: [] });
   assert.deepEqual(resolveClaude({ bin: 'D:\\apps\\claude.exe', platform: 'win32' }), { command: 'D:\\apps\\claude.exe', prefix: [] });
+});
+
+test('plan usage is read from what Claude Code reports, and odd shapes are ignored', () => {
+  const u = planUsageFrom({ status: 'allowed_warning', unifiedWindows: { five_hour: { utilization: 0.912, resetsAt: 1795090200 }, seven_day: { utilization: 1.4 } } });
+  assert.equal(u.status, 'allowed_warning');
+  assert.deepEqual(u.windows.map((w) => w.used), [91, 100]);
+  assert.equal(u.windows[1].resetsAt, null);
+  assert.deepEqual(planUsageFrom({ rateLimitType: 'seven_day', utilization: 0.5, status: 'allowed' }).windows.map((w) => w.label), ['This week']);
+  assert.equal(planUsageFrom(null), null);
+  assert.deepEqual(planUsageFrom({ unifiedWindows: { five_hour: {} } }).windows, []);
 });

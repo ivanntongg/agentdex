@@ -5,7 +5,7 @@ import { SPECIES, BUILDINGS, PARTY_MAX, hpMaxFor, xpToNext } from './species.js'
 
 export const EVENT_TYPES = [
   'agent.spawned', 'agent.moved', 'agent.status', 'agent.fainted', 'agent.reset',
-  'agent.boxed', 'agent.unboxed', 'agent.interacted', 'agent.leveled',
+  'agent.boxed', 'agent.unboxed', 'agent.interacted', 'agent.leveled', 'agent.renamed',
   'task.assigned', 'task.started', 'task.progress', 'task.handoff', 'task.finished',
   'review.started', 'review.finished',
   'approval.requested', 'approval.resolved',
@@ -298,6 +298,17 @@ export function createStore() {
         }
         event.message = data.message || null;
         event.tone = data.tone || 'info';
+        break;
+      }
+
+      case 'agent.renamed': {
+        const nick = String(data.nick || '').trim().toUpperCase();
+        if (!/^[A-Z0-9][A-Z0-9_-]{1,11}$/.test(nick)) throw new StoreError(400, 'A name is one word of 2 to 12 letters or numbers (dashes and underscores are fine).');
+        if ([...agents.values()].some((x) => x.id !== a.id && x.nick.toUpperCase() === nick)) throw new StoreError(409, `Another agent is already called ${nick}.`);
+        const old = a.nick;
+        a.nick = nick;
+        event.data = { from: old, nick };
+        event.message = old === nick ? null : `${old} is now called ${nick}.`;
         break;
       }
 
