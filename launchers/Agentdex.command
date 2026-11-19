@@ -24,7 +24,7 @@ fi
 
 if [[ ! -d node_modules ]]; then
   echo "First start: installing Agentdex. This takes a minute."
-  npm install || { echo "Install failed. Check your internet connection and try again."; read -r "?Press Enter to close."; exit 1; }
+  npm ci || { echo "Install failed. Check your internet connection and try again."; read -r "?Press Enter to close."; exit 1; }
 fi
 
 echo "Starting Agentdex from $AGENTDEX_DIR"

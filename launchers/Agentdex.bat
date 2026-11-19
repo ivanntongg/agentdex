@@ -36,7 +36,7 @@ if errorlevel 1 (
 
 if not exist "node_modules" (
   echo First start: installing Agentdex. This takes a minute.
-  call npm install
+  call npm ci
   if errorlevel 1 (
     echo Install failed. Check your internet connection and try again.
     pause
