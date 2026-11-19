@@ -66,6 +66,15 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .screen canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer;filter:saturate(.8) contrast(.88) brightness(.96)}
 .bl{position:absolute;transform:translate(-50%,-100%);font-family:var(--font-pixel);font-size:clamp(8px,1.55cqw,13px);letter-spacing:.06em;background:rgba(28,23,51,.86);color:#fff;padding:.25em .55em .3em;pointer-events:none;white-space:nowrap;line-height:1}
 .bl small{color:#cfc9f5;font-size:.82em;margin-left:.4em;text-transform:lowercase}
+.cmdbar{margin-top:12px;display:grid;gap:6px}
+.cmdbar form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.cmdbar label{font-weight:700;font-size:14px;color:var(--spark)}
+.cmdbar input{font:inherit;font-size:16px;color:var(--ink);background:#1c1940;border:0;box-shadow:inset 0 0 0 2px #4b4596;padding:10px 12px;min-width:0}
+.cmdbar input:focus-visible{outline:2px solid var(--spark)}
+.cmd-reply{font-size:14px;color:#d6d2f0;white-space:pre-line;background:#1c1940;padding:8px 12px;box-shadow:inset 0 0 0 2px #2c2860}
+.cmd-reply.bad{color:#ffb4bc}
+.rename{display:flex;gap:8px;flex-wrap:wrap}
+.rename input{font:inherit;font-size:15px;color:var(--ink);background:#1c1940;border:0;box-shadow:inset 0 0 0 2px #4b4596;padding:8px 10px;width:12em;max-width:100%;text-transform:uppercase}
 .screen-cap{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--muted);letter-spacing:.01em}
 
 /* dialog box */
@@ -178,6 +187,16 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 
 /* ---------- SETUP screen ---------- */
 .chip.setup-btn{cursor:pointer;color:var(--ink)}
+.chip.plan-chip{cursor:pointer;color:var(--good);box-shadow:inset 0 0 0 2px #4f8f68}
+.chip.plan-chip.warn{color:var(--spark);box-shadow:inset 0 0 0 2px #8a7a3a}
+.chip.plan-chip.bad{color:var(--bad);box-shadow:inset 0 0 0 2px #8a3a44}
+.usage{display:grid;gap:10px;padding:12px;background:#1c1940;box-shadow:inset 0 0 0 2px #4b4596}
+.ubar{display:grid;gap:4px}
+.ubar-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px}
+.ubar-h span:last-child{color:var(--muted)}
+.ubar .bar2{background:#2c2858;height:10px}
+.usage small{color:var(--muted);font-size:13px}
+.usage .acts a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .chip.setup-btn .dot{color:var(--muted)}
 .chip.setup-btn.need .dot{color:var(--bad)}
 .chip.setup-btn.good .dot{color:var(--good)}
@@ -239,6 +258,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
     <div class="hud" aria-live="polite">
       <span class="chip" style="color:var(--good)"><span class="dot"></span><b id="cWork">0</b> working</span>
       <span class="chip"><span class="dot" style="color:#8f8bc0"></span><b id="cIdle">0</b> idle</span>
+      <button class="chip plan-chip" id="planChip" type="button" hidden></button>
       <button class="chip setup-btn" id="setupBtn" type="button"><span class="dot"></span>SETUP</button>
       <span class="chip mode" id="mode" title="Demo runs in your browser. Live follows the Agentdex server.">DEMO</span>
       <button class="chip needs" id="cNeeds"><b id="cNeedN">0</b> need you</button>
@@ -257,6 +277,14 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
         </div>
       </div>
       <div class="screen-cap"><span>Walk: arrow keys, WASD or tap the map. Z near an agent to pet or poke. Z = YES, X = NO.</span><button class="pausebtn" id="pause">PAUSE TIME</button></div>
+      <div class="cmdbar">
+        <label for="cmdText">Tell your team</label>
+        <form id="cmdForm" autocomplete="off">
+          <input id="cmdText" maxlength="240" placeholder="e.g. compare 3 note-taking apps, or quill write 5 video titles. Press / to jump here">
+          <button class="btn primary" type="submit">SEND</button>
+        </form>
+        <div class="cmd-reply" id="cmdReply" hidden></div>
+      </div>
       <div class="log">
         <div class="log-h"><span>Field log</span></div>
         <div id="log"></div>
@@ -528,8 +556,8 @@ function tick(){
   }
   refresh();
 }
-function startTask(a){
-  const s=SPEC[a.sp];const t={...pick(POOL[s.types[0]])};
+function startTask(a,given){
+  const s=SPEC[a.sp];const t=given?{...given}:{...pick(POOL[s.types[0]])};
   a.task=t;a.status='OK';
   log(`${a.nick} took a task: "${t.t}".`);
   goTo(a,s.home,'work');
@@ -839,8 +867,10 @@ function renderPane(){
   if(tab==='party'){
     if(view==='sum'&&byId(selId)){
       const ta=$('#giveTitle'),keep=ta?{v:ta.value,f:document.activeElement===ta,s:ta.selectionStart,e:ta.selectionEnd,r:$('#giveReview').checked}:null;
+      const ri=$('#renameInput'),rkeep=ri&&!$('#renameForm').hidden?{v:ri.value,f:document.activeElement===ri}:null;
       p.innerHTML=sumHTML(byId(selId));bindSum();
       const nt=$('#giveTitle');if(keep&&nt){nt.value=keep.v;$('#giveReview').checked=keep.r;if(keep.f){nt.focus();nt.setSelectionRange(keep.s,keep.e)}}
+      if(rkeep){$('#renameForm').hidden=false;const nr=$('#renameInput');nr.value=rkeep.v;if(rkeep.f)nr.focus()}
       return}
     view='list';
     let h=`<div class="pane-h"><span>Party ${party.length}/6</span><span>HP is context left</span></div>`;
@@ -907,14 +937,23 @@ function sumHTML(a){
     <div class="give-row"><label class="chk"><input type="checkbox" id="giveReview" checked> Ask a reviewer to check it</label><button class="btn primary" type="submit">SEND</button></div>
   </form>`:''}
   <div class="acts">
+    <button class="btn" id="renameBtn" type="button">RENAME</button>
     <button class="btn" id="reset" ${(!LIVE&&a.status==='FNT')||a.path.length?'disabled':''}>RESET SESSION</button>
     <button class="btn" id="tobox" ${a.status==='PAR'||a.path.length?'disabled':''}>SEND TO BOX</button>
   </div>
+  <form class="rename" id="renameForm" hidden><label class="sr" for="renameInput">New name</label><input id="renameInput" maxlength="12" value="${esc(a.nick)}" spellcheck="false"><button class="btn primary" type="submit">SAVE NAME</button><button class="btn" type="button" id="renameCancel">CANCEL</button></form>
   <p class="cap" style="margin:0;color:var(--muted)">PP is the rate limit left on each tool. Reset walks the agent to the CENTER and clears its context.</p></div>`;
 }
 function bindSum(){
   $('#back').onclick=()=>{view='list';renderPane()};
   const a=byId(selId);
+  const rf=$('#renameForm');
+  $('#renameBtn').onclick=()=>{rf.hidden=false;const i=$('#renameInput');i.focus();i.select()};
+  $('#renameCancel').onclick=()=>{rf.hidden=true};
+  rf.onsubmit=async e=>{e.preventDefault();const nick=$('#renameInput').value.trim().toUpperCase();
+    if(LIVE){const r=await api(`api/agents/${a.id}/actions`,{action:'rename',nick});if(r){rf.hidden=true;renderPane()}return}
+    const err=nameProblem(nick,a);if(err){log(err,'bad');return}
+    const old=a.nick;a.nick=nick;log(`${old} is now called ${nick}.`,'ok');rf.hidden=true;renderPane()};
   if(LIVE){
     const gf=$('#give');
     if(gf)gf.onsubmit=async e=>{e.preventDefault();const title=$('#giveTitle').value.trim();if(!title)return;
@@ -1027,6 +1066,7 @@ function onChange(p){
   if(ev.message){addLog(ev);renderLog()}
   syncApprovals(p.approvals);
   refresh();
+  if(setupAvailable&&(ev.type==='task.finished'||ev.type==='agent.fainted'))checkSetup(false);
 }
 function setMode(m){const el=$('#mode');el.textContent=m==='live'?'LIVE':m==='lost'?'RECONNECTING':'DEMO';el.className='chip mode '+(m==='demo'?'':m)}
 function nowClock(){const d=new Date();clock=d.getHours()*60+d.getMinutes()}
@@ -1041,6 +1081,7 @@ function startLive(s){
   es.addEventListener('change',e=>onChange(JSON.parse(e.data)));
   es.onerror=()=>setMode('lost');
   checkSetup(true);
+  setInterval(()=>{if(setupAvailable&&$('#setup').hidden)checkSetup(false)},30000);
 }
 
 /* ---------- SETUP screen ---------- */
@@ -1063,8 +1104,26 @@ async function checkSetup(autoOpen){
   if(!LIVE){setupAvailable=false;return}
   const r=await setupCall('GET','api/setup');
   setupAvailable=r.ok;
-  if(r.ok){setupState=r.data;setSetupBadge();
+  if(r.ok){setupState=r.data;setSetupBadge();renderPlanChip();
     if(autoOpen&&setupState.claude.brain!=='claude-code'&&!setupState.claude.hasKey&&!setupAutoOpened){setupAutoOpened=true;openSetup()}}
+}
+const SHORT_WIN={five_hour:'5h',seven_day:'week'};
+function planLevel(plan){const m=Math.max(0,...plan.windows.map(w=>w.used));return plan.status==='rejected'||m>=85?'bad':m>=60?'warn':''}
+function fmtReset(iso){const d=new Date(iso);const same=d.toDateString()===new Date().toDateString();return same?'today '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):d.toLocaleString([],{weekday:'short',hour:'2-digit',minute:'2-digit'})}
+function renderPlanChip(){
+  const chip=$('#planChip'),plan=setupState&&setupState.plan;
+  if(!plan||!plan.windows||!plan.windows.length){chip.hidden=true;return}
+  chip.hidden=false;chip.className='chip plan-chip '+planLevel(plan);
+  chip.textContent='Plan · '+plan.windows.filter(w=>SHORT_WIN[w.key]).map(w=>`${SHORT_WIN[w.key]} ${w.used}%`).join(' · ');
+  chip.title=plan.windows.map(w=>`${w.label}: ${w.used}% used${w.resetsAt?', resets '+fmtReset(w.resetsAt):''}`).join('\n');
+}
+function planPanel(plan){
+  const bars=plan&&plan.windows&&plan.windows.length?plan.windows.map(w=>{const lv=w.used>=85?'hp-r':w.used>=60?'hp-y':'hp-g';
+    return `<div class="ubar"><div class="ubar-h"><span>${esc(w.label)}</span><span>${w.used}% used${w.resetsAt?' · resets '+esc(fmtReset(w.resetsAt)):''}</span></div><div class="bar2"><i class="${lv}" style="width:${w.used}%"></i></div></div>`}).join('')+`<small>Updated ${ago(plan.at)}, as reported by Claude Code.</small>`
+    :'<small>Shows after your next task, or press Check now.</small>';
+  return `<div class="usage"><span class="flabel">Your Claude plan usage</span>${bars}
+    <div class="acts"><button class="btn" type="button" id="planCheck">CHECK NOW</button><a class="btn" href="https://claude.ai/settings" target="_blank" rel="noopener">CLAUDE.AI SETTINGS</a></div>
+    <small>Check now sends Claude one tiny message. Full details are under Settings, Usage on claude.ai.</small></div>`;
 }
 function copyBtn(text){return `<div class="copyrow"><code>${esc(text)}</code><button type="button" data-copy="${esc(text)}">COPY</button></div>`}
 function pill(kind,label){return `<span class="pill ${kind}">${label}</span>`}
@@ -1104,6 +1163,7 @@ function renderSetup(note){
         <li><div><p><b>Sign in once.</b> Open a new terminal window, run the command below, and log in with your Claude account. Then close that window.</p>${copyBtn('claude')}</div></li>
         <li><div><p><b>Press SAVE &amp; TEST.</b> Agentdex starts Claude Code for each task. It never sees your login.</p></div></li>
       </ol>
+      ${planPanel(s.plan)}
       <p class="setup-note">Tasks count toward your plan's usage limits, and those limits are meant for ordinary personal use. Agentdex runs Claude Code in its restricted mode: no shell commands, files only inside the workspace, and your YES before any write outside drafts.</p>
     </div>
     <div class="field"><label for="stModel">Model</label>
@@ -1161,6 +1221,8 @@ function bindSetup(){
     try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='COPIED'}catch{const r=document.createRange();r.selectNodeContents(b.previousElementSibling);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);b.textContent='SELECTED'}
     setTimeout(()=>{b.textContent='COPY'},1500);
   });
+  const pc=$('#planCheck');
+  if(pc)pc.onclick=async()=>{pc.disabled=true;pc.textContent='CHECKING...';await setupCall('POST','api/setup/test-claude');await checkSetup(false);renderSetup()};
   const fc=$('#fClaude');
   if(fc)fc.querySelectorAll('input[name=stBrain]').forEach(r=>r.onchange=()=>{const isCc=r.value==='claude-code'&&r.checked;if(!r.checked)return;$('#brainApi').hidden=isCc;$('#brainCc').hidden=!isCc});
   if(fc)fc.onsubmit=async e=>{
@@ -1203,9 +1265,53 @@ async function openSetup(){
 }
 function closeSetup(){$('#setup').hidden=true;setupReturnFocus&&setupReturnFocus.focus&&setupReturnFocus.focus()}
 $('#setupBtn').onclick=openSetup;
+$('#planChip').onclick=openSetup;
 $('#setupClose').onclick=closeSetup;
 $('#setup').addEventListener('click',e=>{if(e.target.id==='setup')closeSetup()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#setup').hidden){e.preventDefault();e.stopImmediatePropagation();closeSetup()}},true);
+
+/* ---------- command bar ---------- */
+function nameProblem(nick,a){
+  if(!/^[A-Z0-9][A-Z0-9_-]{1,11}$/.test(nick))return'A name is one word of 2 to 12 letters or numbers (dashes and underscores are fine).';
+  if([...party,...box].some(x=>x!==a&&x.nick.toUpperCase()===nick))return`Another agent is already called ${nick}.`;
+  return null;
+}
+// Offline demo only. With the server running, /api/command does this (server/commands.js).
+const DEMO_SKILLS={RESEARCH:/\b(research|compare|find|search|look|investigate|analy[sz]e|which|best|price|trends?|reviews?)\b/,WRITE:/\b(write|draft|emails?|reply|rewrite|edit|summar[iy][sz]e?|titles?|captions?|scripts?|blog|posts?|description|outline)\b/,CODE:/\b(code|bugs?|fix|function|website|html|css|javascript|python|api|refactor|tests?|app)\b/,DESIGN:/\b(design|layout|ui|ux|mockup|wireframe|colou?rs?|palette|logo|thumbnails?)\b/,OPS:/\b(deploy|servers?|monitor|backups?|uptime|logs|scale)\b/};
+function demoCommand(text){
+  const lower=text.toLowerCase(),[first,...rest]=text.split(/\s+/);
+  const byNick=w=>party.find(a=>a.nick.toUpperCase()===String(w||'').replace(/^@/,'').replace(/[:,.!]$/,'').toUpperCase());
+  if(['help','?'].includes(lower))return'Type a job (compare 3 note apps), start with a name (quill write 5 titles), or: status, yes, no, reset scout, rename scout to max.';
+  if(lower==='status')return party.map(a=>`${a.nick}: ${a.status==='PAR'?'waiting for your OK':a.task?'working on "'+a.task.t+'"':'free'}`).join('\n');
+  if(lower==='yes'||lower==='no'){if(current&&current.kind!=='act'){answer(lower==='yes'?0:1);return'Answered.'}return'Nothing is waiting for an answer.'}
+  if(first.toLowerCase()==='reset'&&rest[0]){const a=byNick(rest[0]);if(!a)return`No agent called ${rest[0]}.`;a.task=null;a.status='OK';goTo(a,'CENTER','heal');return`Resetting ${a.nick}.`}
+  if(first.toLowerCase()==='rename'&&rest.length>=2){const a=byNick(rest[0]);if(!a)return`No agent called ${rest[0]}.`;const nick=String(rest[1].toLowerCase()==='to'?rest[2]||'':rest[1]).toUpperCase();const err=nameProblem(nick,a);if(err)return err;const old=a.nick;a.nick=nick;log(`${old} is now called ${nick}.`,'ok');refresh();return`${old} is now called ${nick}.`}
+  let a=byNick(first),title=a?rest.join(' '):text;
+  if(a&&SPEC[a.sp].reviewer)return`${a.nick} only reviews other agents' work.`;
+  if(!a){const skill=Object.keys(DEMO_SKILLS).find(k=>DEMO_SKILLS[k].test(lower));
+    const workers=party.filter(x=>!SPEC[x.sp].reviewer&&x.status!=='FNT');
+    a=workers.find(x=>skill&&SPEC[x.sp].types[0]===skill&&x.phase==='idle')||workers.find(x=>skill&&SPEC[x.sp].types.includes(skill))||workers.find(x=>x.phase==='idle')||workers[0];}
+  if(!a)return'No agent can take this right now.';
+  if(!title.trim())return`What should ${a.nick} do?`;
+  if(a.phase==='idle'&&!a.path.length){startTask(a,{t:title.slice(0,200)});return`Sent to ${a.nick}.`}
+  return`${a.nick} is busy. In this demo, try another agent or wait.`;
+}
+$('#cmdForm').onsubmit=async e=>{
+  e.preventDefault();const box=$('#cmdText'),out=$('#cmdReply'),text=box.value.trim();if(!text)return;
+  const btn=$('#cmdForm button');btn.disabled=true;
+  let reply,bad=false;
+  if(LIVE){
+    try{const r=await fetch('api/command',{method:'POST',headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:JSON.stringify({text})});
+      const j=await r.json().catch(()=>({}));reply=r.ok?j.reply:(j.error||'That did not work.');bad=!r.ok}
+    catch{reply='Could not reach Agentdex. Is its window still open?';bad=true}
+  }else reply=demoCommand(text);
+  btn.disabled=false;out.hidden=false;out.textContent=reply;out.classList.toggle('bad',bad);
+  if(!bad)box.value='';box.focus();
+};
+document.addEventListener('keydown',e=>{
+  if(e.key!=='/'||e.target.closest&&e.target.closest('input,textarea,select')||!$('#setup').hidden||current)return;
+  e.preventDefault();$('#cmdText').focus();
+},true);
 
 async function boot(){
   requestAnimationFrame(draw);

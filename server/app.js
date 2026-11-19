@@ -6,12 +6,14 @@
 //   POST /api/agents                     { species, nick? }            spawn into the party
 //   POST /api/agents/:id/actions         { action: pet | poke | reset | box | unbox }
 //   POST /api/agents/:id/tasks           { title, details?, review? }   give an agent work
+//   POST /api/command                    { text }   one sentence from the command bar or WhatsApp
 //   POST /api/ingest                     one event or an array, from a real agent runtime
 //   GET  /                               the town (index.html)
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
 import { StoreError } from './store.js';
+import { createCommands } from './commands.js';
 
 const MAX_BODY = 64 * 1024;
 
@@ -53,6 +55,25 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     catch { throw new StoreError(400, 'Body must be valid JSON'); }
   }
 
+  function resolve(approvalId, decision) {
+    const ap = store.approvals.get(Number(approvalId));
+    if (!ap) throw new StoreError(404, `No open approval ${approvalId}`);
+    const event = store.apply({ type: 'approval.resolved', agentId: ap.agentId, data: { approvalId: ap.id, decision } });
+    adapter?.onApproval?.(ap, decision);
+    return event;
+  }
+  function assign(a, title, review, details) {
+    const event = store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details: details ? String(details).slice(0, 4000) : undefined, review: Boolean(review) } });
+    adapter?.onAssigned?.(a, event.data);
+    return event;
+  }
+  function reset(a) {
+    if (a.boxed) throw new StoreError(409, `${a.nick} is in the box`);
+    if (adapter?.onReset) { adapter.onReset(a); return null; }
+    return store.apply({ type: 'agent.reset', agentId: a.id });
+  }
+  const commands = createCommands({ store, actions: { resolve, assign, reset, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
+
   const routes = [
     ['GET', /^\/api\/state$/, (req, res) => send(res, 200, { ...store.snapshot(), adapter: adapter ? adapter.name : null })],
 
@@ -65,11 +86,12 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
 
     ['POST', /^\/api\/approvals\/(\d+)$/, async (req, res, [, id]) => {
       const { decision } = await readJSON(req);
-      const ap = store.approvals.get(Number(id));
-      if (!ap) throw new StoreError(404, `No open approval ${id}`);
-      const event = store.apply({ type: 'approval.resolved', agentId: ap.agentId, data: { approvalId: ap.id, decision } });
-      adapter?.onApproval?.(ap, decision);
-      send(res, 200, { event });
+      send(res, 200, { event: resolve(Number(id), decision) });
+    }],
+
+    ['POST', /^\/api\/command$/, async (req, res) => {
+      const { text, review } = await readJSON(req);
+      send(res, 200, await commands.run(text, { review }));
     }],
 
     ['POST', /^\/api\/agents$/, async (req, res) => {
@@ -79,7 +101,8 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     }],
 
     ['POST', /^\/api\/agents\/([^/]+)\/actions$/, async (req, res, [, id]) => {
-      const { action } = await readJSON(req);
+      const body = await readJSON(req);
+      const { action } = body;
       const a = store.resolveAgent(decodeURIComponent(id));
       let event = null;
       switch (action) {
@@ -97,9 +120,10 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
           else event = store.apply({ type: 'agent.interacted', agentId: a.id, data: { action: 'poke', message: `${a.nick} looked up at you.` } });
           break;
         case 'reset':
-          if (a.boxed) throw new StoreError(409, `${a.nick} is in the box`);
-          if (adapter?.onReset) adapter.onReset(a);
-          else event = store.apply({ type: 'agent.reset', agentId: a.id });
+          event = reset(a);
+          break;
+        case 'rename':
+          event = store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick: body.nick } });
           break;
         case 'box':
           if (a.status === 'PAR') throw new StoreError(409, `${a.nick} is waiting on your approval. Answer it first.`);
@@ -110,7 +134,7 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
           event = store.apply({ type: 'agent.unboxed', agentId: a.id });
           break;
         default:
-          throw new StoreError(400, 'action must be one of pet, poke, reset, box, unbox');
+          throw new StoreError(400, 'action must be one of pet, poke, reset, rename, box, unbox');
       }
       send(res, 200, { event, agent: store.resolveAgent(a.id) });
     }],
@@ -118,9 +142,7 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     ['POST', /^\/api\/agents\/([^/]+)\/tasks$/, async (req, res, [, id]) => {
       const { title, details, review } = await readJSON(req);
       const a = store.resolveAgent(decodeURIComponent(id));
-      const event = store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details: details ? String(details).slice(0, 4000) : undefined, review: Boolean(review) } });
-      adapter?.onAssigned?.(a, event.data);
-      send(res, 200, { event });
+      send(res, 200, { event: assign(a, title, review, details) });
     }],
 
     ['POST', /^\/api\/ingest$/, async (req, res) => {

@@ -55,6 +55,8 @@ const step = (toolName, rel, extra = 0) => {
   if (hook(toolName, abs) === 'allow') { mkdirSync(path.dirname(abs), { recursive: true }); writeFileSync(abs, `written by fake claude: ${rel}\n`); }
 };
 
+out({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', rateLimitType: 'five_hour', unifiedWindows: { five_hour: { utilization: 0.29, resetsAt: 1795090200, status: 'allowed' }, seven_day: { utilization: 0.164, resetsAt: 1795266000, status: 'allowed' } } } });
+
 if (scenario === 'huge') {
   out({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: 'Reading everything.' }], usage: { input_tokens: 990000, output_tokens: 100 } } });
   setTimeout(() => out({ type: 'result', subtype: 'success', is_error: false, result: 'never reached' }), 3000);

@@ -98,10 +98,6 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
 
   // ---------- understanding your messages ----------
   const party = () => [...agents.values()].filter((a) => !a.boxed);
-  const findAgent = (word) => {
-    const w = word.replace(/^@/, '').replace(/[:,]$/, '').toUpperCase();
-    return w ? party().find((a) => a.nick.toUpperCase() === w) : null;
-  };
   const statusText = () => {
     const lines = party().map((a) => {
       const now = a.status === 'PAR' ? 'waiting for your OK'
@@ -115,9 +111,11 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
   const HELP = [
     'Agentdex remote control',
     '• status: what everyone is doing',
-    '• scout compare 3 note apps: give SCOUT a task (any agent name works)',
+    '• compare 3 note apps: the best-suited free agent takes it',
+    '• scout compare 3 note apps: start with a name to choose the agent',
     '• yes / no: answer the open request (or tap the buttons)',
     '• reset scout: clear an agent that fainted or got stuck',
+    '• rename scout to max: give an agent a new name',
   ].join('\n');
 
   async function resolve(from, approvalId, decision) {
@@ -158,24 +156,14 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
       for (const ap of approvals) await askApproval(from, ap);
       return;
     }
-    const [first, ...rest] = body.split(/\s+/);
-    if (first.toLowerCase() === 'reset' && rest.length) {
-      const a = findAgent(rest[0]);
-      if (!a) return text(from, `No agent called ${rest[0]} in your party. Send "status" to see names.`);
-      try { await dex.post(`/api/agents/${a.id}/actions`, { action: 'reset' }); return text(from, `Resetting ${a.nick}.`); }
-      catch (err) { return text(from, `Could not reset ${a.nick}: ${err.message}`); }
+    // Everything else (tasks with or without a name, reset, rename) goes through the same
+    // command handler as the town's command bar.
+    try {
+      const r = await dex.post('/api/command', { text: body });
+      return text(from, r.reply || 'Done.');
+    } catch (err) {
+      return text(from, `Could not do that: ${err.message}`);
     }
-    const a = findAgent(first);
-    if (a) {
-      const title = rest.join(' ').trim();
-      if (!title) return text(from, `What should ${a.nick} do? For example: ${a.nick.toLowerCase()} write 5 title ideas for my GTA 6 video`);
-      const review = party().some((r) => r.species === 'sentril' && r.status !== 'FNT');
-      try {
-        await dex.post(`/api/agents/${a.id}/tasks`, { title: clip(title, 200), review });
-        return text(from, `${a.nick} is on it${review ? ', and CHECKS will review it' : ''}. I'll message you when it needs you or finishes.`);
-      } catch (err) { return text(from, `${a.nick} could not take it: ${err.message}`); }
-    }
-    return text(from, `I didn't catch that. Start with an agent's name (${party().map((x) => x.nick).join(', ') || 'none yet'}).\n\n${HELP}`);
   }
 
   async function handlePayload(payload) {

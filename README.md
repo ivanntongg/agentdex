@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
-![Version 0.5.2](https://img.shields.io/badge/version-0.5.2-5462a6)
+![Version 0.6.0](https://img.shields.io/badge/version-0.6.0-5462a6)
 ![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
 
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
@@ -119,6 +119,25 @@ Close the window it opens to stop Agentdex. Because the shortcut points into the
 
 Every real task uses a little API credit. For cheaper, quicker runs, open SETUP and choose **Low**, or pick the **Haiku** model.
 
+## Tell your team
+
+Under the map is one box for everything. Press **/** anywhere in the town to jump to it.
+
+| You type | What happens |
+|---|---|
+| `compare 3 note-taking apps` | No name: the best-suited free agent takes it (research goes to SCOUT, writing to QUILL, code to PATCH) |
+| `quill write 5 video titles` | Start with a name to choose the agent |
+| `status` | What everyone is doing |
+| `yes` / `no` | Answers the open request |
+| `reset scout` | Clears an agent that fainted or got stuck |
+| `rename scout to max` | Gives an agent a new name (one word, 2 to 12 letters or numbers) |
+
+You can also rename an agent with **RENAME** on its summary. The same commands work from WhatsApp.
+
+## Your Claude plan usage
+
+With **My Claude plan**, the top bar shows how much of your plan is used, for example `Plan · 5h 35% · week 17%`. It turns yellow at 60% and red at 85%. Click it for both windows with their reset times, and **CHECK NOW** to refresh. The numbers come from Claude Code itself after each task.
+
 ## Playing
 
 | Input | Action |
@@ -172,10 +191,12 @@ Leave your computer running Agentdex at home and message your agents from your p
 
 | You send | What happens |
 |---|---|
-| `scout compare 3 note apps` | SCOUT gets that task (start with any agent's name) |
+| `compare 3 note apps` | The best-suited free agent gets it |
+| `scout compare 3 note apps` | SCOUT gets it (start with any agent's name) |
 | `status` | What everyone is doing, plus questions waiting for you |
 | Tap **YES** / **NO** | Answers an agent's question (typing `yes` or `no` works too) |
 | `reset scout` | Clears an agent that fainted or got stuck |
+| `rename scout to max` | Renames an agent |
 | `help` | The list of commands |
 
 You also get a message when a job finishes or an agent faints.
@@ -270,6 +291,7 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 | `server/store.js` | World state. Validates and applies every event |
 | `server/app.js` | HTTP API, live event stream, setup routes |
 | `server/config.js` | Settings saved from SETUP |
+| `server/commands.js` | The command bar and WhatsApp commands: routes a sentence to the right agent |
 | `server/simulator.js` | Pretend agents that use only the public event API |
 | `runtime/runtime.js` | Real agents: Claude tool-use loop, approvals, review, HP reporting |
 | `runtime/workspace.js` | Sandboxed file tools |

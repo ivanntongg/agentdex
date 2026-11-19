@@ -2,6 +2,12 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.6.0 · Command bar, renaming and plan usage
+
+- **Tell your team:** one box under the map. Type a job and the best-suited free agent takes it, or start with a name to choose. Also `status`, `yes`, `no`, `reset`, `rename`. Press **/** to jump to it. WhatsApp uses the same commands, so jobs without a name work from your phone too.
+- **Rename agents** with RENAME on their summary or `rename scout to max`.
+- **Plan usage meter:** with My Claude plan, the top bar shows how much of your 5-hour and weekly limits are used, with reset times in SETUP, straight from Claude Code.
+
 ## 0.5.2 · Claude Code installed with npm on Windows
 
 - Finds Claude Code 2.1 and later installed with `npm install -g`: the real program now lives at `node_modules\@anthropic-ai\claude-code\bin\claude.exe` inside npm's folder. Falls back to the package's `cli-wrapper.cjs` (or `cli.js` on older versions) when needed.

@@ -53,6 +53,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   };
   let lastClaudeCheck = null;
   let claudeCode = null;
+  let planUsage = null; // latest plan usage Claude Code reported
 
   let dex = null;
   let bridge = null;
@@ -82,6 +83,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
         settings: config.publicView(),
         workspace: workspace.root,
         claude: { brain: config.brain(), hasKey: Boolean(config.get('anthropicKey')), lastCheck: lastClaudeCheck },
+        plan: config.brain() === 'claude-code' ? planUsage : null,
         whatsapp: {
           complete: Boolean(wa), running: Boolean(bridge), error: bridgeError,
           port: wa?.port || Number(env.WHATSAPP_PORT || 8788), path: '/webhooks/whatsapp',
@@ -136,7 +138,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   }
 
   dex = createAgentdexClient({ url, token });
-  claudeCode = createClaudeCode({ bin: env.AGENTDEX_CLAUDE_BIN || 'claude', workspace, url, token });
+  claudeCode = createClaudeCode({ bin: env.AGENTDEX_CLAUDE_BIN || 'claude', workspace, url, token, onPlanUsage: (u) => { planUsage = u; } });
   const runtime = createRuntime({ dex, workspace, settings: () => ({ engine: config.brain(), claudeCode, anthropic: claude(), model: config.model(), effort: config.effort() }) });
 
   const state = await dex.state().catch((err) => { throw new Error(`Cannot reach Agentdex at ${url}: ${err.message}`); });
