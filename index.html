@@ -152,6 +152,12 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 
 /* box */
 .boxgrid{display:grid;gap:8px}
+.give{display:grid;gap:6px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);padding:10px}
+.give label[for]{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;color:var(--spark)}
+.give textarea{font:inherit;font-size:15px;color:var(--ink);background:#1c1940;border:0;box-shadow:inset 0 0 0 2px #4b4596;padding:8px;resize:vertical;width:100%}
+.give textarea:focus-visible{outline:2px solid var(--spark)}
+.give-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.chk{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .boxnote{font-size:14px;color:var(--muted);padding:2px}
 
 /* log */
@@ -589,6 +595,7 @@ const DIRK={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',a:
 document.addEventListener('keyup',e=>{const k=DIRK[e.key];if(k)keys.delete(k)});
 window.addEventListener('blur',()=>keys.clear());
 document.addEventListener('keydown',e=>{
+  if(e.target&&e.target.closest&&e.target.closest('input,textarea,select'))return;
   if(!current){
     const k=DIRK[e.key];
     if(k){e.preventDefault();keys.add(k);return}
@@ -748,7 +755,7 @@ function hpClass(a){const p=a.hp/a.hpMax;return p>.5?'hp-g':p>.2?'hp-y':'hp-r'}
 function taskLine(a){
   if(a.status==='FNT')return'<em>Fainted. Heading to the CENTER</em>';
   if(a.reviewing){const t=byId(a.reviewing);return`Reviewing ${esc(t?t.nick:'')}'s work <em>· GYM</em>`}
-  if(a.status==='PAR')return`Waiting on you: ${esc(a.task&&a.task.ap?a.task.ap.m:'approval')} <em>· ${esc(a.loc)}</em>`;
+  if(a.status==='PAR')return`Waiting on you: ${esc((queue.find(q=>q.id===a.id&&q.tool)||{}).tool||(a.task&&a.task.ap?a.task.ap.m:'approval'))} <em>· ${esc(a.loc)}</em>`;
   if(a.task)return`${esc(a.task.t)} <em>· ${a.path.length?'walking to '+a.dest:a.loc}</em>`;
   if(a.path.length)return`<em>Walking to ${a.dest}</em>`;
   return`<em>Idle at ${a.loc}</em>`;
@@ -768,7 +775,11 @@ function renderPane(){
   ['party','dex','box'].forEach(t=>$('#t-'+t).setAttribute('aria-selected',String(t===tab)));
   const p=$('#pane');
   if(tab==='party'){
-    if(view==='sum'&&byId(selId)){p.innerHTML=sumHTML(byId(selId));bindSum();return}
+    if(view==='sum'&&byId(selId)){
+      const ta=$('#giveTitle'),keep=ta?{v:ta.value,f:document.activeElement===ta,s:ta.selectionStart,e:ta.selectionEnd,r:$('#giveReview').checked}:null;
+      p.innerHTML=sumHTML(byId(selId));bindSum();
+      const nt=$('#giveTitle');if(keep&&nt){nt.value=keep.v;$('#giveReview').checked=keep.r;if(keep.f){nt.focus();nt.setSelectionRange(keep.s,keep.e)}}
+      return}
     view='list';
     let h=`<div class="pane-h"><span>Party ${party.length}/6</span><span>HP = context left</span></div>`;
     h+=party.map(a=>slotHTML(a)).join('');
@@ -828,8 +839,13 @@ function sumHTML(a){
     <div class="moves">${a.moves.map(m=>`<div class="mv">${m.n}<span>PP ${m.pp}/${m.max}</span></div>`).join('')}</div>
     <p class="memo" style="margin:0">${s.memo}</p>
   </div>
+  ${LIVE&&!SPEC[a.sp].reviewer?`<form class="give" id="give">
+    <label for="giveTitle">GIVE TASK</label>
+    <textarea id="giveTitle" rows="2" maxlength="200" placeholder="e.g. Compare 3 note-taking apps for a student" required></textarea>
+    <div class="give-row"><label class="chk"><input type="checkbox" id="giveReview" checked> Ask a reviewer to check it</label><button class="btn primary" type="submit">SEND</button></div>
+  </form>`:''}
   <div class="acts">
-    <button class="btn" id="reset" ${a.status==='FNT'||a.path.length?'disabled':''}>RESET SESSION</button>
+    <button class="btn" id="reset" ${(!LIVE&&a.status==='FNT')||a.path.length?'disabled':''}>RESET SESSION</button>
     <button class="btn" id="tobox" ${a.status==='PAR'||a.path.length?'disabled':''}>SEND TO BOX</button>
   </div>
   <p class="cap" style="margin:0;color:var(--muted)">PP is the rate limit left on each tool. Reset walks the agent to the CENTER and clears its context.</p></div>`;
@@ -838,6 +854,11 @@ function bindSum(){
   $('#back').onclick=()=>{view='list';renderPane()};
   const a=byId(selId);
   if(LIVE){
+    const gf=$('#give');
+    if(gf)gf.onsubmit=async e=>{e.preventDefault();const title=$('#giveTitle').value.trim();if(!title)return;
+      const btn=gf.querySelector('button');btn.disabled=true;
+      const r=await api(`api/agents/${a.id}/tasks`,{title,review:$('#giveReview').checked});
+      btn.disabled=false;if(r)$('#giveTitle').value=''};
     $('#reset').onclick=()=>api(`api/agents/${a.id}/actions`,{action:'reset'});
     $('#tobox').onclick=()=>{api(`api/agents/${a.id}/actions`,{action:'box'});selId=null;view='list';renderPane()};
     return;
@@ -909,7 +930,7 @@ const toTask=t=>t?{t:t.title,review:t.review?1:0,ap:t.approval?{m:t.approval.too
 function syncAgent(sa){
   let a=party.find(x=>x.id===sa.id)||box.find(x=>x.id===sa.id);
   if(!a)a={id:sa.id,path:[],x:0,y:0,slot:0};
-  Object.assign(a,{sp:sa.species,nick:sa.nick,lv:sa.lv,xp:sa.xp,hp:sa.hp,hpMax:sa.hpMax,status:sa.status,phase:sa.phase,
+  Object.assign(a,{sp:sa.species,nick:sa.nick,lv:sa.lv,xp:sa.xp,hp:Math.round(sa.hp),hpMax:sa.hpMax,status:sa.status,phase:sa.phase,
     task:toTask(sa.task),moves:sa.moves,friend:sa.bond,reviewing:sa.reviewingId,workLeft:0});
   seen.add(sa.species);
   const pi=party.indexOf(a),bi=box.indexOf(a);

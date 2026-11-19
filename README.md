@@ -27,7 +27,42 @@ Opening `index.html` straight from disk still works. The header then shows **DEM
 npm test
 ```
 
-## Connect a real agent runtime
+## Run real Claude agents
+
+```bash
+npm install
+```
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+```bash
+npm run real
+```
+
+Open http://localhost:8787. Four agents arrive at the CENTER: PATCH (code), SCOUT (research), QUILL (writing) and CHECKS (reviewer). Open one, type a job into **GIVE TASK** and press SEND.
+
+What happens next is real:
+
+- The agent walks to its building and runs a Claude tool-use loop (`claude-opus-5-5`, effort `medium`).
+- It works in the `workspace/` folder. Files under `workspace/drafts/` are written freely; **any other write stops and asks you YES / NO in the dialog box**.
+- HP is the agent's context: it drops as the conversation grows. At 0 the agent faints; RESET SESSION brings it back.
+- With "Ask a reviewer" ticked, the agent walks to the GYM and CHECKS reviews the files it wrote. If CHECKS asks for changes, the agent gets one round to fix them.
+- SCOUT and QUILL can search the web (up to 5 searches per request).
+- Every request asks the API to retry on a fallback model if Claude declines it (`fallbacks: "default"`).
+
+Each task costs real API tokens. Lower `AGENTDEX_EFFORT` to `low` for cheaper, quicker runs.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AGENTDEX_WORKSPACE` | `./workspace` | The only folder agents can touch. Paths that escape it, including through symlinks, are refused |
+| `AGENTDEX_MODEL` | `claude-opus-5-5` | Model for every agent |
+| `AGENTDEX_EFFORT` | `medium` | `low`, `medium`, `high`, `xhigh` or `max` |
+
+To keep the server and the agents as two processes, start the server with `AGENTDEX_SIM=0 npm start`, then run `npm run agents` (set `AGENTDEX_URL` if the server is elsewhere).
+
+## Connect your own agent runtime
 
 Your runtime posts events (`task.started`, `task.progress`, `approval.requested`, ...) to `POST /api/ingest` and listens to `GET /api/events` for your answers. The full protocol, with a curl example, is in [docs/EVENTS.md](docs/EVENTS.md).
 
@@ -40,6 +75,9 @@ Your runtime posts events (`task.started`, `task.progress`, `approval.requested`
 | `server/simulator.js` | Fake runtime that only speaks the public event API |
 | `server/app.js` | HTTP API and the live event stream |
 | `server/test/` | Store rules and HTTP tests |
+| `runtime/runtime.js` | Real agents: the Claude tool-use loop, approvals, review, HP reporting |
+| `runtime/workspace.js` | Sandboxed file tools |
+| `runtime/test/` | End-to-end tests against a stand-in for the Claude API (no key, no cost) |
 
 ## Controls
 
@@ -88,11 +126,12 @@ Design rule: every movement on the map is a real event (a task taken, a handoff,
 
 ## Status
 
-Prototype. The server, event protocol and live town work end to end; agent activity comes from the built-in simulator until a real runtime posts events. All creatures, names and art are original.
+Prototype. `npm start` runs the town with simulated agents; `npm run real` runs it with real Claude agents working in a local folder. All creatures, names and art are original.
 
 ## Roadmap
 
-1. ~~Backend skeleton: state endpoint, event stream, ingest API.~~ Done. Next: a first real runtime adapter.
+1. ~~Backend skeleton: state endpoint, event stream, ingest API.~~ Done.
+1. ~~First real runtime: Claude agents with approvals and review.~~ Done. Next: let agents hand work to each other.
 2. Commission creature art: 6 creatures at 32x32 with 2-frame walk cycles.
 3. WhatsApp approvals: PAR, FNT and evolution requests as messages with YES / NO buttons, with a PIN step for high-risk moves.
 4. Review "battle" view: work faces the reviewer, issues found land as hits.

@@ -156,6 +156,9 @@ export function createSimulator({ tickMs = 1300, random = Math.random } = {}) {
       emit('agent.moved', a.id, { to: 'CENTER', reason: 'is walking to the CENTER for a reset.' });
       later(a, TRAVEL_TICKS, () => emit('agent.reset', a.id));
     },
+    onAssigned(a, task) {
+      if (a.phase === 'idle' && sim(a).wait === 0 && !SPECIES[a.species].reviewer) startTask(a, { title: task.title, review: task.review });
+    },
     onRemoved(a) { sims.delete(a.id); },
   };
 }
