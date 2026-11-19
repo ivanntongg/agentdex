@@ -12,7 +12,7 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 
 const HOOK = fileURLToPath(new URL('./cc-hook.js', import.meta.url));
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
@@ -22,10 +22,12 @@ export class ClaudeCodeError extends Error {}
 
 // Finds how to start Claude Code. On Windows, Node can only start .exe files directly, a window
 // opened before an install does not see the new PATH, and npm installs a claude.cmd wrapper.
-// So look for claude.exe on PATH and in the native installer's folder, then fall back to running
-// the npm package's cli.js with Node. Checked on every run, so a fresh install is picked up
-// without restarting Agentdex.
-export function resolveClaude({ bin = 'claude', platform = process.platform, env = process.env, exists = existsSync, nodePath = process.execPath } = {}) {
+// So look for claude.exe on PATH and in the native installer's folder, then inside the npm
+// package: current versions put the real program at bin/claude.exe (a tiny placeholder until
+// npm's install step replaces it), older ones shipped cli.js. Checked on every run, so a fresh
+// install is picked up without restarting Agentdex.
+const sizeOf = (f) => { try { return statSync(f).size; } catch { return 0; } };
+export function resolveClaude({ bin = 'claude', platform = process.platform, env = process.env, exists = existsSync, size = sizeOf, nodePath = process.execPath } = {}) {
   if (bin !== 'claude' || platform !== 'win32') return { command: bin, prefix: [] };
   const win = path.win32;
   const dirs = String(env.PATH || env.Path || '').split(';').map((d) => d.trim().replace(/^"|"$/g, '')).filter(Boolean);
@@ -36,8 +38,13 @@ export function resolveClaude({ bin = 'claude', platform = process.platform, env
   }
   const npmDirs = [...dirs, ...(env.APPDATA ? [win.join(env.APPDATA, 'npm')] : [])];
   for (const d of npmDirs) {
-    const cli = win.join(d, 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js');
-    if (exists(win.join(d, 'claude.cmd')) && exists(cli)) return { command: nodePath, prefix: [cli] };
+    if (!exists(win.join(d, 'claude.cmd'))) continue;
+    const pkg = win.join(d, 'node_modules', '@anthropic-ai', 'claude-code');
+    const exe = win.join(pkg, 'bin', 'claude.exe');
+    if (exists(exe) && size(exe) > 100_000) return { command: exe, prefix: [] };
+    for (const js of ['cli-wrapper.cjs', 'cli.js']) {
+      if (exists(win.join(pkg, js))) return { command: nodePath, prefix: [win.join(pkg, js)] };
+    }
   }
   return { command: bin, prefix: [] };
 }

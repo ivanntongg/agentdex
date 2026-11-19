@@ -164,11 +164,19 @@ test('finding Claude Code on Windows: PATH, the native install folder, then npm'
   r = resolveClaude({ ...base, env: { PATH: 'C:\\Tools', USERPROFILE: home }, exists: has(`${home}\\.local\\bin\\claude.exe`) });
   assert.equal(r.command, `${home}\\.local\\bin\\claude.exe`);
 
-  // Installed with npm: claude.cmd cannot be started directly, so run its cli.js with Node.
+  // Installed with npm (claude.cmd cannot be started directly).
   const npmDir = `${home}\\AppData\\Roaming\\npm`;
-  const cli = `${npmDir}\\node_modules\\@anthropic-ai\\claude-code\\cli.js`;
-  r = resolveClaude({ ...base, env: { PATH: 'C:\\Tools', USERPROFILE: home, APPDATA: `${home}\\AppData\\Roaming` }, exists: has(`${npmDir}\\claude.cmd`, cli) });
-  assert.deepEqual(r, { command: 'C:\\node\\node.exe', prefix: [cli] });
+  const pkg = `${npmDir}\\node_modules\\@anthropic-ai\\claude-code`;
+  const npmEnv = { PATH: `C:\\Tools;${npmDir}`, USERPROFILE: home, APPDATA: `${home}\\AppData\\Roaming` };
+  // Current versions (2.1.x): the real program is bin\\claude.exe inside the package.
+  r = resolveClaude({ ...base, env: npmEnv, exists: has(`${npmDir}\\claude.cmd`, `${pkg}\\bin\\claude.exe`, `${pkg}\\cli-wrapper.cjs`), size: () => 200_000_000 });
+  assert.deepEqual(r, { command: `${pkg}\\bin\\claude.exe`, prefix: [] });
+  // npm's install step did not run: bin\\claude.exe is still the tiny placeholder, so use the wrapper.
+  r = resolveClaude({ ...base, env: npmEnv, exists: has(`${npmDir}\\claude.cmd`, `${pkg}\\bin\\claude.exe`, `${pkg}\\cli-wrapper.cjs`), size: () => 500 });
+  assert.deepEqual(r, { command: 'C:\\node\\node.exe', prefix: [`${pkg}\\cli-wrapper.cjs`] });
+  // Older versions shipped cli.js.
+  r = resolveClaude({ ...base, env: npmEnv, exists: has(`${npmDir}\\claude.cmd`, `${pkg}\\cli.js`) });
+  assert.deepEqual(r, { command: 'C:\\node\\node.exe', prefix: [`${pkg}\\cli.js`] });
 
   // Nothing found: fall back to plain "claude" (the error then explains what to do).
   r = resolveClaude({ ...base, env: { PATH: 'C:\\Tools', USERPROFILE: home }, exists: () => false });
