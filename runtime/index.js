@@ -1,19 +1,22 @@
 // Real agents for Agentdex.
 //
-//   npm run real        town + real agents in one process (simulator off)
+//   npm run real        town + real agents + SETUP screen in one process
 //   npm run agents      agents only, against a server you started with AGENTDEX_SIM=0
 //
-//   ANTHROPIC_API_KEY   your Claude API key (or `ant auth login`)
-//   AGENTDEX_URL        server to report to (agents-only mode), default http://127.0.0.1:8787
-//   AGENTDEX_TOKEN      bearer token, if the server has one
-//   AGENTDEX_WORKSPACE  folder the agents can read and write, default ./workspace
-//   AGENTDEX_MODEL      default claude-opus-5-5
-//   AGENTDEX_EFFORT     low | medium | high | xhigh | max, default medium
+// Everything can be set on the SETUP screen. Environment variables still work as a fallback:
+//   ANTHROPIC_API_KEY, AGENTDEX_MODEL, AGENTDEX_EFFORT, WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
+//   WHATSAPP_APP_SECRET, WHATSAPP_ALLOWED
+// and these only as variables:
+//   PORT (8787), HOST (127.0.0.1), AGENTDEX_TOKEN, AGENTDEX_URL, AGENTDEX_WORKSPACE (./workspace),
+//   AGENTDEX_CONFIG (./agentdex.config.json), WHATSAPP_PORT (8788)
 import Anthropic from '@anthropic-ai/sdk';
 import { fileURLToPath } from 'node:url';
 import { createAgentdexClient } from './agentdex.js';
 import { createWorkspace } from './workspace.js';
 import { createRuntime } from './runtime.js';
+import { createConfig, ConfigError } from '../server/config.js';
+import { StoreError } from '../server/store.js';
+import { createWhatsAppBridge } from '../bridges/whatsapp.js';
 
 const STARTERS = [
   { ref: 'patch', species: 'bytle', nick: 'PATCH' },
@@ -22,31 +25,106 @@ const STARTERS = [
   { ref: 'checks', species: 'sentril', nick: 'CHECKS' },
 ];
 
-async function main() {
-  const withServer = process.argv.includes('--with-server');
-  const token = process.env.AGENTDEX_TOKEN || null;
-  let url = process.env.AGENTDEX_URL || 'http://127.0.0.1:8787';
+function claudeError(err, model) {
+  if (err instanceof Anthropic.AuthenticationError) return 'Claude rejected this key. Copy it again from the Claude Console and paste it here.';
+  if (err instanceof Anthropic.PermissionDeniedError) return `This key is not allowed to use ${model}. Pick another model or check your Console settings.`;
+  if (err instanceof Anthropic.NotFoundError) return `${model} is not available on this key. Pick another model.`;
+  if (err instanceof Anthropic.RateLimitError) return 'Claude is busy or your credit is used up. Check billing in the Claude Console.';
+  if (err instanceof Anthropic.APIConnectionError) return 'Could not reach Claude. Check your internet connection.';
+  return `Claude said: ${err.message}`;
+}
+
+export async function main({ argv = process.argv, env = process.env } = {}) {
+  const withServer = argv.includes('--with-server');
+  const token = env.AGENTDEX_TOKEN || null;
+  let url = env.AGENTDEX_URL || 'http://127.0.0.1:8787';
+  const config = createConfig({ path: env.AGENTDEX_CONFIG || 'agentdex.config.json', env });
+  const workspace = await createWorkspace(env.AGENTDEX_WORKSPACE || 'workspace');
+
+  // One Claude client, rebuilt when the key changes.
+  let client = null;
+  let clientKey = null;
+  const claude = () => {
+    const key = config.get('anthropicKey');
+    if (key !== clientKey) { clientKey = key; client = key ? new Anthropic({ apiKey: key }) : null; }
+    return client;
+  };
+  let lastClaudeCheck = null;
+
+  let dex = null;
+  let bridge = null;
+  let bridgeCtl = null;
+  let bridgeError = null;
+  async function applyWhatsApp() {
+    if (bridge) { bridgeCtl.abort(); await bridge.stop(); bridge = null; }
+    bridgeError = null;
+    const c = config.whatsapp();
+    if (!c || !dex) return;
+    try {
+      bridgeCtl = new AbortController();
+      bridge = createWhatsAppBridge({ dex, config: c });
+      await bridge.start(bridgeCtl.signal);
+      console.log(`WhatsApp bridge listening on http://127.0.0.1:${c.port}/webhooks/whatsapp`);
+    } catch (err) {
+      bridge = null;
+      bridgeError = err.code === 'EADDRINUSE' ? `Port ${c.port} is busy. Close the other program using it, or set WHATSAPP_PORT.` : err.message;
+      console.error(`WhatsApp bridge: ${bridgeError}`);
+    }
+  }
+
+  const setup = {
+    async status() {
+      const wa = config.whatsapp();
+      return {
+        settings: config.publicView(),
+        workspace: workspace.root,
+        claude: { hasKey: Boolean(config.get('anthropicKey')), lastCheck: lastClaudeCheck },
+        whatsapp: {
+          complete: Boolean(wa), running: Boolean(bridge), error: bridgeError,
+          port: wa?.port || Number(env.WHATSAPP_PORT || 8788), path: '/webhooks/whatsapp',
+          health: bridge ? bridge.health() : null,
+        },
+      };
+    },
+    async save(body) {
+      try { config.save(body); } catch (err) {
+        throw err instanceof ConfigError ? new StoreError(400, err.message) : err;
+      }
+    },
+    async testClaude() {
+      const c = claude();
+      if (!c) return (lastClaudeCheck = { ok: false, message: 'Paste your Claude API key first.', at: new Date().toISOString() });
+      try {
+        const m = await c.models.retrieve(config.model());
+        lastClaudeCheck = { ok: true, message: `Connected. ${m.display_name || config.model()} is ready.`, at: new Date().toISOString() };
+      } catch (err) {
+        lastClaudeCheck = { ok: false, message: claudeError(err, config.model()), at: new Date().toISOString() };
+      }
+      return lastClaudeCheck;
+    },
+    async testWhatsApp() {
+      if (!config.whatsapp()) return { ok: false, message: 'Fill in all four WhatsApp boxes and save first.' };
+      if (!bridge) return { ok: false, message: bridgeError || 'The WhatsApp bridge is not running.' };
+      try { await bridge.sendTest(); return { ok: true, message: 'Test message sent. Check WhatsApp on your phone.' }; }
+      catch (err) { return { ok: false, message: err.message }; }
+    },
+  };
 
   if (withServer) {
     const { createStore } = await import('../server/store.js');
     const { createApp } = await import('../server/app.js');
-    const port = Number(process.env.PORT || 8787);
-    const host = process.env.HOST || '127.0.0.1';
-    const app = createApp({ store: createStore(), token, indexPath: fileURLToPath(new URL('../index.html', import.meta.url)) });
-    await new Promise((r) => app.listen(port, host, r));
+    const port = Number(env.PORT || 8787);
+    const host = env.HOST || '127.0.0.1';
+    const app = createApp({ store: createStore(), token, setup, indexPath: fileURLToPath(new URL('../index.html', import.meta.url)) });
+    await new Promise((resolve, reject) => { app.once('error', reject); app.listen(port, host, resolve); }).catch((err) => {
+      throw new Error(err.code === 'EADDRINUSE' ? `Port ${port} is already in use. Agentdex may already be running in another window.` : err.message);
+    });
     url = `http://127.0.0.1:${port}`;
-    console.log(`Agentdex town: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+    console.log(`Agentdex town: http://localhost:${port}`);
   }
 
-  const dex = createAgentdexClient({ url, token });
-  const workspace = await createWorkspace(process.env.AGENTDEX_WORKSPACE || 'workspace');
-  const runtime = createRuntime({
-    anthropic: new Anthropic(),
-    dex,
-    workspace,
-    model: process.env.AGENTDEX_MODEL || 'claude-opus-5-5',
-    effort: process.env.AGENTDEX_EFFORT || 'medium',
-  });
+  dex = createAgentdexClient({ url, token });
+  const runtime = createRuntime({ dex, workspace, settings: () => ({ anthropic: claude(), model: config.model(), effort: config.effort() }) });
 
   const state = await dex.state().catch((err) => { throw new Error(`Cannot reach Agentdex at ${url}: ${err.message}`); });
   if (state.adapter === 'simulator') console.warn('Warning: the server is running its simulator. Start it with AGENTDEX_SIM=0 so the fake agents stay out of the way.');
@@ -61,8 +139,14 @@ async function main() {
     onError: (err) => console.error(`Lost the event stream (${err.message}); reconnecting.`),
   });
 
+  config.onChange(() => { applyWhatsApp(); });
+  await applyWhatsApp();
+
   console.log(`Workspace: ${workspace.root}`);
-  console.log('Agents are ready. In the town, open an agent and use GIVE TASK.');
+  console.log(config.get('anthropicKey') ? 'Agents are ready. Open an agent and use GIVE TASK.' : 'Open the town and press SETUP to add your Claude API key.');
+  return { setup, config };
 }
 
-main().catch((err) => { console.error(err.message); process.exit(1); });
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((err) => { console.error(err.message); process.exit(1); });
+}

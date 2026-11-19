@@ -174,6 +174,54 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .pausebtn{font-family:var(--font-display);font-size:10px;letter-spacing:.08em;color:var(--muted)}
 .pausebtn:hover{color:var(--ink)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- SETUP screen ---------- */
+.chip.setup-btn{cursor:pointer;color:var(--ink)}
+.chip.setup-btn .dot{color:var(--muted)}
+.chip.setup-btn.need .dot{color:var(--bad)}
+.chip.setup-btn.good .dot{color:var(--good)}
+.setup{position:fixed;inset:0;z-index:50;background:rgba(17,15,36,.96);overflow-y:auto;
+  padding:calc(env(safe-area-inset-top,0px) + 24px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 32px) max(16px,env(safe-area-inset-left,0px))}
+.setup-in{max-width:780px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+#setupBody{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0}
+.setup-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.setup-head h2{margin:0;font-family:var(--font-display);font-size:clamp(22px,4vw,30px);color:var(--spark);letter-spacing:.04em;text-shadow:3px 3px 0 #8a5a3a}
+.setup-head p{margin:2px 0 0;color:var(--muted);font-size:15px}
+.scard{background:var(--bezel);box-shadow:inset 0 0 0 3px var(--bezel-hi);padding:18px;display:grid;gap:12px;min-width:0}
+.scard h3{margin:0;font-family:var(--font-display);font-size:15px;letter-spacing:.06em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.scard h3 .num{background:var(--spark);color:#2a1d00;padding:2px 8px}
+.scard p{margin:0;font-size:15px;line-height:1.45;color:#d6d2f0;max-width:64ch}
+.scard a{color:var(--spark)}
+.pill{font-family:var(--font-display);font-size:10px;letter-spacing:.06em;padding:3px 8px;margin-left:auto}
+.pill.ok{background:#2f6e4a;color:#d9ffe7}.pill.no{background:#6e2f3a;color:#ffe0e4}.pill.wait{background:#5f5c8a;color:#fff}
+.field{display:grid;gap:5px;min-width:0;align-content:start}
+.field>label,.flabel{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;color:var(--spark)}
+.field small{color:var(--muted);font-size:13px}
+.field input,.field select{font:inherit;font-size:15px;color:var(--ink);background:#1c1940;border:0;box-shadow:inset 0 0 0 2px #4b4596;padding:9px 10px;width:100%;min-width:0}
+.field input:focus-visible,.field select:focus-visible{outline:2px solid var(--spark)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.efforts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+@media (max-width:520px){.efforts{grid-template-columns:1fr}}
+.efforts label{display:grid;gap:2px;padding:10px;background:#1c1940;box-shadow:inset 0 0 0 2px #4b4596;cursor:pointer;font-size:14px}
+.efforts label b{font-family:var(--font-display);font-size:11px;letter-spacing:.06em}
+.efforts label span{color:var(--muted);font-size:13px}
+.efforts label{position:relative}
+.efforts input{position:absolute;inset:0;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.efforts label:has(input:checked){box-shadow:inset 0 0 0 2px var(--spark);background:#2c2858}
+.efforts label:has(input:focus-visible){outline:2px solid var(--spark)}
+.result{font-size:14px;padding:8px 10px;background:#1c1940}
+.result.ok{color:#9ee6b6}.result.no{color:#ffb4bc}
+.scard>*,.wsteps>li>div>*,.field>*{min-width:0}
+.copyrow{display:flex;min-width:0;max-width:100%;background:#1c1940;box-shadow:inset 0 0 0 2px #4b4596}
+.copyrow code{flex:1;min-width:0;padding:8px 10px;font-size:13px;overflow-x:auto;white-space:nowrap;color:#e9e6ff}
+.copyrow button{font-family:var(--font-display);font-size:10px;letter-spacing:.06em;background:#3a3474;color:#fff;padding:0 12px}
+.wsteps{margin:0;padding:0;list-style:none;display:grid;gap:12px;counter-reset:w}
+.wsteps>li{counter-increment:w;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px}
+.wsteps>li::before{content:counter(w);font-family:var(--font-display);font-size:12px;width:30px;height:30px;display:grid;place-items:center;background:#3a3474;color:#fff}
+.wsteps>li>div{display:grid;gap:8px;min-width:0}
+.health{display:grid;gap:4px;font-size:14px;color:#d6d2f0}
+.health b{color:#9ee6b6;font-weight:400}
+.setup-note{font-size:14px;color:var(--muted)}
 @media (max-width:520px){.moves{grid-template-columns:1fr}.sum-top{grid-template-columns:80px minmax(0,1fr)}.portrait{width:80px;height:80px}.portrait img{width:64px;height:64px}}
 @media (prefers-reduced-motion:reduce){.hp-bar i{transition:none}}
 </style>
@@ -189,6 +237,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
     <div class="hud" aria-live="polite">
       <span class="chip" style="color:var(--good)"><span class="dot"></span><b id="cWork">0</b> WORKING</span>
       <span class="chip"><span class="dot" style="color:#8f8bc0"></span><b id="cIdle">0</b> IDLE</span>
+      <button class="chip setup-btn" id="setupBtn" type="button"><span class="dot"></span>SETUP</button>
       <span class="chip mode" id="mode" title="Demo runs in your browser. Live follows the Agentdex server.">DEMO</span>
       <button class="chip needs" id="cNeeds"><b id="cNeedN">0</b> NEED YOU</button>
       <span class="chip"><span id="clock">DAY 1 09:41</span></span>
@@ -228,6 +277,16 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
       </div>
       <div class="pane" id="pane"></div>
     </aside>
+  </div>
+</div>
+
+<div class="setup" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+  <div class="setup-in">
+    <div class="setup-head">
+      <div><h2 id="setupTitle">SETUP</h2><p>Connect your agents' brains and your phone. Everything is saved on this computer only.</p></div>
+      <button class="btn" type="button" id="setupClose">CLOSE ✕</button>
+    </div>
+    <div id="setupBody"></div>
   </div>
 </div>
 
@@ -596,6 +655,7 @@ document.addEventListener('keyup',e=>{const k=DIRK[e.key];if(k)keys.delete(k)});
 window.addEventListener('blur',()=>keys.clear());
 document.addEventListener('keydown',e=>{
   if(e.target&&e.target.closest&&e.target.closest('input,textarea,select'))return;
+  if(!$('#setup').hidden)return;
   if(!current){
     const k=DIRK[e.key];
     if(k){e.preventDefault();keys.add(k);return}
@@ -978,7 +1038,155 @@ function startLive(s){
   es.addEventListener('snapshot',e=>hydrate(JSON.parse(e.data)));
   es.addEventListener('change',e=>onChange(JSON.parse(e.data)));
   es.onerror=()=>setMode('lost');
+  checkSetup(true);
 }
+
+/* ---------- SETUP screen ---------- */
+let setupState=null,setupAvailable=null,setupAutoOpened=false;
+async function setupCall(method,path,body){
+  try{
+    const r=await fetch(path,{method,headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store'});
+    const j=await r.json().catch(()=>({}));
+    return {ok:r.ok,status:r.status,data:j};
+  }catch{return {ok:false,status:0,data:{error:'Could not reach Agentdex. Is its window still open?'}}}
+}
+function setSetupBadge(){
+  const b=$('#setupBtn');
+  const good=setupState&&setupState.claude.hasKey&&(!setupState.claude.lastCheck||setupState.claude.lastCheck.ok);
+  b.classList.toggle('need',Boolean(setupState&&!good));b.classList.toggle('good',Boolean(good));
+  b.title=!setupState?'Setup':good?'Claude is connected':'Claude is not connected yet';
+}
+async function checkSetup(autoOpen){
+  if(!LIVE){setupAvailable=false;return}
+  const r=await setupCall('GET','api/setup');
+  setupAvailable=r.ok;
+  if(r.ok){setupState=r.data;setSetupBadge();
+    if(autoOpen&&!setupState.claude.hasKey&&!setupAutoOpened){setupAutoOpened=true;openSetup()}}
+}
+function copyBtn(text){return `<div class="copyrow"><code>${esc(text)}</code><button type="button" data-copy="${esc(text)}">COPY</button></div>`}
+function pill(kind,label){return `<span class="pill ${kind}">${label}</span>`}
+function ago(iso){if(!iso)return'';const s=Math.round((Date.now()-new Date(iso))/1000);return s<60?'just now':s<3600?`${Math.round(s/60)} min ago`:`${Math.round(s/3600)} h ago`}
+function renderSetup(note){
+  const body=$('#setupBody');
+  if(!setupAvailable){
+    body.innerHTML=`<div class="scard"><h3>SETUP IS OFF IN THIS MODE</h3>
+      <p>${LIVE?'Agentdex is running with practice agents (npm start). Setup and real agents start together.':'This page was opened as a file, so it runs a demo inside your browser.'}</p>
+      <p>To use real agents: close this, then double-click your <b>Agentdex</b> desktop icon, or run <code>npm run real</code> in the agentdex folder. Then open <b>http://localhost:8787</b> and press SETUP again.</p></div>`;
+    return;
+  }
+  const s=setupState,st=s.settings,c=s.claude,w=s.whatsapp;
+  const claudePill=!c.hasKey?pill('no','NOT CONNECTED'):c.lastCheck&&!c.lastCheck.ok?pill('no','PROBLEM'):c.lastCheck?pill('ok','CONNECTED'):pill('wait','SAVED, NOT TESTED');
+  const waPill=!w.complete?pill('wait','OFF'):w.error?pill('no','PROBLEM'):w.health&&w.health.lastMessageAt?pill('ok','CONNECTED'):w.health&&w.health.verifiedAt?pill('ok','LINKED TO META'):pill('wait','WAITING FOR META');
+  const effort=[['low','LOW','Quick and cheapest'],['medium','MEDIUM','Balanced. Best for most jobs'],['high','HIGH','Most careful, costs more']];
+  const models=[['claude-opus-5-5','Opus 5.5 · smartest (recommended)'],['claude-sonnet-5-5','Sonnet 5.5 · fast and capable, cheaper'],['claude-haiku-5-5','Haiku 5.5 · quickest and cheapest']];
+  const h=w.health||{};
+  body.innerHTML=`
+  <form class="scard" id="fClaude" novalidate>
+    <h3><span class="num">1</span>CLAUDE · YOUR AGENTS' BRAIN ${claudePill}</h3>
+    <p>Your agents think with Claude. Sign in at <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>, add some credit, open <b>API keys</b>, create a key and paste it here.</p>
+    <div class="field"><label for="stKey">API KEY</label>
+      <input id="stKey" type="password" autocomplete="off" spellcheck="false" placeholder="${c.hasKey?'Saved key '+esc(st.anthropicKey||'')+'. Paste a new one to replace it':'sk-ant-...'}">
+      <small>Treat it like a password. It is stored only on this computer.</small></div>
+    <div class="field"><label for="stModel">MODEL</label>
+      <select id="stModel">${models.map(([v,l])=>`<option value="${v}" ${st.model===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field"><span class="flabel">HOW HARD SHOULD THEY THINK?</span>
+      <div class="efforts" role="radiogroup" aria-label="Effort">${effort.map(([v,t,d])=>`<label><input type="radio" name="stEffort" value="${v}" ${st.effort===v?'checked':''}><b>${t}</b><span>${d}</span></label>`).join('')}</div></div>
+    <div class="acts"><button class="btn primary" type="submit">SAVE &amp; TEST</button></div>
+    ${c.lastCheck?`<div class="result ${c.lastCheck.ok?'ok':'no'}">${esc(c.lastCheck.message)}</div>`:''}
+    ${note&&note.claude?`<div class="result no">${esc(note.claude)}</div>`:''}
+  </form>
+
+  <div class="scard">
+    <h3><span class="num">2</span>WORKSPACE · WHERE AGENTS WORK ${pill('ok','READY')}</h3>
+    <p>Agents can only read and write inside this folder. Files in its <b>drafts</b> folder need no permission; anything else asks you first.</p>
+    ${copyBtn(s.workspace)}
+  </div>
+
+  <form class="scard" id="fWa" novalidate>
+    <h3><span class="num">3</span>WHATSAPP · CONTROL FROM YOUR PHONE ${waPill}</h3>
+    <p>Optional. Message your agents, get their questions with YES / NO buttons, and hear when they finish, while this computer stays on at home. Uses Meta's official WhatsApp API, which is free for personal testing.</p>
+    <ol class="wsteps">
+      <li><div><p><b>Create a free Meta app.</b> Go to <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>, create an app, and add the <b>WhatsApp</b> product. On its <b>API Setup</b> page, add your own phone number as a recipient and confirm the code WhatsApp sends you.</p></div></li>
+      <li><div><p><b>Copy four things into the boxes.</b> The first two are on <b>API Setup</b>; the app secret is under <b>App settings, Basic</b>.</p>
+        <div class="grid2">
+          <div class="field"><label for="waToken">ACCESS TOKEN</label><input id="waToken" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappToken?'Saved '+esc(st.whatsappToken):'Long code starting with EA...'}"><small>The temporary token stops working after about a day. A System User token lasts.</small></div>
+          <div class="field"><label for="waPhoneId">PHONE NUMBER ID</label><input id="waPhoneId" inputmode="numeric" autocomplete="off" value="${esc(st.whatsappPhoneNumberId||'')}" placeholder="e.g. 123456789012345"></div>
+          <div class="field"><label for="waSecret">APP SECRET</label><input id="waSecret" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappAppSecret?'Saved '+esc(st.whatsappAppSecret):'32 letters and numbers'}"></div>
+          <div class="field"><label for="waAllowed">YOUR WHATSAPP NUMBER</label><input id="waAllowed" inputmode="tel" autocomplete="tel" value="${esc(st.whatsappAllowed||'')}" placeholder="+60 12 345 6789"><small>Only this number can give orders.</small></div>
+        </div>
+        <div class="acts"><button class="btn primary" type="submit">SAVE WHATSAPP</button></div>
+        ${note&&note.wa?`<div class="result no">${esc(note.wa)}</div>`:''}
+        ${w.error?`<div class="result no">${esc(w.error)}</div>`:''}</div></li>
+      <li><div><p><b>Open a tunnel</b> so WhatsApp can reach this computer. Install the free <a href="https://ngrok.com/download" target="_blank" rel="noopener">ngrok</a>, then run this in a new terminal window and keep it open. It prints an address starting with <b>https://</b>.</p>
+        ${copyBtn(`ngrok http ${w.port}`)}
+        <div class="field"><label for="waTunnel">PASTE THE HTTPS ADDRESS NGROK SHOWS</label><input id="waTunnel" type="url" placeholder="https://something.ngrok-free.app" autocomplete="off"></div></div></li>
+      <li><div><p><b>Tell Meta where to send messages.</b> In your Meta app open <b>WhatsApp, Configuration</b>, press <b>Edit</b> next to Webhook, paste these two, then press <b>Verify and save</b>. Afterwards, tick <b>messages</b> under webhook fields.</p>
+        <span class="flabel">CALLBACK URL</span><div id="waUrl">${copyBtn('Paste your ngrok address above first')}</div>
+        <span class="flabel">VERIFY TOKEN</span>${copyBtn(st.whatsappVerifyToken)}</div></li>
+      <li><div><p><b>Say hi.</b> From your phone, send <b>hi</b> to the WhatsApp test number shown on API Setup. Then press the button below.</p>
+        <div class="acts"><button class="btn primary" type="button" id="waTest">SEND TEST MESSAGE</button></div>
+        <div id="waTestResult"></div>
+        <div class="health">
+          <div>Meta link: ${h.verifiedAt?`<b>verified ${ago(h.verifiedAt)}</b>`:'not yet (finish step 4)'}</div>
+          <div>Last message from you: ${h.lastMessageAt?`<b>${ago(h.lastMessageAt)}</b>`:'none yet'}</div>
+          ${h.lastError?`<div class="result no">${esc(h.lastError)}</div>`:''}
+        </div></div></li>
+    </ol>
+    <p class="setup-note">From your phone, send <b>help</b> to see commands. Example: <i>scout compare 3 note-taking apps</i>. WhatsApp only lets the bot message you within 24 hours of your last message, so send "status" once a day if you want alerts.</p>
+  </form>`;
+  bindSetup();
+}
+function bindSetup(){
+  const body=$('#setupBody');
+  body.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{
+    try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='COPIED'}catch{const r=document.createRange();r.selectNodeContents(b.previousElementSibling);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);b.textContent='SELECTED'}
+    setTimeout(()=>{b.textContent='COPY'},1500);
+  });
+  const fc=$('#fClaude');
+  if(fc)fc.onsubmit=async e=>{
+    e.preventDefault();const btn=fc.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='TESTING...';
+    const patch={model:$('#stModel').value,effort:(fc.querySelector('input[name=stEffort]:checked')||{}).value};
+    const key=$('#stKey').value.trim();if(key)patch.anthropicKey=key;
+    const r=await setupCall('POST','api/setup',patch);
+    if(!r.ok){btn.disabled=false;btn.textContent='SAVE & TEST';return renderSetup({claude:r.data.error||'Could not save.'})}
+    await setupCall('POST','api/setup/test-claude');
+    await checkSetup(false);renderSetup();
+  };
+  const fw=$('#fWa');
+  if(fw)fw.onsubmit=async e=>{
+    e.preventDefault();const patch={whatsappPhoneNumberId:$('#waPhoneId').value,whatsappAllowed:$('#waAllowed').value};
+    const t=$('#waToken').value.trim(),sec=$('#waSecret').value.trim();if(t)patch.whatsappToken=t;if(sec)patch.whatsappAppSecret=sec;
+    const r=await setupCall('POST','api/setup',patch);
+    await checkSetup(false);renderSetup(r.ok?null:{wa:r.data.error||'Could not save.'});
+  };
+  const tun=$('#waTunnel');
+  if(tun){
+    try{tun.value=localStorage.getItem('agentdex-tunnel')||''}catch{}
+    const upd=()=>{const v=tun.value.trim().replace(/\/+$/,'');try{localStorage.setItem('agentdex-tunnel',v)}catch{}
+      $('#waUrl').innerHTML=/^https:\/\/[^\s/]+/.test(v)?copyBtn(v.match(/^https:\/\/[^\s/]+/)[0]+setupState.whatsapp.path):copyBtn('Paste your ngrok address above first');
+      $('#waUrl').querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='COPIED'}catch{b.textContent='SELECT IT'}setTimeout(()=>{b.textContent='COPY'},1500)})};
+    tun.oninput=upd;upd();
+  }
+  const wt=$('#waTest');
+  if(wt)wt.onclick=async()=>{wt.disabled=true;wt.textContent='SENDING...';
+    const r=await setupCall('POST','api/setup/test-whatsapp');
+    wt.disabled=false;wt.textContent='SEND TEST MESSAGE';
+    const ok=r.ok&&r.data.ok;$('#waTestResult').innerHTML=`<div class="result ${ok?'ok':'no'}">${esc(r.data.message||r.data.error||'Something went wrong.')}</div>`;
+    await checkSetup(false);};
+}
+let setupReturnFocus=null;
+async function openSetup(){
+  setupReturnFocus=document.activeElement;keys.clear();
+  if(LIVE)await checkSetup(false);
+  renderSetup();$('#setup').hidden=false;
+  const first=$('#setupBody input')||$('#setupClose');first&&first.focus();
+}
+function closeSetup(){$('#setup').hidden=true;setupReturnFocus&&setupReturnFocus.focus&&setupReturnFocus.focus()}
+$('#setupBtn').onclick=openSetup;
+$('#setupClose').onclick=closeSetup;
+$('#setup').addEventListener('click',e=>{if(e.target.id==='setup')closeSetup()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#setup').hidden){e.preventDefault();e.stopImmediatePropagation();closeSetup()}},true);
+
 async function boot(){
   requestAnimationFrame(draw);
   if(/^https?:$/.test(location.protocol)){

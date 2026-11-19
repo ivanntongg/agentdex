@@ -34,14 +34,12 @@ npm install
 ```
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-```
-
-```bash
 npm run real
 ```
 
-Open http://localhost:8787. Four agents arrive at the CENTER: PATCH (code), SCOUT (research), QUILL (writing) and CHECKS (reviewer). Open one, type a job into **GIVE TASK** and press SEND.
+Open http://localhost:8787. The first time, the **SETUP** screen opens by itself: paste your Claude API key, pick a model and how hard the agents should think, and press SAVE & TEST. Settings are saved in `agentdex.config.json` on your computer (git-ignored, readable only by you). You can reopen SETUP from the button in the top bar at any time.
+
+Four agents arrive at the CENTER: PATCH (code), SCOUT (research), QUILL (writing) and CHECKS (reviewer). Open one, type a job into **GIVE TASK** and press SEND.
 
 What happens next is real:
 
@@ -62,6 +60,25 @@ Each task costs real API tokens. Lower `AGENTDEX_EFFORT` to `low` for cheaper, q
 
 To keep the server and the agents as two processes, start the server with `AGENTDEX_SIM=0 npm start`, then run `npm run agents` (set `AGENTDEX_URL` if the server is elsewhere).
 
+## Control it from WhatsApp
+
+Leave your computer running Agentdex at home and talk to your agents from your phone:
+
+- `scout compare 3 note-taking apps` gives SCOUT a task (any agent name works)
+- `status` lists what everyone is doing
+- approval requests arrive with **YES / NO buttons**; you can also reply `yes` or `no`
+- `reset scout` clears an agent that fainted
+- you get a message when a task finishes or an agent faints
+
+It uses Meta's official WhatsApp Business API (free test number, up to 5 recipients) and a tunnel such as ngrok so WhatsApp can reach your computer. **The SETUP screen walks you through it in five steps**, with copy buttons and a test message.
+
+How it stays safe:
+
+- Only the WhatsApp webhook is exposed, on its own port (8788). The town and its controls stay private on your computer.
+- Every webhook request must carry Meta's signature (HMAC-SHA256 with your app secret); anything else is refused.
+- Only the number you enter can give orders; messages from any other number are ignored.
+- WhatsApp lets a bot message you only within 24 hours of your last message. Send `status` once a day if you want alerts; the SETUP screen tells you when this window has closed.
+
 ## Connect your own agent runtime
 
 Your runtime posts events (`task.started`, `task.progress`, `approval.requested`, ...) to `POST /api/ingest` and listens to `GET /api/events` for your answers. The full protocol, with a curl example, is in [docs/EVENTS.md](docs/EVENTS.md).
@@ -77,6 +94,8 @@ Your runtime posts events (`task.started`, `task.progress`, `approval.requested`
 | `server/test/` | Store rules and HTTP tests |
 | `runtime/runtime.js` | Real agents: the Claude tool-use loop, approvals, review, HP reporting |
 | `runtime/workspace.js` | Sandboxed file tools |
+| `server/config.js` | Settings saved from the SETUP screen |
+| `bridges/whatsapp.js` | WhatsApp remote control (official Cloud API) |
 | `runtime/test/` | End-to-end tests against a stand-in for the Claude API (no key, no cost) |
 
 ## Controls
