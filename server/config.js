@@ -7,8 +7,10 @@ import { randomBytes } from 'node:crypto';
 export const SECRET_FIELDS = ['anthropicKey', 'whatsappToken', 'whatsappAppSecret'];
 export const MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'];
 export const EFFORTS = ['low', 'medium', 'high'];
+export const BRAINS = ['api', 'claude-code'];
 
 const FIELDS = {
+  brain: (v) => (BRAINS.includes(v) ? null : `Brain must be one of ${BRAINS.join(', ')}`),
   anthropicKey: (v) => (v.startsWith('sk-ant-') ? null : 'A Claude API key starts with sk-ant-'),
   model: (v) => (MODELS.includes(v) ? null : `Model must be one of ${MODELS.join(', ')}`),
   effort: (v) => (EFFORTS.includes(v) ? null : `Effort must be one of ${EFFORTS.join(', ')}`),
@@ -28,7 +30,7 @@ export function createConfig({ path = 'agentdex.config.json', env = process.env 
 
   // Saved value first, then the matching environment variable.
   const ENV = {
-    anthropicKey: 'ANTHROPIC_API_KEY', model: 'AGENTDEX_MODEL', effort: 'AGENTDEX_EFFORT',
+    brain: 'AGENTDEX_BRAIN', anthropicKey: 'ANTHROPIC_API_KEY', model: 'AGENTDEX_MODEL', effort: 'AGENTDEX_EFFORT',
     whatsappToken: 'WHATSAPP_TOKEN', whatsappPhoneNumberId: 'WHATSAPP_PHONE_NUMBER_ID',
     whatsappAppSecret: 'WHATSAPP_APP_SECRET', whatsappAllowed: 'WHATSAPP_ALLOWED',
   };
@@ -58,6 +60,7 @@ export function createConfig({ path = 'agentdex.config.json', env = process.env 
     get,
     save,
     onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
+    brain: () => (BRAINS.includes(get('brain')) ? get('brain') : 'api'),
     model: () => get('model') || 'claude-opus-5-5',
     effort: () => get('effort') || 'medium',
     verifyToken: () => data.whatsappVerifyToken,
@@ -71,7 +74,7 @@ export function createConfig({ path = 'agentdex.config.json', env = process.env 
     },
     // What the SETUP screen may see.
     publicView() {
-      const view = { model: this.model(), effort: this.effort(), whatsappVerifyToken: data.whatsappVerifyToken,
+      const view = { brain: this.brain(), model: this.model(), effort: this.effort(), whatsappVerifyToken: data.whatsappVerifyToken,
         whatsappPhoneNumberId: get('whatsappPhoneNumberId'), whatsappAllowed: get('whatsappAllowed') };
       for (const k of SECRET_FIELDS) view[k] = mask(get(k));
       return view;

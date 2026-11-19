@@ -206,6 +206,8 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .efforts label b{font-family:var(--font-display);font-size:11px;letter-spacing:.06em}
 .efforts label span{color:var(--muted);font-size:13px}
 .efforts label{position:relative}
+.efforts.brains{grid-template-columns:repeat(2,1fr)}
+@media (max-width:520px){.efforts.brains{grid-template-columns:1fr}}
 .efforts input{position:absolute;inset:0;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
 .efforts label:has(input:checked){box-shadow:inset 0 0 0 2px var(--spark);background:#2c2858}
 .efforts label:has(input:focus-visible){outline:2px solid var(--spark)}
@@ -1052,7 +1054,8 @@ async function setupCall(method,path,body){
 }
 function setSetupBadge(){
   const b=$('#setupBtn');
-  const good=setupState&&setupState.claude.hasKey&&(!setupState.claude.lastCheck||setupState.claude.lastCheck.ok);
+  const c=setupState&&setupState.claude;
+  const good=Boolean(c)&&(c.brain==='claude-code'?Boolean(c.lastCheck&&c.lastCheck.ok):c.hasKey&&(!c.lastCheck||c.lastCheck.ok));
   b.classList.toggle('need',Boolean(setupState&&!good));b.classList.toggle('good',Boolean(good));
   b.title=!setupState?'Setup':good?'Claude is connected':'Claude is not connected yet';
 }
@@ -1061,7 +1064,7 @@ async function checkSetup(autoOpen){
   const r=await setupCall('GET','api/setup');
   setupAvailable=r.ok;
   if(r.ok){setupState=r.data;setSetupBadge();
-    if(autoOpen&&!setupState.claude.hasKey&&!setupAutoOpened){setupAutoOpened=true;openSetup()}}
+    if(autoOpen&&setupState.claude.brain!=='claude-code'&&!setupState.claude.hasKey&&!setupAutoOpened){setupAutoOpened=true;openSetup()}}
 }
 function copyBtn(text){return `<div class="copyrow"><code>${esc(text)}</code><button type="button" data-copy="${esc(text)}">COPY</button></div>`}
 function pill(kind,label){return `<span class="pill ${kind}">${label}</span>`}
@@ -1075,7 +1078,8 @@ function renderSetup(note){
     return;
   }
   const s=setupState,st=s.settings,c=s.claude,w=s.whatsapp;
-  const claudePill=!c.hasKey?pill('no','NOT CONNECTED'):c.lastCheck&&!c.lastCheck.ok?pill('no','PROBLEM'):c.lastCheck?pill('ok','CONNECTED'):pill('wait','SAVED, NOT TESTED');
+  const cc=c.brain==='claude-code';
+  const claudePill=cc?(!c.lastCheck?pill('wait','NOT TESTED'):c.lastCheck.ok?pill('ok','CONNECTED'):pill('no','PROBLEM')):!c.hasKey?pill('no','NOT CONNECTED'):c.lastCheck&&!c.lastCheck.ok?pill('no','PROBLEM'):c.lastCheck?pill('ok','CONNECTED'):pill('wait','SAVED, NOT TESTED');
   const waPill=!w.complete?pill('wait','OFF'):w.error?pill('no','PROBLEM'):w.health&&w.health.lastMessageAt?pill('ok','CONNECTED'):w.health&&w.health.verifiedAt?pill('ok','LINKED TO META'):pill('wait','WAITING FOR META');
   const effort=[['low','LOW','Quick and cheapest'],['medium','MEDIUM','Balanced. Best for most jobs'],['high','HIGH','Most careful, costs more']];
   const models=[['claude-opus-5-5','Opus 5.5 · smartest (recommended)'],['claude-sonnet-5-5','Sonnet 5.5 · fast and capable, cheaper'],['claude-haiku-5-5','Haiku 5.5 · quickest and cheapest']];
@@ -1083,10 +1087,25 @@ function renderSetup(note){
   body.innerHTML=`
   <form class="scard" id="fClaude" novalidate>
     <h3><span class="num">1</span>CLAUDE · YOUR AGENTS' BRAIN ${claudePill}</h3>
-    <p>Your agents think with Claude. Sign in at <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>, add some credit, open <b>API keys</b>, create a key and paste it here.</p>
-    <div class="field"><label for="stKey">API KEY</label>
-      <input id="stKey" type="password" autocomplete="off" spellcheck="false" placeholder="${c.hasKey?'Saved key '+esc(st.anthropicKey||'')+'. Paste a new one to replace it':'sk-ant-...'}">
-      <small>Treat it like a password. It is stored only on this computer.</small></div>
+    <div class="field"><span class="flabel">HOW SHOULD YOUR AGENTS CONNECT?</span>
+      <div class="efforts brains" role="radiogroup" aria-label="Connection">
+        <label><input type="radio" name="stBrain" value="api" ${cc?'':'checked'}><b>API KEY</b><span>Pay as you go from the Claude Console. Works for everyone.</span></label>
+        <label><input type="radio" name="stBrain" value="claude-code" ${cc?'checked':''}><b>MY CLAUDE PLAN</b><span>Uses Claude Code on this computer, signed in with your Pro or Max plan.</span></label>
+      </div></div>
+    <div id="brainApi" ${cc?'hidden':''}>
+      <p>Sign in at <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>, add some credit, open <b>API keys</b>, create a key and paste it here.</p>
+      <div class="field"><label for="stKey">API KEY</label>
+        <input id="stKey" type="password" autocomplete="off" spellcheck="false" placeholder="${c.hasKey?'Saved key '+esc(st.anthropicKey||'')+'. Paste a new one to replace it':'sk-ant-...'}">
+        <small>Treat it like a password. It is stored only on this computer.</small></div>
+    </div>
+    <div id="brainCc" ${cc?'':'hidden'}>
+      <ol class="wsteps">
+        <li><div><p><b>Install Claude Code</b> on this computer if you have not: follow <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noopener">code.claude.com/docs/en/setup</a>. On Windows, use the native installer.</p></div></li>
+        <li><div><p><b>Sign in once.</b> Open a new terminal window, run the command below, and log in with your Claude account. Then close that window.</p>${copyBtn('claude')}</div></li>
+        <li><div><p><b>Press SAVE &amp; TEST.</b> Agentdex starts Claude Code for each task. It never sees your login.</p></div></li>
+      </ol>
+      <p class="setup-note">Tasks count toward your plan's usage limits, and those limits are meant for ordinary personal use. Agentdex runs Claude Code in its restricted mode: no shell commands, files only inside the workspace, and your YES before any write outside drafts.</p>
+    </div>
     <div class="field"><label for="stModel">MODEL</label>
       <select id="stModel">${models.map(([v,l])=>`<option value="${v}" ${st.model===v?'selected':''}>${l}</option>`).join('')}</select></div>
     <div class="field"><span class="flabel">HOW HARD SHOULD THEY THINK?</span>
@@ -1143,9 +1162,10 @@ function bindSetup(){
     setTimeout(()=>{b.textContent='COPY'},1500);
   });
   const fc=$('#fClaude');
+  if(fc)fc.querySelectorAll('input[name=stBrain]').forEach(r=>r.onchange=()=>{const isCc=r.value==='claude-code'&&r.checked;if(!r.checked)return;$('#brainApi').hidden=isCc;$('#brainCc').hidden=!isCc});
   if(fc)fc.onsubmit=async e=>{
     e.preventDefault();const btn=fc.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='TESTING...';
-    const patch={model:$('#stModel').value,effort:(fc.querySelector('input[name=stEffort]:checked')||{}).value};
+    const patch={model:$('#stModel').value,effort:(fc.querySelector('input[name=stEffort]:checked')||{}).value,brain:(fc.querySelector('input[name=stBrain]:checked')||{}).value};
     const key=$('#stKey').value.trim();if(key)patch.anthropicKey=key;
     const r=await setupCall('POST','api/setup',patch);
     if(!r.ok){btn.disabled=false;btn.textContent='SAVE & TEST';return renderSetup({claude:r.data.error||'Could not save.'})}

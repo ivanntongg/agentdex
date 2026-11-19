@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { SPECIES } from '../server/species.js';
 import { FILE_TOOLS, WorkspaceError } from './workspace.js';
 import { REVIEWER_SYSTEM, REVIEW_SCHEMA, systemPrompt, usesWeb } from './roles.js';
+import { ClaudeCodeError, ClaudeCodeStopped } from './claude-code.js';
 
 const WEB_SEARCH = { type: 'web_search_20260209', name: 'web_search', max_uses: 5 };
 const MOVE_FOR_TOOL = { list_files: 'READ', read_file: 'READ', write_file: 'EDIT' };
@@ -72,9 +73,10 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
   }
 
   async function reportFailure(agentId, err) {
-    if (err instanceof Stopped || err?.name === 'AbortError' || err instanceof Anthropic.APIUserAbortError) return;
+    if (err instanceof Stopped || err instanceof ClaudeCodeStopped || err?.name === 'AbortError' || err instanceof Anthropic.APIUserAbortError) return;
     let reason;
-    if (err instanceof Anthropic.AuthenticationError) reason = 'The Claude API rejected the key. Check ANTHROPIC_API_KEY.';
+    if (err instanceof ClaudeCodeError) reason = err.message;
+    else if (err instanceof Anthropic.AuthenticationError) reason = 'The Claude API rejected the key. Check ANTHROPIC_API_KEY.';
     else if (err instanceof Anthropic.RateLimitError) reason = 'The Claude API is rate limiting us. Try again in a minute.';
     else if (err instanceof Anthropic.APIError) reason = `Claude API error ${err.status ?? ''}: ${err.message}`.slice(0, 200);
     else reason = `Runtime error: ${err?.message || err}`.slice(0, 200);
@@ -151,20 +153,22 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     for (const rel of [...written].slice(0, 10)) {
       try { files.push(`--- ${rel} ---\n${(await workspace.tools.read_file({ path: rel })).slice(0, 20000)}`); } catch { /* deleted or too big */ }
     }
-    const res = await request({
-      system: REVIEWER_SYSTEM,
-      messages: [{ role: 'user', content: `Task given to ${agent.nick}: ${task.title}\n${task.details || ''}\n\nTheir summary: ${summary}\n\nFiles they wrote:\n${files.join('\n\n') || '(none)'}` }],
-      output_config: { format: { type: 'json_schema', schema: REVIEW_SCHEMA } },
-    }, signal);
-    await dex.emit('task.progress', reviewer.id, { tokens: (res.usage.input_tokens + res.usage.output_tokens) / 1000, tool: 'REVIEW' });
-    let verdict = { verdict: 'approved', issues: [], summary: '' };
-    if (res.stop_reason !== 'refusal') {
-      const text = res.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-      try {
-        const v = JSON.parse(text);
-        if (['approved', 'changes'].includes(v.verdict) && Array.isArray(v.issues)) verdict = v;
-      } catch { /* treat unreadable output as approved rather than blocking the task */ }
+    const prompt = `Task given to ${agent.nick}: ${task.title}\n${task.details || ''}\n\nTheir summary: ${summary}\n\nFiles they wrote:\n${files.join('\n\n') || '(none)'}`;
+    let v = null;
+    const cfg = current();
+    if (cfg.engine === 'claude-code') {
+      const r = await cfg.claudeCode.structured({ prompt, systemPrompt: REVIEWER_SYSTEM, schema: REVIEW_SCHEMA, model: cfg.model, effort: cfg.effort, signal });
+      await dex.emit('task.progress', reviewer.id, { tokens: r.tokens, tool: 'REVIEW' });
+      v = r.output;
+    } else {
+      const res = await request({ system: REVIEWER_SYSTEM, messages: [{ role: 'user', content: prompt }], output_config: { format: { type: 'json_schema', schema: REVIEW_SCHEMA } } }, signal);
+      await dex.emit('task.progress', reviewer.id, { tokens: (res.usage.input_tokens + res.usage.output_tokens) / 1000, tool: 'REVIEW' });
+      if (res.stop_reason !== 'refusal') {
+        try { v = JSON.parse(res.content.filter((b) => b.type === 'text').map((b) => b.text).join('')); } catch { /* unreadable */ }
+      }
     }
+    // Unreadable output counts as approved rather than blocking the task.
+    const verdict = v && ['approved', 'changes'].includes(v.verdict) && Array.isArray(v.issues) ? v : { verdict: 'approved', issues: [], summary: '' };
     await dex.emit('review.finished', agent.id, { reviewerId: reviewer.id, result: verdict.verdict, issues: verdict.issues.length || 1 });
     return verdict;
   }
@@ -173,7 +177,9 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     const agent = agents.get(agentId);
     if (!agent || agent.boxed) return;
     const species = SPECIES[agent.species];
-    if (!current().anthropic) {
+    const cfg = current();
+    if (cfg.engine === 'claude-code') return runWithClaudeCode(agent, task, species, cfg, signal);
+    if (!cfg.anthropic) {
       await dex.emit('agent.interacted', agentId, { action: 'poke', tone: 'bad', message: `${agent.nick} can't start "${task.title}" yet: add your Claude API key on the SETUP screen, then give the task again.` });
       return;
     }
@@ -201,6 +207,38 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
         ctx.messages.push({ role: 'user', content: `${reviewer.nick} reviewed your work and asked for changes:\n${v.issues.map((i) => `- ${i}`).join('\n')}\n\nFix these, then reply with your one or two sentence summary again.` });
         summary = await loop(agent, ctx, signal);
         if (summary === null) return;
+      }
+    }
+    await dex.emit('task.finished', agentId, { xp: 60, note: summary });
+    log(`[${agent.nick}] finished: ${summary}`);
+  }
+
+  // Same flow as runTask, but each round of work is one `claude -p` run (see claude-code.js).
+  async function runWithClaudeCode(agent, task, species, cfg, signal) {
+    const agentId = agent.id;
+    if (agent.loc !== species.home) await dex.emit('agent.moved', agentId, { to: species.home });
+    await dex.emit('task.started', agentId, { title: task.title, review: task.review });
+    log(`[${agent.nick}] started with Claude Code: ${task.title}`);
+    const ask = `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}`;
+    const work = (prompt) => cfg.claudeCode.runTask({
+      agentId, prompt, signal,
+      systemPrompt: systemPrompt(species, agent.nick),
+      web: usesWeb(species), model: cfg.model, effort: cfg.effort,
+      hpBudget: agents.get(agentId)?.hp ?? agent.hp,
+      onProgress: (tokens, tool) => { dex.emit('task.progress', agentId, { tokens, tool }).catch(() => {}); },
+    });
+    let r = await work(ask);
+    if (r.fainted) return;
+    let { summary } = r;
+    const written = new Set(r.written);
+    const reviewer = task.review && [...agents.values()].find((x) => !x.boxed && SPECIES[x.species].reviewer && x.status !== 'FNT' && !x.reviewingId);
+    if (reviewer) {
+      const v = await review(agent, reviewer, task, summary, written, signal);
+      if (v.verdict === 'changes') {
+        await dex.emit('agent.moved', agentId, { to: species.home });
+        r = await work(`${ask}\n\nYou already worked on this task; your files are in the workspace. Your summary was: ${summary}\n\n${reviewer.nick} reviewed it and asked for changes:\n${v.issues.map((i) => `- ${i}`).join('\n')}\n\nFix these, then reply with your one or two sentence summary again.`);
+        if (r.fainted) return;
+        summary = r.summary;
       }
     }
     await dex.emit('task.finished', agentId, { xp: 60, note: summary });

@@ -8,12 +8,14 @@
 //   WHATSAPP_APP_SECRET, WHATSAPP_ALLOWED
 // and these only as variables:
 //   PORT (8787), HOST (127.0.0.1), AGENTDEX_TOKEN, AGENTDEX_URL, AGENTDEX_WORKSPACE (./workspace),
-//   AGENTDEX_CONFIG (./agentdex.config.json), WHATSAPP_PORT (8788)
+//   AGENTDEX_CONFIG (./agentdex.config.json), WHATSAPP_PORT (8788),
+//   AGENTDEX_BRAIN (api | claude-code), AGENTDEX_CLAUDE_BIN (path to the claude command, default "claude")
 import Anthropic from '@anthropic-ai/sdk';
 import { fileURLToPath } from 'node:url';
 import { createAgentdexClient } from './agentdex.js';
 import { createWorkspace } from './workspace.js';
 import { createRuntime } from './runtime.js';
+import { createClaudeCode, ClaudeCodeError } from './claude-code.js';
 import { createConfig, ConfigError } from '../server/config.js';
 import { StoreError } from '../server/store.js';
 import { createWhatsAppBridge } from '../bridges/whatsapp.js';
@@ -50,6 +52,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
     return client;
   };
   let lastClaudeCheck = null;
+  let claudeCode = null;
 
   let dex = null;
   let bridge = null;
@@ -78,7 +81,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
       return {
         settings: config.publicView(),
         workspace: workspace.root,
-        claude: { hasKey: Boolean(config.get('anthropicKey')), lastCheck: lastClaudeCheck },
+        claude: { brain: config.brain(), hasKey: Boolean(config.get('anthropicKey')), lastCheck: lastClaudeCheck },
         whatsapp: {
           complete: Boolean(wa), running: Boolean(bridge), error: bridgeError,
           port: wa?.port || Number(env.WHATSAPP_PORT || 8788), path: '/webhooks/whatsapp',
@@ -92,6 +95,15 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
       }
     },
     async testClaude() {
+      if (config.brain() === 'claude-code') {
+        try {
+          await claudeCode.check({ model: config.model() });
+          lastClaudeCheck = { ok: true, message: 'Connected through Claude Code. Tasks will use your Claude plan.', at: new Date().toISOString() };
+        } catch (err) {
+          lastClaudeCheck = { ok: false, message: err instanceof ClaudeCodeError ? err.message : `Claude Code check failed: ${err.message}`, at: new Date().toISOString() };
+        }
+        return lastClaudeCheck;
+      }
       const c = claude();
       if (!c) return (lastClaudeCheck = { ok: false, message: 'Paste your Claude API key first.', at: new Date().toISOString() });
       try {
@@ -124,7 +136,8 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   }
 
   dex = createAgentdexClient({ url, token });
-  const runtime = createRuntime({ dex, workspace, settings: () => ({ anthropic: claude(), model: config.model(), effort: config.effort() }) });
+  claudeCode = createClaudeCode({ bin: env.AGENTDEX_CLAUDE_BIN || 'claude', workspace, url, token });
+  const runtime = createRuntime({ dex, workspace, settings: () => ({ engine: config.brain(), claudeCode, anthropic: claude(), model: config.model(), effort: config.effort() }) });
 
   const state = await dex.state().catch((err) => { throw new Error(`Cannot reach Agentdex at ${url}: ${err.message}`); });
   if (state.adapter === 'simulator') console.warn('Warning: the server is running its simulator. Start it with AGENTDEX_SIM=0 so the fake agents stay out of the way.');
@@ -143,7 +156,8 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   await applyWhatsApp();
 
   console.log(`Workspace: ${workspace.root}`);
-  console.log(config.get('anthropicKey') ? 'Agents are ready. Open an agent and use GIVE TASK.' : 'Open the town and press SETUP to add your Claude API key.');
+  const ready = config.brain() === 'claude-code' || config.get('anthropicKey');
+  console.log(ready ? `Agents are ready (${config.brain() === 'claude-code' ? 'using Claude Code and your Claude plan' : 'using your Claude API key'}). Open an agent and use GIVE TASK.` : 'Open the town and press SETUP to connect Claude.');
   return { setup, config };
 }
 
