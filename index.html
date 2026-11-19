@@ -7,7 +7,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=Silkscreen:wght@400;700&display=swap">
 <style>
 /* Layout: a handheld console. The town screen is the hero; party, dex and box live in a side menu; the event log sits under the screen. Single deliberate night-console theme. */
 :root{
@@ -27,14 +27,15 @@
   --good:#7cc79a;
   --hp-g:#72c07c;--hp-y:#dcb64e;--hp-r:#d8706a;
   --t-code:#5f84c8;--t-research:#55a06e;--t-design:#c96f99;--t-ops:#cc8650;--t-qa:#8a6fc4;--t-write:#b89a4a;
-  --font-display:"Silkscreen","Courier New",monospace;
-  --font-body:"Pixelify Sans","Trebuchet MS",system-ui,sans-serif;
+  --font-pixel:"Silkscreen","Courier New",monospace;
+  --font-body:"Atkinson Hyperlegible Next","Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-display:var(--font-body);
   color-scheme:dark;
 }
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink);margin:0}
 img{max-width:100%}
-body{font-family:var(--font-body);font-size:16px;line-height:1.35;
+body{font-family:var(--font-body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 32px;
   background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:6px 6px}
 *{box-sizing:border-box}
@@ -46,10 +47,10 @@ img.spr{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
 .wrap{max-width:1240px;margin:0 auto;display:grid;gap:14px}
 header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px}
 .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.brand h1{margin:0;font-family:var(--font-display);font-weight:700;font-size:clamp(26px,4vw,38px);letter-spacing:.04em;color:var(--spark);text-shadow:3px 3px 0 #8a5a3a,5px 5px 0 #191730}
-.brand p{margin:0;font-family:var(--font-display);font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.brand h1{margin:0;font-family:var(--font-pixel);font-weight:700;font-size:clamp(26px,4vw,38px);letter-spacing:.04em;color:var(--spark);text-shadow:3px 3px 0 #8a5a3a,5px 5px 0 #191730}
+.brand p{margin:0;font-family:var(--font-display);font-weight:600;font-size:12px;color:var(--muted);letter-spacing:.01em}
 .hud{display:flex;flex-wrap:wrap;gap:8px}
-.chip{font-family:var(--font-display);font-size:12px;letter-spacing:.06em;padding:6px 10px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.chip{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.01em;padding:6px 10px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .chip b{font-weight:700;font-variant-numeric:tabular-nums}
 .chip.needs{background:#4a3a10;box-shadow:inset 0 0 0 2px var(--spark);color:var(--spark)}
 .chip.mode.live{color:var(--good);box-shadow:inset 0 0 0 2px #4f8f68}
@@ -63,17 +64,17 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .console{background:var(--bezel);padding:14px;box-shadow:inset 0 0 0 3px var(--bezel-hi),inset 0 -6px 0 rgba(0,0,0,.25);min-width:0}
 .screen{position:relative;width:100%;aspect-ratio:3/2;background:#000;container-type:inline-size;box-shadow:0 0 0 4px #0c0b1c}
 .screen canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer;filter:saturate(.8) contrast(.88) brightness(.96)}
-.bl{position:absolute;transform:translate(-50%,-100%);font-family:var(--font-display);font-size:clamp(8px,1.55cqw,13px);letter-spacing:.06em;background:rgba(28,23,51,.86);color:#fff;padding:.25em .55em .3em;pointer-events:none;white-space:nowrap;line-height:1}
+.bl{position:absolute;transform:translate(-50%,-100%);font-family:var(--font-pixel);font-size:clamp(8px,1.55cqw,13px);letter-spacing:.06em;background:rgba(28,23,51,.86);color:#fff;padding:.25em .55em .3em;pointer-events:none;white-space:nowrap;line-height:1}
 .bl small{color:#cfc9f5;font-size:.82em;margin-left:.4em;text-transform:lowercase}
-.screen-cap{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;font-family:var(--font-display);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.screen-cap{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--muted);letter-spacing:.01em}
 
 /* dialog box */
 .dlg{position:absolute;left:3%;right:3%;bottom:3.5%;background:var(--paper);color:var(--paper-ink);
   box-shadow:inset 0 0 0 .5cqw var(--frame-a),inset 0 0 0 1cqw var(--frame-b),inset 0 0 0 1.3cqw var(--paper);
   padding:2.2cqw 2.8cqw;display:flex;gap:2cqw;align-items:stretch;min-height:21%}
-.dlg-text{flex:1;font-size:clamp(13px,2.75cqw,26px);line-height:1.35;min-width:0;cursor:pointer}
+.dlg-text{flex:1;font-size:clamp(14px,2.6cqw,24px);line-height:1.4;font-weight:600;min-width:0;cursor:pointer}
 .dlg-text .hl{color:#b0371f;font-weight:700}
-.dlg-meta{display:block;font-family:var(--font-display);font-size:clamp(8px,1.45cqw,12px);color:#6a6490;letter-spacing:.06em;margin-bottom:.6cqw;text-transform:uppercase}
+.dlg-meta{display:block;font-family:var(--font-display);font-weight:600;font-size:clamp(8px,1.45cqw,12px);color:#6a6490;letter-spacing:.01em;margin-bottom:.6cqw}
 .dlg-ch{display:flex;flex-direction:column;justify-content:center;gap:.6cqw;padding:1cqw 1.4cqw 1cqw 3.2cqw;background:var(--paper);box-shadow:inset 0 0 0 .4cqw var(--frame-a)}
 .dlg-ch button{font-family:var(--font-body);font-weight:700;font-size:clamp(13px,2.6cqw,24px);text-align:left;position:relative;color:var(--paper-ink);padding:.1em .2em;line-height:1.2}
 .dlg-ch button.sel::before{content:"";position:absolute;left:-1.1em;top:50%;transform:translateY(-50%);border-left:.55em solid var(--paper-ink);border-top:.35em solid transparent;border-bottom:.35em solid transparent}
@@ -82,47 +83,47 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 /* side menu */
 .menu{background:var(--bezel);box-shadow:inset 0 0 0 3px var(--bezel-hi);padding:12px;display:grid;gap:12px;min-width:0}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.tab{font-family:var(--font-display);font-size:13px;letter-spacing:.08em;padding:9px 4px;background:#1c1940;box-shadow:inset 0 0 0 2px var(--slot-line);color:var(--muted);text-align:center}
+.tab{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em;padding:9px 4px;background:#1c1940;box-shadow:inset 0 0 0 2px var(--slot-line);color:var(--muted);text-align:center}
 .tab[aria-selected="true"]{background:var(--spark);color:#2a1d00;box-shadow:inset 0 0 0 2px #fff3b0}
 .pane{display:grid;gap:8px;min-width:0}
-.pane-h{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--font-display);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;padding:0 2px}
+.pane-h{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--muted);letter-spacing:.01em;padding:0 2px}
 
 .slot{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;width:100%;text-align:left;padding:8px 10px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line)}
 .slot:hover{background:#38337a}
 .slot.sel{box-shadow:inset 0 0 0 2px var(--spark)}
 .slot.needs{background:#3d3214;box-shadow:inset 0 0 0 2px var(--spark)}
-.slot.empty{grid-template-columns:1fr;color:var(--muted);font-family:var(--font-display);font-size:11px;letter-spacing:.08em;justify-items:center;padding:14px;background:transparent;box-shadow:inset 0 0 0 2px #3a3574;cursor:default}
+.slot.empty{grid-template-columns:1fr;color:var(--muted);font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em;justify-items:center;padding:14px;background:transparent;box-shadow:inset 0 0 0 2px #3a3574;cursor:default}
 .mini{width:44px;height:44px;background:#1c1940;box-shadow:inset 0 0 0 2px #3f3a80;display:grid;place-items:center}
 .mini img{width:32px;height:32px}
 .r1{display:flex;align-items:center;gap:8px;min-width:0}
 .nick{font-weight:700;font-size:17px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lv{font-family:var(--font-display);font-size:11px;color:var(--muted);white-space:nowrap}
-.st{font-family:var(--font-display);font-size:10px;padding:2px 5px;letter-spacing:.06em;color:#fff;margin-left:auto;white-space:nowrap}
+.lv{font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--muted);white-space:nowrap}
+.st{font-family:var(--font-pixel);font-size:12px;padding:2px 5px;letter-spacing:.06em;color:#fff;margin-left:auto;white-space:nowrap}
 .st-OK{display:none}
 .st-SLP{background:#5f5c8a}.st-PAR{background:#c99a00;color:#231a00}.st-CNF{background:#c0447c}.st-PSN{background:#7b4bc4}.st-FNT{background:#c8323e}
 .hpr{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;margin-top:4px}
-.hp-tag{font-family:var(--font-display);font-size:9px;background:#1c1733;color:var(--spark);padding:1px 4px}
+.hp-tag{font-family:var(--font-display);font-weight:600;font-size:12px;background:#1c1733;color:var(--spark);padding:1px 4px}
 .hp-bar{height:7px;background:#1c1733;box-shadow:inset 0 0 0 1px #0f0d22;position:relative}
 .hp-bar i{position:absolute;left:1px;top:1px;bottom:1px;display:block;transition:width .4s steps(8)}
 .hp-g{background:var(--hp-g)}.hp-y{background:var(--hp-y)}.hp-r{background:var(--hp-r)}
-.hp-num{font-family:var(--font-display);font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hp-num{font-family:var(--font-display);font-weight:600;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .task{font-size:13.5px;color:#d4cff5;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .task em{font-style:normal;color:var(--muted)}
 
 /* summary */
 .sum{display:grid;gap:10px}
-.back{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;color:var(--muted);justify-self:start;padding:4px 2px}
+.back{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em;color:var(--muted);justify-self:start;padding:4px 2px}
 .back:hover{color:var(--ink)}
 .card{background:var(--paper);color:var(--paper-ink);padding:14px;box-shadow:inset 0 0 0 3px var(--frame-a),inset 0 0 0 5px var(--frame-b)}
 .sum-top{display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px;align-items:center}
 .portrait{width:104px;height:104px;background:linear-gradient(#cfe8ff,#eaf5ff 60%,#bfe3a0 60%,#a8d488);box-shadow:inset 0 0 0 2px var(--paper-ink);display:grid;place-items:center}
 .portrait img{width:80px;height:80px}
 .sum-name{font-weight:700;font-size:22px;line-height:1.1}
-.sum-sp{font-family:var(--font-display);font-size:10px;color:#6a6490;letter-spacing:.06em;margin-top:2px}
+.sum-sp{font-family:var(--font-display);font-weight:600;font-size:12px;color:#6a6490;letter-spacing:.01em;margin-top:2px}
 .types{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
-.type{font-family:var(--font-display);font-size:10px;letter-spacing:.06em;color:#fff;padding:2px 6px;text-shadow:1px 1px 0 rgba(0,0,0,.35)}
+.type{font-family:var(--font-pixel);font-size:12px;letter-spacing:.06em;color:#fff;padding:2px 6px;text-shadow:1px 1px 0 rgba(0,0,0,.35)}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
-.kv dt{font-family:var(--font-display);font-size:10px;letter-spacing:.06em;color:#6a6490;padding-top:3px}
+.kv dt{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.01em;color:#6a6490;padding-top:3px}
 .kv dd{margin:0;min-width:0}
 .bar2{height:8px;background:#d9d4ea;position:relative;margin-top:4px}
 .bar2 i{position:absolute;inset:0 auto 0 0;display:block}
@@ -130,11 +131,11 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .cap{font-size:12px;color:#6a6490;margin-top:2px}
 .moves{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .mv{background:#fff;box-shadow:inset 0 0 0 2px #d4cfe6;padding:6px 8px;display:flex;justify-content:space-between;gap:6px;font-weight:700;font-size:14px}
-.mv span{font-family:var(--font-display);font-weight:400;font-size:10px;color:#6a6490;align-self:center;font-variant-numeric:tabular-nums}
+.mv span{font-family:var(--font-display);font-weight:600;font-weight:400;font-size:12px;color:#6a6490;align-self:center;font-variant-numeric:tabular-nums}
 .mv.locked{color:#8a84aa}
 .memo{font-size:14px;line-height:1.4;color:#3d375c}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
-.btn{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;padding:9px 12px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);color:var(--ink)}
+.btn{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em;padding:9px 12px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);color:var(--ink)}
 .btn:hover{background:#38337a}
 .btn.primary{background:var(--spark);color:#2a1d00;box-shadow:inset 0 0 0 2px #fff3b0}
 .btn.primary:hover{background:#ffe070}
@@ -144,8 +145,8 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .dexgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .dx{background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);padding:8px 4px 6px;display:grid;justify-items:center;gap:2px;position:relative}
 .dx img{width:48px;height:48px}
-.dx .no{font-family:var(--font-display);font-size:9px;color:var(--muted);letter-spacing:.06em}
-.dx .dn{font-family:var(--font-display);font-size:10px;letter-spacing:.04em}
+.dx .no{font-family:var(--font-display);font-weight:600;font-size:12px;color:var(--muted);letter-spacing:.01em}
+.dx .dn{font-family:var(--font-pixel);font-size:12px;letter-spacing:.04em}
 .dx.sel{box-shadow:inset 0 0 0 2px var(--spark)}
 .dx .own{position:absolute;top:5px;right:6px;width:9px;height:9px;background:var(--spark);box-shadow:0 0 0 1px #1c1733;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
 .dx.unk .dn{color:var(--muted)}
@@ -153,7 +154,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 /* box */
 .boxgrid{display:grid;gap:8px}
 .give{display:grid;gap:6px;background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);padding:10px}
-.give label[for]{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;color:var(--spark)}
+.give label[for]{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em;color:var(--spark)}
 .give textarea{font:inherit;font-size:15px;color:var(--ink);background:#1c1940;border:0;box-shadow:inset 0 0 0 2px #4b4596;padding:8px;resize:vertical;width:100%}
 .give textarea:focus-visible{outline:2px solid var(--spark)}
 .give-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
@@ -162,16 +163,16 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 
 /* log */
 .log{margin-top:12px;background:#110f26;box-shadow:inset 0 0 0 2px #2c2860;padding:10px 12px;display:grid;gap:4px;max-height:212px;overflow:auto}
-.log-h{display:flex;justify-content:space-between;font-family:var(--font-display);font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;gap:8px;flex-wrap:wrap}
+.log-h{display:flex;justify-content:space-between;font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em;color:var(--muted);margin-bottom:4px;gap:8px;flex-wrap:wrap}
 .ev{display:grid;grid-template-columns:46px minmax(0,1fr);gap:8px;font-size:14px;line-height:1.35}
-.ev time{font-family:var(--font-display);font-size:10px;color:#6f69a3;padding-top:3px;font-variant-numeric:tabular-nums}
+.ev time{font-family:var(--font-display);font-weight:600;font-size:12px;color:#6f69a3;padding-top:3px;font-variant-numeric:tabular-nums}
 .ev.need span{color:var(--spark)}
 .ev.bad span{color:#ff8e98}
 .ev.ok span{color:#9ee6b6}
 .ev.lvl span{color:#9fc2ff}
 .key{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px;color:var(--muted)}
 .key span{display:flex;align-items:center;gap:6px}
-.pausebtn{font-family:var(--font-display);font-size:10px;letter-spacing:.08em;color:var(--muted)}
+.pausebtn{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.01em;color:var(--muted)}
 .pausebtn:hover{color:var(--ink)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
@@ -185,27 +186,29 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .setup-in{max-width:780px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 #setupBody{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0}
 .setup-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.setup-head h2{margin:0;font-family:var(--font-display);font-size:clamp(22px,4vw,30px);color:var(--spark);letter-spacing:.04em;text-shadow:3px 3px 0 #8a5a3a}
+.setup-head h2{margin:0;font-family:var(--font-pixel);font-size:clamp(22px,4vw,30px);color:var(--spark);letter-spacing:.04em;text-shadow:3px 3px 0 #8a5a3a}
 .setup-head p{margin:2px 0 0;color:var(--muted);font-size:15px}
 .scard{background:var(--bezel);box-shadow:inset 0 0 0 3px var(--bezel-hi);padding:18px;display:grid;gap:12px;min-width:0}
-.scard h3{margin:0;font-family:var(--font-display);font-size:15px;letter-spacing:.06em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.scard h3{margin:0;font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.01em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .scard h3 .num{background:var(--spark);color:#2a1d00;padding:2px 8px}
 .scard p{margin:0;font-size:15px;line-height:1.45;color:#d6d2f0;max-width:64ch}
 .scard a{color:var(--spark)}
-.pill{font-family:var(--font-display);font-size:10px;letter-spacing:.06em;padding:3px 8px;margin-left:auto}
+.pill{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.01em;padding:3px 8px;margin-left:auto}
 .pill.ok{background:#2f6e4a;color:#d9ffe7}.pill.no{background:#6e2f3a;color:#ffe0e4}.pill.wait{background:#5f5c8a;color:#fff}
 .field{display:grid;gap:5px;min-width:0;align-content:start}
-.field>label,.flabel{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;color:var(--spark)}
+.field>label,.flabel{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em;color:var(--spark)}
 .field small{color:var(--muted);font-size:13px}
 .field input,.field select{font:inherit;font-size:15px;color:var(--ink);background:#1c1940;border:0;box-shadow:inset 0 0 0 2px #4b4596;padding:9px 10px;width:100%;min-width:0}
 .field input:focus-visible,.field select:focus-visible{outline:2px solid var(--spark)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .efforts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 @media (max-width:520px){.efforts{grid-template-columns:1fr}}
-.efforts label{display:grid;gap:2px;padding:10px;background:#1c1940;box-shadow:inset 0 0 0 2px #4b4596;cursor:pointer;font-size:14px}
-.efforts label b{font-family:var(--font-display);font-size:11px;letter-spacing:.06em}
+.efforts label{display:grid;gap:2px;align-content:start;padding:10px;background:#1c1940;box-shadow:inset 0 0 0 2px #4b4596;cursor:pointer;font-size:14px}
+.efforts label b{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em}
 .efforts label span{color:var(--muted);font-size:13px}
 .efforts label{position:relative}
+.efforts.brains{grid-template-columns:repeat(2,1fr)}
+@media (max-width:520px){.efforts.brains{grid-template-columns:1fr}}
 .efforts input{position:absolute;inset:0;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
 .efforts label:has(input:checked){box-shadow:inset 0 0 0 2px var(--spark);background:#2c2858}
 .efforts label:has(input:focus-visible){outline:2px solid var(--spark)}
@@ -214,10 +217,10 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .scard>*,.wsteps>li>div>*,.field>*{min-width:0}
 .copyrow{display:flex;min-width:0;max-width:100%;background:#1c1940;box-shadow:inset 0 0 0 2px #4b4596}
 .copyrow code{flex:1;min-width:0;padding:8px 10px;font-size:13px;overflow-x:auto;white-space:nowrap;color:#e9e6ff}
-.copyrow button{font-family:var(--font-display);font-size:10px;letter-spacing:.06em;background:#3a3474;color:#fff;padding:0 12px}
+.copyrow button{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.01em;background:#3a3474;color:#fff;padding:0 12px}
 .wsteps{margin:0;padding:0;list-style:none;display:grid;gap:12px;counter-reset:w}
 .wsteps>li{counter-increment:w;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px}
-.wsteps>li::before{content:counter(w);font-family:var(--font-display);font-size:12px;width:30px;height:30px;display:grid;place-items:center;background:#3a3474;color:#fff}
+.wsteps>li::before{content:counter(w);font-family:var(--font-display);font-weight:600;font-size:12px;width:30px;height:30px;display:grid;place-items:center;background:#3a3474;color:#fff}
 .wsteps>li>div{display:grid;gap:8px;min-width:0}
 .health{display:grid;gap:4px;font-size:14px;color:#d6d2f0}
 .health b{color:#9ee6b6;font-weight:400}
@@ -232,15 +235,14 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
   <header class="top">
     <div class="brand">
       <h1>AGENTDEX</h1>
-      <p>Your agents, out in the field</p>
     </div>
     <div class="hud" aria-live="polite">
-      <span class="chip" style="color:var(--good)"><span class="dot"></span><b id="cWork">0</b> WORKING</span>
-      <span class="chip"><span class="dot" style="color:#8f8bc0"></span><b id="cIdle">0</b> IDLE</span>
+      <span class="chip" style="color:var(--good)"><span class="dot"></span><b id="cWork">0</b> working</span>
+      <span class="chip"><span class="dot" style="color:#8f8bc0"></span><b id="cIdle">0</b> idle</span>
       <button class="chip setup-btn" id="setupBtn" type="button"><span class="dot"></span>SETUP</button>
       <span class="chip mode" id="mode" title="Demo runs in your browser. Live follows the Agentdex server.">DEMO</span>
-      <button class="chip needs" id="cNeeds"><b id="cNeedN">0</b> NEED YOU</button>
-      <span class="chip"><span id="clock">DAY 1 09:41</span></span>
+      <button class="chip needs" id="cNeeds"><b id="cNeedN">0</b> need you</button>
+      <span class="chip"><span id="clock">Day 1 · 09:41</span></span>
     </div>
   </header>
 
@@ -256,7 +258,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
       </div>
       <div class="screen-cap"><span>Walk: arrow keys, WASD or tap the map. Z near an agent to pet or poke. Z = YES, X = NO.</span><button class="pausebtn" id="pause">PAUSE TIME</button></div>
       <div class="log">
-        <div class="log-h"><span>Field log</span><span>Every move on the map is a real event</span></div>
+        <div class="log-h"><span>Field log</span></div>
         <div id="log"></div>
       </div>
       <div class="key">
@@ -841,9 +843,9 @@ function renderPane(){
       const nt=$('#giveTitle');if(keep&&nt){nt.value=keep.v;$('#giveReview').checked=keep.r;if(keep.f){nt.focus();nt.setSelectionRange(keep.s,keep.e)}}
       return}
     view='list';
-    let h=`<div class="pane-h"><span>Party ${party.length}/6</span><span>HP = context left</span></div>`;
+    let h=`<div class="pane-h"><span>Party ${party.length}/6</span><span>HP is context left</span></div>`;
     h+=party.map(a=>slotHTML(a)).join('');
-    for(let i=party.length;i<6;i++)h+=`<div class="slot empty">EMPTY SLOT · SPAWN FROM THE DEX</div>`;
+    for(let i=party.length;i<6;i++)h+=`<div class="slot empty">Empty slot. Spawn one from the Dex.</div>`;
     p.innerHTML=h;
     p.querySelectorAll('.slot[data-id]').forEach(b=>b.onclick=()=>{selId=+b.dataset.id;view='sum';renderPane()});
   }else if(tab==='dex'){
@@ -876,7 +878,7 @@ function dexDetail(){
   return`<div class="card pix sum">
     <div class="sum-top"><div class="portrait"><img class="spr" alt="" src="${sprURL(dexSel)}"></div>
       <div><div class="sum-sp">No.${String(s.no).padStart(3,'0')}</div><div class="sum-name">${s.name}</div><div class="types">${typeChips(s.types)}</div></div></div>
-    <dl class="kv"><dt>HOME</dt><dd>${s.home}</dd><dt>BRAIN</dt><dd>${s.brain}</dd><dt>COST</dt><dd>${s.cost}</dd><dt>MOVES</dt><dd>${s.moves.map(m=>m[0]).join(' · ')}</dd><dt>EVOLVE</dt><dd>${evo}</dd></dl>
+    <dl class="kv"><dt>Home</dt><dd>${s.home}</dd><dt>Brain</dt><dd>${s.brain}</dd><dt>Cost</dt><dd>${s.cost}</dd><dt>Moves</dt><dd>${s.moves.map(m=>m[0]).join(' · ')}</dd><dt>Evolves</dt><dd>${evo}</dd></dl>
     <p class="memo" style="margin:0">${s.memo}</p>
     <div class="acts">${dexSel==='bytlord'?'<button class="btn" disabled>EVOLVE A BYTLE TO GET ONE</button>':`<button class="btn primary" id="spawn" ${full?'disabled':''}>SPAWN ${s.name}</button>`}</div>
     ${full?'<p class="cap" style="margin:0">Party is full (6/6). Send an agent to the box first.</p>':''}
@@ -888,19 +890,19 @@ function sumHTML(a){
   <div class="card pix sum">
     <div class="sum-top"><div class="portrait"><img class="spr" alt="" src="${sprURL(a.sp,a.status==='FNT'?'gray':'')}"></div>
       <div style="min-width:0"><div class="sum-sp">No.${String(s.no).padStart(3,'0')} · ${s.name}</div><div class="sum-name">${esc(a.nick)}</div><div class="types">${typeChips(s.types)}</div>
-      <div class="sum-sp" style="margin-top:6px">LV ${a.lv} · ${s.brain.toUpperCase()} BRAIN</div></div></div>
+      <div class="sum-sp" style="margin-top:6px">Lv ${a.lv} · ${s.brain.toLowerCase()} brain</div></div></div>
     <dl class="kv">
-      <dt>STATUS</dt><dd><span class="st st-${a.status}" style="margin:0 6px 0 0">${a.status}</span>${STATUS_TXT[a.status]}</dd>
+      <dt>Status</dt><dd><span class="st st-${a.status}" style="margin:0 6px 0 0">${a.status}</span>${STATUS_TXT[a.status]}</dd>
       <dt>HP</dt><dd><div class="bar2"><i class="${hpClass(a)}" style="width:${(a.hp/a.hpMax*100).toFixed(1)}%"></i></div><div class="cap">${a.hp}k of ${a.hpMax}k tokens of context left</div></dd>
-      <dt>EXP</dt><dd><div class="bar2 xp"><i style="width:${(a.xp/need*100).toFixed(1)}%"></i></div><div class="cap">${need-a.xp} XP to Lv ${a.lv+1}${s.evo?` · evolves at Lv ${s.evo.lv}`:''}</div></dd>
-      <dt>NOW</dt><dd>${taskLine(a)}</dd>
-      <dt>BOND</dt><dd style="color:#c25a78;letter-spacing:.1em">${hearts(a)}</dd>
+      <dt>XP</dt><dd><div class="bar2 xp"><i style="width:${(a.xp/need*100).toFixed(1)}%"></i></div><div class="cap">${need-a.xp} XP to Lv ${a.lv+1}${s.evo?` · evolves at Lv ${s.evo.lv}`:''}</div></dd>
+      <dt>Now</dt><dd>${taskLine(a)}</dd>
+      <dt>Bond</dt><dd style="color:#c25a78;letter-spacing:.1em">${hearts(a)}</dd>
     </dl>
     <div class="moves">${a.moves.map(m=>`<div class="mv">${m.n}<span>PP ${m.pp}/${m.max}</span></div>`).join('')}</div>
     <p class="memo" style="margin:0">${s.memo}</p>
   </div>
   ${LIVE&&!SPEC[a.sp].reviewer?`<form class="give" id="give">
-    <label for="giveTitle">GIVE TASK</label>
+    <label for="giveTitle">Give a task</label>
     <textarea id="giveTitle" rows="2" maxlength="200" placeholder="e.g. Compare 3 note-taking apps for a student" required></textarea>
     <div class="give-row"><label class="chk"><input type="checkbox" id="giveReview" checked> Ask a reviewer to check it</label><button class="btn primary" type="submit">SEND</button></div>
   </form>`:''}
@@ -956,7 +958,7 @@ function refresh(){
   $('#cWork').textContent=work;$('#cIdle').textContent=idle;
   const needs=queue.filter(q=>q.kind!=='act').length;
   $('#cNeedN').textContent=needs;$('#cNeeds').classList.toggle('zero',!needs);
-  $('#clock').textContent=`DAY ${day} ${hhmm()}`;
+  $('#clock').textContent=`Day ${day} · ${hhmm()}`;
   if(tab!=='dex')renderPane();
 }
 
@@ -1052,7 +1054,8 @@ async function setupCall(method,path,body){
 }
 function setSetupBadge(){
   const b=$('#setupBtn');
-  const good=setupState&&setupState.claude.hasKey&&(!setupState.claude.lastCheck||setupState.claude.lastCheck.ok);
+  const c=setupState&&setupState.claude;
+  const good=Boolean(c)&&(c.brain==='claude-code'?Boolean(c.lastCheck&&c.lastCheck.ok):c.hasKey&&(!c.lastCheck||c.lastCheck.ok));
   b.classList.toggle('need',Boolean(setupState&&!good));b.classList.toggle('good',Boolean(good));
   b.title=!setupState?'Setup':good?'Claude is connected':'Claude is not connected yet';
 }
@@ -1061,7 +1064,7 @@ async function checkSetup(autoOpen){
   const r=await setupCall('GET','api/setup');
   setupAvailable=r.ok;
   if(r.ok){setupState=r.data;setSetupBadge();
-    if(autoOpen&&!setupState.claude.hasKey&&!setupAutoOpened){setupAutoOpened=true;openSetup()}}
+    if(autoOpen&&setupState.claude.brain!=='claude-code'&&!setupState.claude.hasKey&&!setupAutoOpened){setupAutoOpened=true;openSetup()}}
 }
 function copyBtn(text){return `<div class="copyrow"><code>${esc(text)}</code><button type="button" data-copy="${esc(text)}">COPY</button></div>`}
 function pill(kind,label){return `<span class="pill ${kind}">${label}</span>`}
@@ -1069,27 +1072,43 @@ function ago(iso){if(!iso)return'';const s=Math.round((Date.now()-new Date(iso))
 function renderSetup(note){
   const body=$('#setupBody');
   if(!setupAvailable){
-    body.innerHTML=`<div class="scard"><h3>SETUP IS OFF IN THIS MODE</h3>
+    body.innerHTML=`<div class="scard"><h3>Setup is off in this mode</h3>
       <p>${LIVE?'Agentdex is running with practice agents (npm start). Setup and real agents start together.':'This page was opened as a file, so it runs a demo inside your browser.'}</p>
       <p>To use real agents: close this, then double-click your <b>Agentdex</b> desktop icon, or run <code>npm run real</code> in the agentdex folder. Then open <b>http://localhost:8787</b> and press SETUP again.</p></div>`;
     return;
   }
   const s=setupState,st=s.settings,c=s.claude,w=s.whatsapp;
-  const claudePill=!c.hasKey?pill('no','NOT CONNECTED'):c.lastCheck&&!c.lastCheck.ok?pill('no','PROBLEM'):c.lastCheck?pill('ok','CONNECTED'):pill('wait','SAVED, NOT TESTED');
+  const cc=c.brain==='claude-code';
+  const claudePill=cc?(!c.lastCheck?pill('wait','NOT TESTED'):c.lastCheck.ok?pill('ok','CONNECTED'):pill('no','PROBLEM')):!c.hasKey?pill('no','NOT CONNECTED'):c.lastCheck&&!c.lastCheck.ok?pill('no','PROBLEM'):c.lastCheck?pill('ok','CONNECTED'):pill('wait','SAVED, NOT TESTED');
   const waPill=!w.complete?pill('wait','OFF'):w.error?pill('no','PROBLEM'):w.health&&w.health.lastMessageAt?pill('ok','CONNECTED'):w.health&&w.health.verifiedAt?pill('ok','LINKED TO META'):pill('wait','WAITING FOR META');
-  const effort=[['low','LOW','Quick and cheapest'],['medium','MEDIUM','Balanced. Best for most jobs'],['high','HIGH','Most careful, costs more']];
+  const effort=[['low','Low','Quick and cheapest'],['medium','Medium','Balanced. Best for most jobs'],['high','High','Most careful, costs more']];
   const models=[['claude-opus-5-5','Opus 5.5 · smartest (recommended)'],['claude-sonnet-5-5','Sonnet 5.5 · fast and capable, cheaper'],['claude-haiku-5-5','Haiku 5.5 · quickest and cheapest']];
   const h=w.health||{};
   body.innerHTML=`
   <form class="scard" id="fClaude" novalidate>
-    <h3><span class="num">1</span>CLAUDE · YOUR AGENTS' BRAIN ${claudePill}</h3>
-    <p>Your agents think with Claude. Sign in at <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>, add some credit, open <b>API keys</b>, create a key and paste it here.</p>
-    <div class="field"><label for="stKey">API KEY</label>
-      <input id="stKey" type="password" autocomplete="off" spellcheck="false" placeholder="${c.hasKey?'Saved key '+esc(st.anthropicKey||'')+'. Paste a new one to replace it':'sk-ant-...'}">
-      <small>Treat it like a password. It is stored only on this computer.</small></div>
-    <div class="field"><label for="stModel">MODEL</label>
+    <h3><span class="num">1</span>Claude ${claudePill}</h3>
+    <div class="field"><span class="flabel">How should your agents connect?</span>
+      <div class="efforts brains" role="radiogroup" aria-label="Connection">
+        <label><input type="radio" name="stBrain" value="api" ${cc?'':'checked'}><b>API key</b><span>Pay as you go from the Claude Console. Works for everyone.</span></label>
+        <label><input type="radio" name="stBrain" value="claude-code" ${cc?'checked':''}><b>My Claude plan</b><span>Uses Claude Code on this computer, signed in with your Pro or Max plan.</span></label>
+      </div></div>
+    <div id="brainApi" ${cc?'hidden':''}>
+      <p>Sign in at <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>, add some credit, open <b>API keys</b>, create a key and paste it here.</p>
+      <div class="field"><label for="stKey">API key</label>
+        <input id="stKey" type="password" autocomplete="off" spellcheck="false" placeholder="${c.hasKey?'Saved key '+esc(st.anthropicKey||'')+'. Paste a new one to replace it':'sk-ant-...'}">
+        <small>Treat it like a password. It is stored only on this computer.</small></div>
+    </div>
+    <div id="brainCc" ${cc?'':'hidden'}>
+      <ol class="wsteps">
+        <li><div><p><b>Install Claude Code</b> on this computer if you have not: follow <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noopener">code.claude.com/docs/en/setup</a>. On Windows, use the native installer.</p></div></li>
+        <li><div><p><b>Sign in once.</b> Open a new terminal window, run the command below, and log in with your Claude account. Then close that window.</p>${copyBtn('claude')}</div></li>
+        <li><div><p><b>Press SAVE &amp; TEST.</b> Agentdex starts Claude Code for each task. It never sees your login.</p></div></li>
+      </ol>
+      <p class="setup-note">Tasks count toward your plan's usage limits, and those limits are meant for ordinary personal use. Agentdex runs Claude Code in its restricted mode: no shell commands, files only inside the workspace, and your YES before any write outside drafts.</p>
+    </div>
+    <div class="field"><label for="stModel">Model</label>
       <select id="stModel">${models.map(([v,l])=>`<option value="${v}" ${st.model===v?'selected':''}>${l}</option>`).join('')}</select></div>
-    <div class="field"><span class="flabel">HOW HARD SHOULD THEY THINK?</span>
+    <div class="field"><span class="flabel">How hard should they think?</span>
       <div class="efforts" role="radiogroup" aria-label="Effort">${effort.map(([v,t,d])=>`<label><input type="radio" name="stEffort" value="${v}" ${st.effort===v?'checked':''}><b>${t}</b><span>${d}</span></label>`).join('')}</div></div>
     <div class="acts"><button class="btn primary" type="submit">SAVE &amp; TEST</button></div>
     ${c.lastCheck?`<div class="result ${c.lastCheck.ok?'ok':'no'}">${esc(c.lastCheck.message)}</div>`:''}
@@ -1097,32 +1116,32 @@ function renderSetup(note){
   </form>
 
   <div class="scard">
-    <h3><span class="num">2</span>WORKSPACE · WHERE AGENTS WORK ${pill('ok','READY')}</h3>
+    <h3><span class="num">2</span>Workspace ${pill('ok','READY')}</h3>
     <p>Agents can only read and write inside this folder. Files in its <b>drafts</b> folder need no permission; anything else asks you first.</p>
     ${copyBtn(s.workspace)}
   </div>
 
   <form class="scard" id="fWa" novalidate>
-    <h3><span class="num">3</span>WHATSAPP · CONTROL FROM YOUR PHONE ${waPill}</h3>
+    <h3><span class="num">3</span>WhatsApp <small>(optional)</small> ${waPill}</h3>
     <p>Optional. Message your agents, get their questions with YES / NO buttons, and hear when they finish, while this computer stays on at home. Uses Meta's official WhatsApp API, which is free for personal testing.</p>
     <ol class="wsteps">
       <li><div><p><b>Create a free Meta app.</b> Go to <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>, create an app, and add the <b>WhatsApp</b> product. On its <b>API Setup</b> page, add your own phone number as a recipient and confirm the code WhatsApp sends you.</p></div></li>
       <li><div><p><b>Copy four things into the boxes.</b> The first two are on <b>API Setup</b>; the app secret is under <b>App settings, Basic</b>.</p>
         <div class="grid2">
-          <div class="field"><label for="waToken">ACCESS TOKEN</label><input id="waToken" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappToken?'Saved '+esc(st.whatsappToken):'Long code starting with EA...'}"><small>The temporary token stops working after about a day. A System User token lasts.</small></div>
-          <div class="field"><label for="waPhoneId">PHONE NUMBER ID</label><input id="waPhoneId" inputmode="numeric" autocomplete="off" value="${esc(st.whatsappPhoneNumberId||'')}" placeholder="e.g. 123456789012345"></div>
-          <div class="field"><label for="waSecret">APP SECRET</label><input id="waSecret" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappAppSecret?'Saved '+esc(st.whatsappAppSecret):'32 letters and numbers'}"></div>
-          <div class="field"><label for="waAllowed">YOUR WHATSAPP NUMBER</label><input id="waAllowed" inputmode="tel" autocomplete="tel" value="${esc(st.whatsappAllowed||'')}" placeholder="+60 12 345 6789"><small>Only this number can give orders.</small></div>
+          <div class="field"><label for="waToken">Access token</label><input id="waToken" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappToken?'Saved '+esc(st.whatsappToken):'Long code starting with EA...'}"><small>The temporary token stops working after about a day. A System User token lasts.</small></div>
+          <div class="field"><label for="waPhoneId">Phone number ID</label><input id="waPhoneId" inputmode="numeric" autocomplete="off" value="${esc(st.whatsappPhoneNumberId||'')}" placeholder="e.g. 123456789012345"></div>
+          <div class="field"><label for="waSecret">App secret</label><input id="waSecret" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappAppSecret?'Saved '+esc(st.whatsappAppSecret):'32 letters and numbers'}"></div>
+          <div class="field"><label for="waAllowed">Your WhatsApp number</label><input id="waAllowed" inputmode="tel" autocomplete="tel" value="${esc(st.whatsappAllowed||'')}" placeholder="+60 12 345 6789"><small>Only this number can give orders.</small></div>
         </div>
         <div class="acts"><button class="btn primary" type="submit">SAVE WHATSAPP</button></div>
         ${note&&note.wa?`<div class="result no">${esc(note.wa)}</div>`:''}
         ${w.error?`<div class="result no">${esc(w.error)}</div>`:''}</div></li>
       <li><div><p><b>Open a tunnel</b> so WhatsApp can reach this computer. Install the free <a href="https://ngrok.com/download" target="_blank" rel="noopener">ngrok</a>, then run this in a new terminal window and keep it open. It prints an address starting with <b>https://</b>.</p>
         ${copyBtn(`ngrok http ${w.port}`)}
-        <div class="field"><label for="waTunnel">PASTE THE HTTPS ADDRESS NGROK SHOWS</label><input id="waTunnel" type="url" placeholder="https://something.ngrok-free.app" autocomplete="off"></div></div></li>
+        <div class="field"><label for="waTunnel">Paste the https address ngrok shows</label><input id="waTunnel" type="url" placeholder="https://something.ngrok-free.app" autocomplete="off"></div></div></li>
       <li><div><p><b>Tell Meta where to send messages.</b> In your Meta app open <b>WhatsApp, Configuration</b>, press <b>Edit</b> next to Webhook, paste these two, then press <b>Verify and save</b>. Afterwards, tick <b>messages</b> under webhook fields.</p>
-        <span class="flabel">CALLBACK URL</span><div id="waUrl">${copyBtn('Paste your ngrok address above first')}</div>
-        <span class="flabel">VERIFY TOKEN</span>${copyBtn(st.whatsappVerifyToken)}</div></li>
+        <span class="flabel">Callback URL</span><div id="waUrl">${copyBtn('Paste your ngrok address above first')}</div>
+        <span class="flabel">Verify token</span>${copyBtn(st.whatsappVerifyToken)}</div></li>
       <li><div><p><b>Say hi.</b> From your phone, send <b>hi</b> to the WhatsApp test number shown on API Setup. Then press the button below.</p>
         <div class="acts"><button class="btn primary" type="button" id="waTest">SEND TEST MESSAGE</button></div>
         <div id="waTestResult"></div>
@@ -1143,9 +1162,10 @@ function bindSetup(){
     setTimeout(()=>{b.textContent='COPY'},1500);
   });
   const fc=$('#fClaude');
+  if(fc)fc.querySelectorAll('input[name=stBrain]').forEach(r=>r.onchange=()=>{const isCc=r.value==='claude-code'&&r.checked;if(!r.checked)return;$('#brainApi').hidden=isCc;$('#brainCc').hidden=!isCc});
   if(fc)fc.onsubmit=async e=>{
     e.preventDefault();const btn=fc.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='TESTING...';
-    const patch={model:$('#stModel').value,effort:(fc.querySelector('input[name=stEffort]:checked')||{}).value};
+    const patch={model:$('#stModel').value,effort:(fc.querySelector('input[name=stEffort]:checked')||{}).value,brain:(fc.querySelector('input[name=stBrain]:checked')||{}).value};
     const key=$('#stKey').value.trim();if(key)patch.anthropicKey=key;
     const r=await setupCall('POST','api/setup',patch);
     if(!r.ok){btn.disabled=false;btn.textContent='SAVE & TEST';return renderSetup({claude:r.data.error||'Could not save.'})}

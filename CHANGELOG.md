@@ -2,6 +2,15 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.5.0 · Use your Claude plan
+
+- **My Claude plan** option in SETUP: agents run through the official Claude Code app on your computer, signed in with your own Pro or Max plan. No API key needed. Agentdex never sees or stores your login.
+- Claude Code runs in restricted mode (no shell or code-running tools, files only inside the workspace, no MCP servers, your own settings not loaded).
+- An Agentdex hook asks you YES / NO before every write outside `drafts/`, exactly like API-key mode. Writes outside the workspace are refused.
+- HP follows Claude Code's real token counts; reviews use Claude Code too.
+- Clear messages when Claude Code is missing, not signed in, or at its usage limit.
+- Easier to read: the town uses Atkinson Hyperlegible Next for all text, keeping the pixel font only for the logo, map signs, creature names and status codes. Labels are in sentence case and filler lines are gone.
+
 ## 0.4.0 · SETUP screen and WhatsApp
 
 - **SETUP screen** in the town: paste your Claude key, pick a model and how hard agents think, test the connection, and connect WhatsApp in five guided steps. Opens by itself on first run.

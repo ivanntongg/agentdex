@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
-![Version 0.4.0](https://img.shields.io/badge/version-0.4.0-5462a6)
+![Version 0.5.0](https://img.shields.io/badge/version-0.5.0-5462a6)
 ![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
 
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
@@ -55,13 +55,24 @@ Open **http://localhost:8787** in your browser. Keep the terminal open while you
 
 ### 4. Connect Claude (first time only)
 
-The **SETUP** screen opens by itself. You need a Claude API key:
+The **SETUP** screen opens by itself. Pick how your agents connect:
+
+**Option A: API key** (pay as you go, works for everyone)
 
 1. Sign in to the [Claude Console](https://platform.claude.com), add some credit, open **API keys** and create a key (it starts with `sk-ant-`).
-2. Paste it into SETUP, choose how hard the agents should think (Medium is a good start) and press **SAVE & TEST**.
-3. When it says **CONNECTED**, close SETUP. Four agents are waiting at the CENTER.
+2. In SETUP choose **API key**, paste it, choose how hard the agents should think (Medium is a good start) and press **SAVE & TEST**.
 
 Your key is saved only on your computer, in `agentdex.config.json`. Treat it like a password: never share it or commit it.
+
+**Option B: your Claude plan** (Pro or Max, through Claude Code)
+
+1. [Install Claude Code](https://code.claude.com/docs/en/setup) on the same computer (on Windows, use the native installer).
+2. Open a terminal, run `claude` and sign in with your Claude account. Close it afterwards.
+3. In SETUP choose **My Claude plan** and press **SAVE & TEST**.
+
+Agentdex starts the official Claude Code app for each task; it never sees or stores your login. Tasks count toward your plan's usage limits, which are meant for ordinary personal use, so use an API key for heavy or shared use.
+
+When SETUP says **CONNECTED**, close it. Four agents are waiting at the CENTER.
 
 **Just want to look around first?** Run `npm start` instead of `npm run real`. It starts practice mode with pretend agents: free, and no key needed.
 
@@ -195,6 +206,7 @@ Your computer, the Agentdex window and the ngrok window must stay on. WhatsApp o
 ## Safety
 
 - **Agents only touch the workspace folder.** Paths that try to escape it, including through symlinks, are refused.
+- **With your Claude plan, Claude Code runs in its restricted mode:** no shell or code-running tools, no MCP servers, your own Claude Code settings are not loaded, and an Agentdex hook asks you before every write outside drafts.
 - **Nothing outside `workspace/drafts` is written without your YES.** If you say NO, the agent is told and works around it.
 - **Your settings stay on your computer.** `agentdex.config.json` is readable only by your user account, is ignored by Git, and keys are never shown in full again.
 - **The town is private.** It only listens on your own computer (`localhost`), and the SETUP screen only answers requests from that computer.
@@ -208,7 +220,10 @@ Your computer, the Agentdex window and the ngrok window must stay on. WhatsApp o
 | `Port 8787 is already in use` | Agentdex is already running in another window. Close it, or restart your computer |
 | The top bar says **DEMO** | You opened the file directly. Start it from the terminal and open http://localhost:8787 |
 | SETUP says the key was rejected | Copy the key again from the Claude Console and paste it, then SAVE & TEST |
-| An agent "can't start yet" | Open SETUP and add your Claude key |
+| An agent "can't start yet" | Open SETUP and add your Claude key, or switch to **My Claude plan** |
+| "Claude Code is not signed in" | Open a terminal, run `claude`, sign in, then press SAVE & TEST again |
+| "Claude Code is not installed" | [Install Claude Code](https://code.claude.com/docs/en/setup), open a new terminal, then press SAVE & TEST |
+| "Your Claude plan has hit its usage limit" | Wait for it to reset (claude.ai shows when), or switch to an API key in SETUP |
 | An agent faints with "rate limiting" or a credit message | Wait a minute or add credit in the Claude Console, then RESET SESSION |
 | The agent "works" but no files appear | You started with `npm start` (pretend agents). Use `npm run real` |
 
@@ -236,6 +251,8 @@ Everything a user needs is on the SETUP screen. Environment variables also work;
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `AGENTDEX_BRAIN` | `api` | `api` (API key) or `claude-code` (your Claude plan through Claude Code) |
+| `AGENTDEX_CLAUDE_BIN` | `claude` | Path to the Claude Code command, if it is not on your PATH |
 | `ANTHROPIC_API_KEY` | none | Claude API key |
 | `AGENTDEX_MODEL` | `claude-opus-5-5` | Model for every agent (SETUP offers Opus, Sonnet and Haiku 5.5) |
 | `AGENTDEX_EFFORT` | `medium` | Effort level (SETUP offers low, medium, high) |
@@ -275,6 +292,8 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 | `server/simulator.js` | Pretend agents that use only the public event API |
 | `runtime/runtime.js` | Real agents: Claude tool-use loop, approvals, review, HP reporting |
 | `runtime/workspace.js` | Sandboxed file tools |
+| `runtime/claude-code.js` | "My Claude plan" mode: runs tasks through the official Claude Code app |
+| `runtime/cc-hook.js` | Claude Code hook that turns writes outside drafts into YES / NO requests |
 | `runtime/index.js` | `npm run real`: wires the server, agents, SETUP and WhatsApp together |
 | `bridges/whatsapp.js` | WhatsApp remote control (official Cloud API) |
 | `*/test/` | Tests |
@@ -283,7 +302,7 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 
 ## Roadmap
 
-Done: the town, server and event protocol · real Claude agents with approvals and review · the SETUP screen · WhatsApp remote control.
+Done: the town, server and event protocol · real Claude agents with approvals and review · the SETUP screen · WhatsApp remote control · run agents on your Claude plan through Claude Code.
 
 Next:
 
