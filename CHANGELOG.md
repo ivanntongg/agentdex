@@ -2,6 +2,15 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.8.0 · Team chat, files and memory
+
+- **Team chat** under the map: your jobs, agents' answers, results and YES / NO questions (with buttons) in one conversation, saved with the town. The **field log** moved to the right, under the menu.
+- **Pick agents instead of typing:** type @ for a list with each agent's job and status, or click an agent button above the box.
+- **Give agents files:** drag them onto the town or use the paperclip. They go into `workspace/inbox` and are named in your next message or task.
+- **Agents remember:** each keeps its last 20 finished tasks (summary and files) and uses them in later tasks and chats. Shown under Remembers on its summary.
+- After a restart, the log says when an agent was answering you as Agentdex closed.
+- Fixed: after a restart the field log showed oldest lines first.
+
 ## 0.7.1 · Your town is saved
 
 - Closing Agentdex no longer resets the town. Names, levels, XP, bond, HP, party and box, chat threads and the field log are saved to `agentdex.state.json` shortly after every change, and again on Ctrl+C or when the window closes.

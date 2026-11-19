@@ -200,7 +200,7 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     const ctx = {
       system: systemPrompt(species, agent.nick),
       tools: usesWeb(species) ? [...FILE_TOOLS, WEB_SEARCH] : FILE_TOOLS,
-      messages: [{ role: 'user', content: `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}` }],
+      messages: [{ role: 'user', content: `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}${memoryBlock(agent) ? `\n\n${memoryBlock(agent)}` : ''}` }],
       context: 0,
       hpAtStart: agent.hp,
       written: new Set(),
@@ -219,18 +219,25 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
         if (summary === null) return;
       }
     }
-    await dex.emit('task.finished', agentId, { xp: 60, note: summary });
+    await dex.emit('task.finished', agentId, { xp: 60, note: summary, files: [...ctx.written] });
     log(`[${agent.nick}] finished: ${summary}`);
+  }
+
+  // What an agent remembers about its own past work (kept by the server, saved with the town).
+  function memoryBlock(agent, limit = 8) {
+    const mem = (agents.get(agent.id)?.memory || agent.memory || []).slice(-limit);
+    if (!mem.length) return '';
+    const lines = mem.map((m) => `- ${String(m.ts || '').slice(0, 10)}: "${m.title}"${m.note ? ` -> ${m.note}` : ''}${m.files?.length ? ` (files: ${m.files.join(', ')})` : ''}`);
+    return `What you did in earlier tasks, most recent last. Use it when the user refers to past work, and build on those files instead of starting over:\n${lines.join('\n')}`;
   }
 
   // ---------- talking (no task) ----------
   async function chatContext(agent) {
-    let recent = [];
-    try { recent = (await dex.state()).log.filter((e) => e.type === 'task.finished' && e.agentId === agent.id).slice(-3).map((e) => `- ${e.message}`); } catch { /* context is optional */ }
     const now = agent.status === 'PAR' ? 'waiting for the user to answer a YES / NO request'
       : agent.status === 'FNT' ? 'fainted and waiting for a reset'
       : agent.task ? `working on the task "${agent.task.title}"` : 'free, with no task';
-    return `About you right now: you are ${now}. HP (context left for tasks) ${Math.round(agent.hp)} of ${agent.hpMax}.${recent.length ? `\nYour recent finished work:\n${recent.join('\n')}` : ''}`;
+    const mem = memoryBlock(agent);
+    return `About you right now: you are ${now}. HP (context left for tasks) ${Math.round(agent.hp)} of ${agent.hpMax}.${mem ? `\n\n${mem}` : ''}`;
   }
 
   async function replyTo(agentId, entry) {
@@ -284,7 +291,7 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     if (agent.loc !== species.home) await dex.emit('agent.moved', agentId, { to: species.home });
     await dex.emit('task.started', agentId, { title: task.title, review: task.review });
     log(`[${agent.nick}] started with Claude Code: ${task.title}`);
-    const ask = `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}`;
+    const ask = `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}${memoryBlock(agent) ? `\n\n${memoryBlock(agent)}` : ''}`;
     const work = (prompt) => cfg.claudeCode.runTask({
       agentId, prompt, signal,
       systemPrompt: systemPrompt(species, agent.nick),
@@ -304,9 +311,10 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
         r = await work(`${ask}\n\nYou already worked on this task; your files are in the workspace. Your summary was: ${summary}\n\n${reviewer.nick} reviewed it and asked for changes:\n${v.issues.map((i) => `- ${i}`).join('\n')}\n\nFix these, then reply with your one or two sentence summary again.`);
         if (r.fainted) return;
         summary = r.summary;
+        for (const f of r.written || []) written.add(f);
       }
     }
-    await dex.emit('task.finished', agentId, { xp: 60, note: summary });
+    await dex.emit('task.finished', agentId, { xp: 60, note: summary, files: [...written] });
     log(`[${agent.nick}] finished: ${summary}`);
   }
 

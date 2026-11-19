@@ -199,3 +199,24 @@ test('talking to an agent over the API: read-only tools, and a suggested task', 
     assert.equal(s.agents.find((a) => a.ref === 'patch').chatting, false);
   } finally { await t.close(); }
 });
+
+test('agents remember earlier tasks and build on them', async () => {
+  const prompts = [];
+  const t = await setup((body) => {
+    if (body.output_config?.format) return { content: [text(JSON.stringify({ verdict: 'approved', issues: [], summary: '' }))], stop_reason: 'end_turn' };
+    const first = body.messages[0];
+    if (body.messages.length === 1) prompts.push(typeof first.content === 'string' ? first.content : '');
+    const turn = body.messages.filter((m) => m.role === 'assistant').length;
+    if (turn === 0 && prompts.length === 1) return { content: [toolUse('w1', 'write_file', { path: 'drafts/apps.md', content: '# Apps' })], stop_reason: 'tool_use' };
+    return { content: [text(prompts.length === 1 ? 'Compared 3 apps in drafts/apps.md.' : 'Updated the comparison.')], stop_reason: 'end_turn' };
+  });
+  try {
+    await post(t.url, '/api/agents/patch/tasks', { title: 'Compare 3 note apps' });
+    await t.until((s) => s.log.some((e) => e.type === 'task.finished'));
+    await post(t.url, '/api/agents/patch/tasks', { title: 'Update the comparison you did' });
+    await t.until((s) => s.log.filter((e) => e.type === 'task.finished').length === 2);
+    assert.doesNotMatch(prompts[0], /earlier tasks/, 'nothing to remember the first time');
+    assert.match(prompts[1], /What you did in earlier tasks/);
+    assert.match(prompts[1], /"Compare 3 note apps" -> Compared 3 apps in drafts\/apps\.md\. \(files: drafts\/apps\.md\)/);
+  } finally { await t.close(); }
+});

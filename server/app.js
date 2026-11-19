@@ -7,7 +7,8 @@
 //   POST /api/agents/:id/actions         { action: pet | poke | reset | box | unbox }
 //   POST /api/agents/:id/tasks           { title, details?, review? }   give an agent work
 //   POST /api/command                    { text }   one sentence from the command bar or WhatsApp
-//   POST /api/agents/:id/chat            { text }   talk to an agent (no task); the reply arrives as chat.replied
+//   POST /api/agents/:id/chat            { text, files? }   talk to an agent (no task); the reply arrives as chat.replied
+//   POST /api/files?name=report.pdf      raw file body   saved to <workspace>/inbox (real mode)
 //   POST /api/ingest                     one event or an array, from a real agent runtime
 //   GET  /                               the town (index.html)
 import { createServer } from 'node:http';
@@ -15,13 +16,24 @@ import { readFile } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
 import { StoreError } from './store.js';
 import { createCommands } from './commands.js';
+import { mkdir, writeFile, stat } from 'node:fs/promises';
+import path from 'node:path';
 
 const MAX_BODY = 64 * 1024;
+const MAX_UPLOAD = 25 * 1024 * 1024;
+
+// A safe file name: no folders, no hidden files, no odd characters.
+export function safeName(raw) {
+  const base = path.basename(String(raw || '').replace(/\\/g, '/')).normalize('NFC');
+  const clean = base.replace(/[^\p{L}\p{N} ._()\-]/gu, '_').replace(/^[.\s]+/, '').replace(/\s+/g, ' ').trim().slice(0, 100);
+  return clean || 'file';
+}
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
 // setup (optional): { status(), save(body), testClaude(), testWhatsApp() } for the SETUP screen.
-export function createApp({ store, adapter = null, token = null, indexPath = null, setup = null }) {
+// workspaceRoot (optional): enables uploads into <workspace>/inbox.
+export function createApp({ store, adapter = null, token = null, indexPath = null, setup = null, workspaceRoot = null }) {
   const clients = new Set();
 
   store.subscribe((payload) => {
@@ -63,10 +75,18 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     adapter?.onApproval?.(ap, decision);
     return event;
   }
+  function filesDetails(details, files) {
+    const list = (Array.isArray(files) ? files : []).map(String).filter((f) => /^inbox\//.test(f)).slice(0, 10);
+    return list.length ? `${details ? `${details}\n\n` : ''}Use these files the user added: ${list.join(', ')}` : details;
+  }
   function assign(a, title, review, details) {
     const event = store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details: details ? String(details).slice(0, 4000) : undefined, review: Boolean(review) } });
     adapter?.onAssigned?.(a, event.data);
     return event;
+  }
+  function withFiles(text, files) {
+    const list = (Array.isArray(files) ? files : []).map(String).filter((f) => /^inbox\//.test(f)).slice(0, 10);
+    return list.length ? `${String(text || '').trim()}\n\n(Files I added: ${list.join(', ')})` : text;
   }
   function chat(a, text, via) {
     const event = store.apply({ type: 'chat.sent', agentId: a.id, data: { text, via } });
@@ -78,7 +98,7 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     if (adapter?.onReset) { adapter.onReset(a); return null; }
     return store.apply({ type: 'agent.reset', agentId: a.id });
   }
-  const commands = createCommands({ store, actions: { resolve, assign, reset, chat, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
+  const commands = createCommands({ store, actions: { resolve, assign, reset, chat, withFiles, filesDetails, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
 
   const routes = [
     ['GET', /^\/api\/state$/, (req, res) => send(res, 200, { ...store.snapshot(), adapter: adapter ? adapter.name : null })],
@@ -96,13 +116,34 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     }],
 
     ['POST', /^\/api\/agents\/([^/]+)\/chat$/, async (req, res, [, id]) => {
-      const { text, via } = await readJSON(req);
-      send(res, 200, { event: chat(store.resolveAgent(decodeURIComponent(id)), text, via) });
+      const { text, via, files } = await readJSON(req);
+      send(res, 200, { event: chat(store.resolveAgent(decodeURIComponent(id)), withFiles(text, files), via) });
+    }],
+
+    ['POST', /^\/api\/files$/, async (req, res, m, url) => {
+      if (!workspaceRoot) throw new StoreError(404, 'Adding files works when Agentdex runs with real agents (npm run real).');
+      const name = safeName(url.searchParams.get('name'));
+      const chunks = [];
+      let size = 0;
+      for await (const c of req) {
+        size += c.length;
+        if (size > MAX_UPLOAD) throw new StoreError(413, `${name} is over ${MAX_UPLOAD / 1024 / 1024} MB.`);
+        chunks.push(c);
+      }
+      const dir = path.join(workspaceRoot, 'inbox');
+      await mkdir(dir, { recursive: true });
+      const ext = path.extname(name), stem = name.slice(0, name.length - ext.length);
+      let final = name;
+      for (let i = 2; await stat(path.join(dir, final)).then(() => true, () => false); i++) final = `${stem} (${i})${ext}`;
+      await writeFile(path.join(dir, final), Buffer.concat(chunks), { flag: 'wx' });
+      const rel = `inbox/${final}`;
+      store.apply({ type: 'files.added', data: { files: [rel] } });
+      send(res, 201, { path: rel, size });
     }],
 
     ['POST', /^\/api\/command$/, async (req, res) => {
-      const { text, review, via } = await readJSON(req);
-      send(res, 200, await commands.run(text, { review, via }));
+      const { text, review, via, files } = await readJSON(req);
+      send(res, 200, await commands.run(text, { review, via, files }));
     }],
 
     ['POST', /^\/api\/agents$/, async (req, res) => {
@@ -151,9 +192,9 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     }],
 
     ['POST', /^\/api\/agents\/([^/]+)\/tasks$/, async (req, res, [, id]) => {
-      const { title, details, review } = await readJSON(req);
+      const { title, details, review, files } = await readJSON(req);
       const a = store.resolveAgent(decodeURIComponent(id));
-      send(res, 200, { event: assign(a, title, review, details) });
+      send(res, 200, { event: assign(a, title, review, filesDetails(details, files)) });
     }],
 
     ['POST', /^\/api\/ingest$/, async (req, res) => {
@@ -193,7 +234,7 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
       if (req.method === 'POST' && !authorized(req)) return send(res, 401, { error: 'Missing or wrong bearer token' });
       for (const [method, re, handler] of routes) {
         const m = url.pathname.match(re);
-        if (m && req.method === method) return await handler(req, res, m);
+        if (m && req.method === method) return await handler(req, res, m, url);
       }
       send(res, 404, { error: `No route for ${req.method} ${url.pathname}` });
     } catch (err) {

@@ -138,7 +138,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
     const save = () => { persistence.flush(); };
     for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK']) process.once(sig, () => { save(); process.exit(0); });
     process.once('exit', save);
-    const app = createApp({ store, token, setup, indexPath: fileURLToPath(new URL('../index.html', import.meta.url)) });
+    const app = createApp({ store, token, setup, workspaceRoot: workspace.root, indexPath: fileURLToPath(new URL('../index.html', import.meta.url)) });
     await new Promise((resolve, reject) => { app.once('error', reject); app.listen(port, host, resolve); }).catch((err) => {
       throw new Error(err.code === 'EADDRINUSE' ? `Port ${port} is already in use. Agentdex may already be running in another window.` : err.message);
     });

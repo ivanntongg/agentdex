@@ -21,6 +21,7 @@ test('closing and reopening keeps names, levels, bond, chats and the log', async
   a.apply({ type: 'task.finished', agentId: 'patch', data: { xp: 60 } });
   a.apply({ type: 'chat.sent', agentId: 'scout', data: { text: 'hi there' } });
   a.apply({ type: 'chat.replied', agentId: 'scout', data: { text: 'Hello!' } });
+  a.apply({ type: 'chat.sent', agentId: 'patch', data: { text: 'still there?' } });
   a.apply({ type: 'task.started', agentId: 'scout', data: { title: 'Compare 3 note apps' } });
   a.apply({ type: 'approval.requested', agentId: 'scout', data: { tool: 'WRITE', target: 'notes/a.md' } });
   save.stop(); // what Ctrl+C or closing the window does
@@ -39,11 +40,13 @@ test('closing and reopening keeps names, levels, bond, chats and the log', async
   assert.equal(max.task, null);
   assert.equal(max.status, 'SLP');
   assert.equal(b.approvals.size, 0);
-  assert.deepEqual(restored.interrupted, [{ nick: 'MAX', title: 'Compare 3 note apps' }]);
+  assert.deepEqual(restored.interrupted, [{ nick: 'MAX', title: 'Compare 3 note apps' }, { nick: 'PATCH', chat: true }]);
+  assert.equal(b.resolveAgent('patch').chatting, false);
   const log = b.snapshot().log.map((e) => e.message);
   assert.ok(log.some((m) => /SCOUT is now called MAX/.test(m)), 'old log lines are kept');
   assert.ok(log.some((m) => /Welcome back/.test(m)));
   assert.ok(log.some((m) => /MAX was working on "Compare 3 note apps"/.test(m)));
+  assert.ok(log.some((m) => /PATCH was answering you when Agentdex closed/.test(m)));
 
   // New things carry on from where the save left off.
   const e = b.apply({ type: 'agent.spawned', data: { species: 'quillow', nick: 'QUILL' } });
