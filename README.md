@@ -60,7 +60,7 @@ The **SETUP** screen opens by itself. Pick how your agents connect:
 **Option A: API key** (pay as you go, works for everyone)
 
 1. Sign in to the [Claude Console](https://platform.claude.com), add some credit, open **API keys** and create a key (it starts with `sk-ant-`).
-2. In SETUP choose **API KEY**, paste it, choose how hard the agents should think (Medium is a good start) and press **SAVE & TEST**.
+2. In SETUP choose **API key**, paste it, choose how hard the agents should think (Medium is a good start) and press **SAVE & TEST**.
 
 Your key is saved only on your computer, in `agentdex.config.json`. Treat it like a password: never share it or commit it.
 
@@ -68,7 +68,7 @@ Your key is saved only on your computer, in `agentdex.config.json`. Treat it lik
 
 1. [Install Claude Code](https://code.claude.com/docs/en/setup) on the same computer (on Windows, use the native installer).
 2. Open a terminal, run `claude` and sign in with your Claude account. Close it afterwards.
-3. In SETUP choose **MY CLAUDE PLAN** and press **SAVE & TEST**.
+3. In SETUP choose **My Claude plan** and press **SAVE & TEST**.
 
 Agentdex starts the official Claude Code app for each task; it never sees or stores your login. Tasks count toward your plan's usage limits, which are meant for ordinary personal use, so use an API key for heavy or shared use.
 
@@ -220,7 +220,7 @@ Your computer, the Agentdex window and the ngrok window must stay on. WhatsApp o
 | `Port 8787 is already in use` | Agentdex is already running in another window. Close it, or restart your computer |
 | The top bar says **DEMO** | You opened the file directly. Start it from the terminal and open http://localhost:8787 |
 | SETUP says the key was rejected | Copy the key again from the Claude Console and paste it, then SAVE & TEST |
-| An agent "can't start yet" | Open SETUP and add your Claude key, or switch to MY CLAUDE PLAN |
+| An agent "can't start yet" | Open SETUP and add your Claude key, or switch to **My Claude plan** |
 | "Claude Code is not signed in" | Open a terminal, run `claude`, sign in, then press SAVE & TEST again |
 | "Claude Code is not installed" | [Install Claude Code](https://code.claude.com/docs/en/setup), open a new terminal, then press SAVE & TEST |
 | "Your Claude plan has hit its usage limit" | Wait for it to reset (claude.ai shows when), or switch to an API key in SETUP |
