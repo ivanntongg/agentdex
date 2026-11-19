@@ -70,7 +70,7 @@ export function createCommands({ store, actions }) {
     return [`Party (${lines.length})`, ...lines, open ? `${open} request(s) need your YES or NO.` : 'Nothing needs you.'].join('\n');
   }
 
-  async function run(input, { review, via } = {}) {
+  async function run(input, { review, via, files } = {}) {
     const text = String(input || '').trim();
     if (!text) return { reply: 'Type what you want done, for example: compare 3 note-taking apps.' };
     const lower = text.toLowerCase();
@@ -92,7 +92,7 @@ export function createCommands({ store, actions }) {
       if (!a) return { reply: `No agent called ${first.slice(1) || '?'} in your party. Send "status" to see names.` };
       const said = rest.join(' ').trim();
       if (!said) return { reply: `What do you want to say to ${a.nick}? For example: @${a.nick.toLowerCase()} what did you find?` };
-      try { await actions.chat(a, said, via); } catch (err) { return { reply: err.message }; }
+      try { await actions.chat(a, actions.withFiles ? actions.withFiles(said, files) : said, via); } catch (err) { return { reply: err.message }; }
       return { reply: `${a.nick} is thinking about it. The answer appears in its chat${via === 'whatsapp' ? ' and here' : ''}.`, agentId: a.id, chat: true };
     }
     // rename scout to max  |  rename scout max
@@ -118,14 +118,14 @@ export function createCommands({ store, actions }) {
       const title = rest.join(' ').trim();
       if (!title) return { reply: `What should ${named.nick} do? For example: ${named.nick.toLowerCase()} write 5 title ideas for my video.` };
       if (SPECIES[named.species].reviewer) return { reply: `${named.nick} only reviews other agents' work. Leave the name out and Agentdex picks someone.` };
-      await actions.assign(named, clip(title, 200), withReview);
+      await actions.assign(named, clip(title, 200), withReview, actions.filesDetails?.(undefined, files));
       return { reply: `${named.nick} is on it${withReview ? ', and the reviewer will check it' : ''}.`, agentId: named.id };
     }
 
     const skill = guessSkill(text);
     const a = pickAgent(party(), skill);
     if (!a) return { reply: 'No agent can take this right now. Spawn one from the Dex, or reset a fainted one.' };
-    await actions.assign(a, clip(text, 200), withReview);
+    await actions.assign(a, clip(text, 200), withReview, actions.filesDetails?.(undefined, files));
     const why = skill ? ` (${LABEL[skill]} job)` : '';
     const busy = a.phase !== 'idle' ? ' It will start after its current task.' : '';
     return { reply: `Sent to ${a.nick}${why}.${busy}${withReview ? ' The reviewer will check it.' : ''}`, agentId: a.id };

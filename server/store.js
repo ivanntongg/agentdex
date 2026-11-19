@@ -6,7 +6,7 @@ import { SPECIES, BUILDINGS, PARTY_MAX, hpMaxFor, xpToNext } from './species.js'
 export const EVENT_TYPES = [
   'agent.spawned', 'agent.moved', 'agent.status', 'agent.fainted', 'agent.reset',
   'agent.boxed', 'agent.unboxed', 'agent.interacted', 'agent.leveled', 'agent.renamed',
-  'chat.sent', 'chat.replied', 'chat.failed',
+  'chat.sent', 'chat.replied', 'chat.failed', 'files.added',
   'task.assigned', 'task.started', 'task.progress', 'task.handoff', 'task.finished',
   'review.started', 'review.finished',
   'approval.requested', 'approval.resolved',
@@ -25,6 +25,7 @@ export function createStore() {
   const chats = new Map(); // agentId -> [{ id, from: 'you' | 'agent', text, ts, via, suggestedTask }]
   let nextChatId = 1;
   const CHAT_LIMIT = 60;
+  const MEMORY_LIMIT = 20;
   const log = [];
   const subscribers = new Set();
   let seq = 0;
@@ -89,7 +90,7 @@ export function createStore() {
     const followUps = [];
     let a = null;
 
-    if (type !== 'agent.spawned') {
+    if (type !== 'agent.spawned' && type !== 'files.added') {
       a = resolveAgent(input.agentId);
       event.agentId = a.id;
       touched.add(a);
@@ -109,7 +110,7 @@ export function createStore() {
           lv, xp: data.xp || 0, hp: Math.min(hpMax, data.hp ?? hpMax), hpMax,
           status: 'SLP', phase: 'idle', loc: BUILDINGS.includes(data.loc) ? data.loc : (boxed ? SPECIES[sp].home : 'CENTER'),
           task: null, moves: SPECIES[sp].moves.map(([n, pp]) => ({ n, pp, max: pp })),
-          boxed, bond: 0, reviewingId: null, evolveAsked: false, chatting: false,
+          boxed, bond: 0, reviewingId: null, evolveAsked: false, chatting: false, memory: [],
         };
         agents.set(a.id, a);
         event.agentId = a.id;
@@ -251,6 +252,13 @@ export function createStore() {
           event.message = `${a.nick} stood down and left a note instead.`;
         } else {
           const xp = Number.isInteger(data.xp) ? data.xp : 60;
+          // What the agent remembers about its own work, used in later tasks and chats.
+          if (!Array.isArray(a.memory)) a.memory = [];
+          a.memory.push({
+            title: t ? t.title : 'a task', note: data.note ? String(data.note).replace(/\s+/g, ' ').slice(0, 400) : '',
+            files: Array.isArray(data.files) ? data.files.slice(0, 12).map(String) : [], ts: event.ts,
+          });
+          if (a.memory.length > MEMORY_LIMIT) a.memory.splice(0, a.memory.length - MEMORY_LIMIT);
           const note = data.note ? ` ${String(data.note).replace(/\s+/g, ' ').slice(0, 160)}` : '';
           event.message = `${a.nick} finished "${t ? t.title : 'its task'}". +${xp} XP${note}`;
           event.tone = 'ok';
@@ -345,6 +353,15 @@ export function createStore() {
         break;
       }
 
+      case 'files.added': {
+        const names = (Array.isArray(data.files) ? data.files : []).map(String).slice(0, 20);
+        if (!names.length) throw new StoreError(400, 'files.added needs data.files');
+        event.data = { files: names };
+        event.message = names.length === 1 ? `You added ${names[0]} for your agents.` : `You added ${names.length} files for your agents: ${names.join(', ')}.`;
+        event.tone = 'ok';
+        break;
+      }
+
       case 'agent.renamed': {
         const nick = String(data.nick || '').trim().toUpperCase();
         if (!/^[A-Z0-9][A-Z0-9_-]{1,11}$/.test(nick)) throw new StoreError(400, 'A name is one word of 2 to 12 letters or numbers (dashes and underscores are fine).');
@@ -420,6 +437,7 @@ export function createStore() {
       if (!raw || !SPECIES[raw.species] || !Number.isInteger(raw.id)) continue;
       const a = clone(raw);
       if (a.task) interrupted.push({ nick: a.nick, title: a.task.title });
+      if (a.chatting) interrupted.push({ nick: a.nick, chat: true });
       Object.assign(a, { task: null, phase: 'idle', status: a.status === 'FNT' ? 'FNT' : 'SLP', reviewingId: null, chatting: false });
       agents.set(a.id, a);
     }

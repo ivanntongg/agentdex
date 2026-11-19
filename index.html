@@ -80,6 +80,55 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .talk form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .talk input{font:inherit;font-size:15px;color:var(--ink);background:#1c1940;border:0;box-shadow:inset 0 0 0 2px #4b4596;padding:8px 10px;min-width:0}
 .talk input:focus-visible{outline:2px solid var(--spark)}
+.cmdbar{position:relative}
+.side{display:grid;gap:14px;align-content:start;min-width:0}
+.sidelog{background:var(--bezel);box-shadow:inset 0 0 0 3px var(--bezel-hi);padding:12px;display:grid;gap:8px;min-width:0}
+.sidelog .log{margin:0;max-height:340px}
+.sidelog .key{margin:0;font-size:12.5px}
+.log-h small,.convo-h small{font-weight:400;color:#6f69a3}
+.convo-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-weight:700;font-size:15px;color:var(--spark)}
+.convo{display:grid;gap:10px;align-content:start;max-height:360px;min-height:120px;overflow-y:auto;padding:10px;background:#110f26;box-shadow:inset 0 0 0 2px #2c2860}
+.convo-empty{margin:0;color:var(--muted);font-size:14px}
+.cv{display:grid;gap:4px;max-width:86%;font-size:14.5px;line-height:1.4}
+.cv-who{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.cv-who img{width:18px;height:18px}
+.cv-who time{font-weight:400;color:#6f69a3;font-variant-numeric:tabular-nums}
+.cv-body{padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.cv.you{justify-self:end}
+.cv.you .cv-who{justify-content:flex-end}
+.cv.you .cv-body{background:#3a3474;color:#fff}
+.cv.agent .cv-body{background:var(--paper);color:var(--paper-ink);box-shadow:inset 0 0 0 2px var(--frame-a)}
+.cv.agent.need .cv-body{box-shadow:inset 0 0 0 2px #c99a00}
+.cv.agent.done .cv-body{box-shadow:inset 0 0 0 2px #2f8a57}
+.cv-acts{display:flex;gap:6px;flex-wrap:wrap}
+.cv-acts .btn{font-size:12px;padding:6px 10px}
+.cv-acts small{color:var(--muted);font-size:12.5px;align-self:center}
+.cv.sys{justify-self:center;max-width:94%;text-align:center;font-size:13px;color:var(--muted)}
+.cv.sys.bad{color:#ffb4bc}
+.who{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
+.who button{display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 4px;background:#1c1940;box-shadow:inset 0 0 0 2px #4b4596;color:var(--ink);font-size:13px;font-weight:600}
+.who button:hover{box-shadow:inset 0 0 0 2px var(--spark)}
+.who img,.mention img{width:20px;height:20px}
+.mention{position:absolute;left:0;right:0;z-index:20;background:#16142e;box-shadow:inset 0 0 0 2px var(--spark),0 8px 24px rgba(0,0,0,.4);display:grid;padding:4px;max-height:260px;overflow-y:auto}
+.mention button{display:grid;grid-template-columns:24px auto minmax(0,1fr);gap:10px;align-items:center;text-align:left;padding:7px 8px;font-size:14px}
+.mention button b{font-weight:700}
+.mention button span{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mention button[aria-selected="true"]{background:#2c2858}
+.attach{min-width:44px;font-size:18px;line-height:1}
+.files{display:flex;gap:6px;flex-wrap:wrap}
+.files:empty{display:none}
+.fchip{display:inline-flex;align-items:center;gap:6px;background:#2c2858;color:var(--ink);padding:4px 4px 4px 10px;font-size:13px;max-width:100%}
+.fchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fchip button{color:var(--muted);padding:2px 6px;font-size:14px}
+.fchip button:hover{color:var(--bad)}
+.dropzone{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(17,15,36,.88);pointer-events:none}
+.dropzone div{border:3px dashed var(--spark);padding:40px 48px;font-size:22px;font-weight:700;color:var(--spark);text-align:center;max-width:90vw}
+.dropzone small{display:block;font-size:15px;font-weight:400;color:var(--muted);margin-top:8px}
+.mem{background:var(--slot);box-shadow:inset 0 0 0 2px var(--slot-line);padding:10px}
+.mem summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--spark)}
+.mem ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:13.5px}
+.mem li span{color:#d6d2f0}
+.mem li small{display:block;color:var(--muted)}
 .cmdbar{margin-top:12px;display:grid;gap:6px}
 .cmdbar form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .cmdbar label{font-weight:700;font-size:14px;color:var(--spark)}
@@ -185,7 +234,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .boxnote{font-size:14px;color:var(--muted);padding:2px}
 
 /* log */
-.log{margin-top:12px;background:#110f26;box-shadow:inset 0 0 0 2px #2c2860;padding:10px 12px;display:grid;gap:4px;max-height:212px;overflow:auto}
+.log{background:#110f26;box-shadow:inset 0 0 0 2px #2c2860;padding:10px 12px;display:grid;gap:4px;max-height:212px;overflow:auto}
 .log-h{display:flex;justify-content:space-between;font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.01em;color:var(--muted);margin-bottom:4px;gap:8px;flex-wrap:wrap}
 .ev{display:grid;grid-template-columns:46px minmax(0,1fr);gap:8px;font-size:14px;line-height:1.35}
 .ev time{font-family:var(--font-display);font-weight:600;font-size:12px;color:#6f69a3;padding-top:3px;font-variant-numeric:tabular-nums}
@@ -292,38 +341,47 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
       </div>
       <div class="screen-cap"><span>Walk: arrow keys, WASD or tap the map. Z near an agent to pet or poke. Z = YES, X = NO.</span><button class="pausebtn" id="pause">PAUSE TIME</button></div>
       <div class="cmdbar">
-        <label for="cmdText">Tell your team</label>
-        <form id="cmdForm" autocomplete="off">
-          <input id="cmdText" maxlength="240" placeholder="compare 3 note apps · quill write 5 titles · @scout how is it going? · press / to jump here">
+        <div class="convo-h"><span>Team chat</span><small>Everything you and your agents say</small></div>
+        <div class="convo" id="convo" aria-live="polite"><p class="convo-empty">Give a job, or type @ to talk to an agent. Their answers and results show up here.</p></div>
+        <label for="cmdText" class="sr">Message your team</label>
+        <div class="who" id="whoRow" aria-label="Talk to an agent"></div>
+        <form id="cmdForm" autocomplete="off" style="grid-template-columns:auto minmax(0,1fr) auto">
+          <button class="btn attach" type="button" id="cmdAttach" title="Add files" aria-label="Add files">&#128206;</button>
+          <input id="cmdText" maxlength="240" role="combobox" aria-autocomplete="list" aria-controls="mentionList" aria-expanded="false" placeholder="compare 3 note apps · quill write 5 titles · type @ to pick an agent · drop files anywhere">
           <button class="btn primary" type="submit">SEND</button>
         </form>
-        <div class="cmd-reply" id="cmdReply" hidden></div>
-      </div>
-      <div class="log">
-        <div class="log-h"><span>Field log</span></div>
-        <div id="log"></div>
-      </div>
-      <div class="key">
-        <span><b class="st st-SLP" style="margin:0">SLP</b> idle</span>
-        <span><b class="st st-PAR" style="margin:0">PAR</b> waiting on you</span>
-        <span><b class="st st-CNF" style="margin:0">CNF</b> looping</span>
-        <span><b class="st st-PSN" style="margin:0">PSN</b> burning budget</span>
-        <span><b class="st st-FNT" style="margin:0">FNT</b> run failed</span>
-        <span><b class="hp-tag">HP</b> context left</span>
+        <div class="mention" id="mentionList" role="listbox" hidden></div>
+        <div class="files" id="cmdFiles"></div>
+        <input type="file" id="filePick" multiple hidden>
       </div>
     </section>
 
-    <aside class="menu pix" aria-label="Menu">
-      <div class="tabs" role="tablist">
-        <button class="tab" role="tab" id="t-party" aria-selected="true">PARTY</button>
-        <button class="tab" role="tab" id="t-dex" aria-selected="false">DEX</button>
-        <button class="tab" role="tab" id="t-box" aria-selected="false">BOX</button>
-      </div>
-      <div class="pane" id="pane"></div>
-    </aside>
+    <div class="side">
+      <aside class="menu pix" aria-label="Menu">
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" id="t-party" aria-selected="true">PARTY</button>
+          <button class="tab" role="tab" id="t-dex" aria-selected="false">DEX</button>
+          <button class="tab" role="tab" id="t-box" aria-selected="false">BOX</button>
+        </div>
+        <div class="pane" id="pane"></div>
+      </aside>
+      <section class="sidelog pix" aria-label="Field log">
+        <div class="log-h"><span>Field log</span><small>Every event in town</small></div>
+        <div class="log" id="log"></div>
+        <div class="key">
+          <span><b class="st st-SLP" style="margin:0">SLP</b> idle</span>
+          <span><b class="st st-PAR" style="margin:0">PAR</b> waiting on you</span>
+          <span><b class="st st-CNF" style="margin:0">CNF</b> looping</span>
+          <span><b class="st st-PSN" style="margin:0">PSN</b> burning budget</span>
+          <span><b class="st st-FNT" style="margin:0">FNT</b> run failed</span>
+          <span><b class="hp-tag">HP</b> context left</span>
+        </div>
+      </section>
+    </div>
   </div>
 </div>
 
+<div class="dropzone" id="dropZone" hidden><div>Drop to give these files to your agents<small>They go into the inbox folder of your workspace</small></div></div>
 <div class="setup" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="setupTitle">
   <div class="setup-in">
     <div class="setup-head">
@@ -949,10 +1007,12 @@ function sumHTML(a){
     <div class="moves">${a.moves.map(m=>`<div class="mv">${m.n}<span>PP ${m.pp}/${m.max}</span></div>`).join('')}</div>
     <p class="memo" style="margin:0">${s.memo}</p>
   </div>
+  ${(a.memory&&a.memory.length)?`<details class="mem" id="memBox" ${memOpen?'open':''}><summary>Remembers ${a.memory.length} past task${a.memory.length===1?'':'s'}</summary><ul>${a.memory.slice(-6).reverse().map(m=>`<li><b>${esc(m.title)}</b>${m.note?` <span>${esc(m.note)}</span>`:''}${m.files&&m.files.length?`<small>Files: ${m.files.map(esc).join(', ')}</small>`:''}</li>`).join('')}</ul></details>`:''}
   <div class="talk">
     <div class="talk-h">Talk to ${esc(a.nick)}</div>
     <div class="talk-log" id="talkLog">${(chatLog.get(a.id)||[]).map(talkBubble).join('')||'<p class="talk-empty">Ask anything. Talking never starts work by itself; you choose when it becomes a task.</p>'}${a.chatting?'<div class="tb agent typing" aria-label="Thinking">...</div>':''}</div>
-    <form id="talkForm" autocomplete="off"><label class="sr" for="talkText">Message to ${esc(a.nick)}</label><input id="talkText" maxlength="2000" placeholder="Say something to ${esc(a.nick)}" ${a.chatting?'disabled':''}><button class="btn" type="submit" ${a.chatting?'disabled':''}>SAY</button></form>
+    <form id="talkForm" autocomplete="off" style="grid-template-columns:auto minmax(0,1fr) auto"><button class="btn attach" type="button" id="talkAttach" title="Add files for ${esc(a.nick)}" aria-label="Add files">&#128206;</button><label class="sr" for="talkText">Message to ${esc(a.nick)}</label><input id="talkText" maxlength="2000" placeholder="Say something to ${esc(a.nick)}" ${a.chatting?'disabled':''}><button class="btn" type="submit" ${a.chatting?'disabled':''}>SAY</button></form>
+    <div class="files" id="talkFiles">${fileChips(agentFiles,'agent')}</div>
   </div>
   ${LIVE&&!SPEC[a.sp].reviewer?`<form class="give" id="give">
     <label for="giveTitle">Give a task</label>
@@ -971,8 +1031,11 @@ function bindSum(){
   $('#back').onclick=()=>{view='list';renderPane()};
   const a=byId(selId);
   const tl=$('#talkLog');if(tl)tl.scrollTop=tl.scrollHeight;
+  const mb=$('#memBox');if(mb)mb.ontoggle=()=>{memOpen=mb.open};
+  $('#talkAttach').onclick=()=>pickFiles('agent');
+  bindFileChips($('#talkFiles'),'agent');
   $('#talkForm').onsubmit=async e=>{e.preventDefault();const i=$('#talkText'),text=i.value.trim();if(!text)return;
-    if(LIVE){i.disabled=true;const r=await api(`api/agents/${a.id}/chat`,{text});if(r)i.value='';else i.disabled=false;return}
+    if(LIVE){i.disabled=true;const r=await api(`api/agents/${a.id}/chat`,{text,files:agentFiles});if(r){i.value='';agentFiles=[]}else i.disabled=false;return}
     i.value='';demoChat(a,text)};
   tl&&tl.querySelectorAll('[data-task]').forEach(b=>b.onclick=async()=>{const title=b.dataset.task;b.disabled=true;
     if(LIVE){await api(`api/agents/${a.id}/tasks`,{title,review:party.some(x=>SPEC[x.sp].reviewer&&x.status!=='FNT')});return}
@@ -988,7 +1051,7 @@ function bindSum(){
     const gf=$('#give');
     if(gf)gf.onsubmit=async e=>{e.preventDefault();const title=$('#giveTitle').value.trim();if(!title)return;
       const btn=gf.querySelector('button');btn.disabled=true;
-      const r=await api(`api/agents/${a.id}/tasks`,{title,review:$('#giveReview').checked});
+      const r=await api(`api/agents/${a.id}/tasks`,{title,review:$('#giveReview').checked,files:agentFiles});if(r){agentFiles=[];renderPane()}
       btn.disabled=false;if(r)$('#giveTitle').value=''};
     $('#reset').onclick=()=>api(`api/agents/${a.id}/actions`,{action:'reset'});
     $('#tobox').onclick=()=>{api(`api/agents/${a.id}/actions`,{action:'box'});selId=null;view='list';renderPane()};
@@ -1022,6 +1085,7 @@ function renderLog(){
   $('#log').innerHTML=logs.map(l=>`<div class="ev ${l.cls}"><time>${l.t}</time><span>${esc(l.msg)}</span></div>`).join('');
 }
 function refresh(){
+  renderWho();
   const work=party.filter(a=>a.task&&a.status!=='FNT'||a.reviewing).length;
   const idle=party.filter(a=>a.phase==='idle'&&!a.reviewing&&a.status==='SLP').length;
   $('#cWork').textContent=work;$('#cIdle').textContent=idle;
@@ -1062,7 +1126,7 @@ function syncAgent(sa){
   let a=party.find(x=>x.id===sa.id)||box.find(x=>x.id===sa.id);
   if(!a)a={id:sa.id,path:[],x:0,y:0,slot:0};
   Object.assign(a,{sp:sa.species,nick:sa.nick,lv:sa.lv,xp:sa.xp,hp:Math.round(sa.hp),hpMax:sa.hpMax,status:sa.status,phase:sa.phase,
-    task:toTask(sa.task),moves:sa.moves,friend:sa.bond,reviewing:sa.reviewingId,workLeft:0,chatting:Boolean(sa.chatting)});
+    task:toTask(sa.task),moves:sa.moves,friend:sa.bond,reviewing:sa.reviewingId,workLeft:0,chatting:Boolean(sa.chatting),memory:sa.memory||[]});
   seen.add(sa.species);
   const pi=party.indexOf(a),bi=box.indexOf(a);
   if(sa.boxed){if(pi>=0)party.splice(pi,1);if(bi<0)box.push(a);a.path=[];a.loc=a.dest=sa.loc;return a}
@@ -1083,8 +1147,9 @@ function hydrate(s){
   const ids=new Set(s.agents.map(a=>a.id));
   for(const list of [party,box])for(let i=list.length-1;i>=0;i--)if(!ids.has(list[i].id))list.splice(i,1);
   s.agents.forEach(syncAgent);
-  logs.length=0;s.log.slice().reverse().forEach(addLog);renderLog();
+  logs.length=0;s.log.forEach(addLog);renderLog(); // addLog puts each line on top, so oldest first leaves the newest on top
   chatLog.clear();for(const [id,list] of Object.entries(s.chats||{}))chatLog.set(Number(id),list);
+  convo.length=0;convoSeen.clear();answered.clear();s.log.forEach(addConvoEvent);renderConvo();
   if(selId&&!byId(selId))selId=null;
   syncApprovals(s.approvals);
   setMode('live');renderPane();refresh();
@@ -1095,8 +1160,9 @@ function onChange(p){
   if(ev.type==='agent.spawned'||ev.type==='agent.unboxed'){const a=byId(ev.agentId);if(a)fx.push({type:'spawn',id:a.id,t:0})}
   if(ev.type==='approval.resolved'&&ev.data.kind==='evolve'&&ev.data.to&&!fx.some(f=>f.type==='evo'&&f.id===ev.agentId))fx.push({type:'evo',id:ev.agentId,t:0});
   if(ev.message){addLog(ev);renderLog()}
+  addConvoEvent(ev);renderConvo();
   if((ev.type==='chat.sent'||ev.type==='chat.replied')&&ev.data.entry)pushChat(ev.agentId,ev.data.entry);
-  if(ev.agentId===cmdChatFor&&(ev.type==='chat.replied'||ev.type==='chat.failed')){const o=$('#cmdReply');const who=byId(ev.agentId);o.hidden=false;o.classList.toggle('bad',ev.type==='chat.failed');o.textContent=ev.type==='chat.replied'?`${who?who.nick:'Agent'}: ${ev.data.entry.text}${ev.data.entry.suggestedTask?'\n(Open its summary to turn this into a task.)':''}`:ev.message;cmdChatFor=null}
+
   syncApprovals(p.approvals);
   refresh();
   if(setupAvailable&&(ev.type==='task.finished'||ev.type==='agent.fainted'))checkSetup(false);
@@ -1303,16 +1369,121 @@ $('#setupClose').onclick=closeSetup;
 $('#setup').addEventListener('click',e=>{if(e.target.id==='setup')closeSetup()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#setup').hidden){e.preventDefault();e.stopImmediatePropagation();closeSetup()}},true);
 
+/* ---------- team chat ---------- */
+// One conversation with everyone, rebuilt from the town's events (so it is saved with the town).
+const convo=[];const convoSeen=new Set();const answered=new Map();let sysId=0;
+function convoItem(ev){
+  const d=ev.data||{};
+  switch(ev.type){
+    case 'task.assigned':return{kind:'you',to:ev.agentId,text:d.title+(d.details&&/files the user added/.test(d.details)?'\n'+d.details.split('\n').pop():''),label:'task'};
+    case 'chat.sent':return d.entry?{kind:'you',to:ev.agentId,text:d.entry.text,label:'talk'}:null;
+    case 'chat.replied':return d.entry?{kind:'agent',from:ev.agentId,text:d.entry.text,task:d.entry.suggestedTask}:null;
+    case 'task.finished':return{kind:'agent',from:ev.agentId,text:ev.message,tone:'done'};
+    case 'approval.requested':return{kind:'agent',from:ev.agentId,text:ev.message,approvalId:d.approvalId,tone:'need'};
+    case 'approval.resolved':answered.set(d.approvalId,d.decision);return{kind:'sys',text:ev.message};
+    case 'chat.failed':case 'agent.fainted':return{kind:'sys',text:ev.message,bad:true};
+    case 'files.added':case 'town.note':return ev.message?{kind:'sys',text:ev.message}:null;
+    default:return null;
+  }
+}
+function addConvoEvent(ev){if(convoSeen.has(ev.id))return;convoSeen.add(ev.id);const it=convoItem(ev);if(it){it.ts=ev.ts;convo.push(it);if(convo.length>120)convo.shift()}}
+function convoSystem(text,bad=false){convo.push({kind:'sys',text,bad,ts:new Date().toISOString(),local:++sysId});renderConvo()}
+function convoPush(item){convo.push({ts:new Date().toISOString(),...item});renderConvo()}
+function cvWho(id,prefix){const a=byId(id)||box.find(x=>x.id===id);return a?`<img class="spr" alt="" src="${sprURL(a.sp,a.status==='FNT'?'gray':'')}">${prefix||''}${esc(a.nick)}`:(prefix||'')+'agent'}
+function cvTime(ts){const d=new Date(ts);return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function renderConvo(){
+  const el=$('#convo');if(!el)return;
+  const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<40;
+  if(!convo.length){el.innerHTML='<p class="convo-empty">Give a job, or type @ to talk to an agent. Their answers and results show up here.</p>';return}
+  el.innerHTML=convo.slice(-80).map((c,i)=>{
+    const n=convo.length-Math.min(80,convo.length)+i;
+    if(c.kind==='sys')return`<div class="cv sys ${c.bad?'bad':''}">${esc(c.text)}</div>`;
+    if(c.kind==='you')return`<div class="cv you"><div class="cv-who"><time>${cvTime(c.ts)}</time>You ${c.label==='talk'?'to':'gave'} ${c.to?cvWho(c.to):'the team'}${c.label==='task'?' a task':''}</div><div class="cv-body">${esc(c.text)}</div></div>`;
+    const ans=c.approvalId!=null?answered.get(c.approvalId):null;
+    const acts=c.approvalId!=null?(ans?`<div class="cv-acts"><small>You said ${ans==='yes'?'YES':'NO'}.</small></div>`:`<div class="cv-acts"><button class="btn primary" type="button" data-ap="${c.approvalId}" data-d="yes">YES</button><button class="btn" type="button" data-ap="${c.approvalId}" data-d="no">NO</button></div>`)
+      :c.task?`<div class="cv-acts"><button class="btn primary" type="button" data-cvtask="${n}">DO IT AS A TASK</button><small>${esc(c.task)}</small></div>`:'';
+    return`<div class="cv agent ${c.tone||''}"><div class="cv-who">${cvWho(c.from)}<time>${cvTime(c.ts)}</time></div><div class="cv-body">${esc(c.text)}</div>${acts}</div>`;
+  }).join('');
+  el.querySelectorAll('[data-ap]').forEach(b=>b.onclick=async()=>{b.parentElement.querySelectorAll('button').forEach(x=>x.disabled=true);await api(`api/approvals/${b.dataset.ap}`,{decision:b.dataset.d})});
+  el.querySelectorAll('[data-cvtask]').forEach(b=>b.onclick=async()=>{const c=convo[+b.dataset.cvtask];if(!c)return;b.disabled=true;
+    if(LIVE)await api(`api/agents/${c.from}/tasks`,{title:c.task,review:party.some(x=>SPEC[x.sp].reviewer&&x.status!=='FNT')});
+    else{const a=byId(c.from);if(a&&a.phase==='idle'&&!a.path.length)startTask(a,{t:c.task})}});
+  if(atBottom)el.scrollTop=el.scrollHeight;
+}
+
+/* ---------- files, mentions, memory ---------- */
+let cmdFiles=[],agentFiles=[],agentFilesFor=null,memOpen=false,filesTarget='cmd';
+function fileChips(list,target){return list.map((f,i)=>`<span class="fchip"><span title="${esc(f)}">${esc(f.replace(/^inbox\//,''))}</span><button type="button" data-rm="${i}" data-target="${target}" aria-label="Remove ${esc(f)}">&times;</button></span>`).join('')}
+function bindFileChips(el,target){if(!el)return;el.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{const l=target==='cmd'?cmdFiles:agentFiles;l.splice(+b.dataset.rm,1);target==='cmd'?renderFiles():renderPane()})}
+function renderFiles(){const el=$('#cmdFiles');el.innerHTML=fileChips(cmdFiles,'cmd');bindFileChips(el,'cmd')}
+function pickFiles(target){filesTarget=target;const f=$('#filePick');f.value='';f.click()}
+async function addFiles(list,target){
+  if(!list||!list.length)return;
+  if(!LIVE||setupAvailable===false){convoSystem('Adding files works when Agentdex runs with real agents on your computer (npm run real).',true);return}
+  for(const f of list){
+    if(f.size>25*1024*1024){log(`${f.name} is over 25 MB, so it was not added.`,'bad');continue}
+    try{const r=await fetch(`api/files?name=${encodeURIComponent(f.name)}`,{method:'POST',headers:{'content-type':'application/octet-stream',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:f});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok){log(j.error||`Could not add ${f.name}.`,'bad');continue}
+      if(target==='agent')agentFiles.push(j.path);else cmdFiles.push(j.path);
+    }catch{log(`Could not add ${f.name}. Is Agentdex still running?`,'bad')}
+  }
+  if(target==='agent'){renderPane();const t=$('#talkText');t&&t.focus()}else{renderFiles();$('#cmdText').focus()}
+}
+$('#filePick').onchange=e=>addFiles([...e.target.files],filesTarget);
+$('#cmdAttach').onclick=()=>pickFiles('cmd');
+// Drop files anywhere. With an agent's summary open they go to that agent; otherwise to the command box.
+let dragDepth=0;const hasFiles=e=>[...(e.dataTransfer?.types||[])].includes('Files');
+addEventListener('dragenter',e=>{if(!hasFiles(e))return;e.preventDefault();dragDepth++;$('#dropZone').hidden=false});
+addEventListener('dragover',e=>{if(hasFiles(e))e.preventDefault()});
+addEventListener('dragleave',e=>{if(!hasFiles(e))return;if(--dragDepth<=0){dragDepth=0;$('#dropZone').hidden=true}});
+addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();dragDepth=0;$('#dropZone').hidden=true;
+  addFiles([...e.dataTransfer.files],tab==='party'&&view==='sum'&&byId(selId)?'agent':'cmd')});
+
+const STATUS_WORD=a=>a.status==='PAR'?'waiting for you':a.status==='FNT'?'fainted':a.chatting?'answering':a.task?'working':'free';
+function renderWho(){
+  const row=$('#whoRow');if(!row)return;
+  row.innerHTML=party.length?'<span>Talk to:</span>'+party.map(a=>`<button type="button" data-nick="${esc(a.nick)}" title="${esc(a.nick)} is ${STATUS_WORD(a)}"><img class="spr" alt="" src="${sprURL(a.sp,a.status==='FNT'?'gray':'')}">${esc(a.nick)}</button>`).join(''):'';
+  row.querySelectorAll('[data-nick]').forEach(b=>b.onclick=()=>{const i=$('#cmdText');i.value=`@${b.dataset.nick} `+i.value.replace(/^@\S+\s*/,'');i.focus();i.setSelectionRange(i.value.length,i.value.length);closeMention()});
+}
+// Type @ to pick an agent from a list.
+let mention={open:false,items:[],idx:0,start:0};
+function closeMention(){mention.open=false;$('#mentionList').hidden=true;$('#cmdText').setAttribute('aria-expanded','false')}
+function updateMention(){
+  const i=$('#cmdText'),before=i.value.slice(0,i.selectionStart),m=/(^|\s)@([A-Za-z0-9_-]*)$/.exec(before);
+  if(!m){closeMention();return}
+  const q=m[2].toUpperCase(),items=party.filter(a=>a.nick.startsWith(q));
+  if(!items.length){closeMention();return}
+  mention={open:true,items,idx:Math.min(mention.open?mention.idx:0,items.length-1),start:before.length-m[2].length-1};
+  const list=$('#mentionList');list.hidden=false;i.setAttribute('aria-expanded','true');
+  list.innerHTML=items.map((a,k)=>`<button type="button" role="option" aria-selected="${k===mention.idx}" data-k="${k}"><img class="spr" alt="" src="${sprURL(a.sp,a.status==='FNT'?'gray':'')}"><b>${esc(a.nick)}</b><span>${SPEC[a.sp].types[0].toLowerCase()} · ${STATUS_WORD(a)}</span></button>`).join('');
+  list.querySelectorAll('[data-k]').forEach(b=>b.onmousedown=e=>{e.preventDefault();pickMention(+b.dataset.k)});
+}
+function pickMention(k){
+  const i=$('#cmdText'),a=mention.items[k];if(!a)return;
+  const after=i.value.slice(i.selectionStart),head=i.value.slice(0,mention.start)+'@'+a.nick+' ';
+  i.value=head+after.replace(/^\S*\s?/,'');i.setSelectionRange(head.length,head.length);closeMention();i.focus();
+}
+$('#cmdText').addEventListener('input',updateMention);
+$('#cmdText').addEventListener('click',updateMention);
+$('#cmdText').addEventListener('blur',()=>setTimeout(closeMention,120));
+$('#cmdText').addEventListener('keydown',e=>{
+  if(!mention.open)return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();mention.idx=(mention.idx+(e.key==='ArrowDown'?1:mention.items.length-1))%mention.items.length;updateMention()}
+  else if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();pickMention(mention.idx)}
+  else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeMention()}
+});
+
 /* ---------- talking ---------- */
-const chatLog=new Map();let cmdChatFor=null;
+const chatLog=new Map();
 function pushChat(id,entry){if(!chatLog.has(id))chatLog.set(id,[]);const l=chatLog.get(id);if(!l.some(e=>e.id===entry.id))l.push(entry);if(l.length>60)l.shift()}
 function talkBubble(e){return `<div class="tb ${e.from==='you'?'you':'agent'}"><span>${esc(e.text)}</span>${e.from!=='you'&&e.suggestedTask?`<small>Suggested task: ${esc(e.suggestedTask)}</small><button class="btn primary" type="button" data-task="${esc(e.suggestedTask)}">DO IT AS A TASK</button>`:''}</div>`}
 let demoChatId=1;
 function demoChat(a,text){
-  pushChat(a.id,{id:demoChatId++,from:'you',text});a.chatting=true;log(`You to ${a.nick}: "${text}"`);renderPane();
+  pushChat(a.id,{id:demoChatId++,from:'you',text});a.chatting=true;log(`You to ${a.nick}: "${text}"`);convoPush({kind:'you',to:a.id,text,label:'talk'});renderPane();
   setTimeout(()=>{const job=Object.values(DEMO_SKILLS).some(r=>r.test(text.toLowerCase()));
     const reply=a.task?`I'm on "${a.task.t}" right now. This is the demo, so my answers are canned; real agents answer properly.`:job?"I can do that. Press DO IT AS A TASK and I'll start.":"I'm free. Ask me something, or give me a task. (Demo agents give canned answers.)";
-    pushChat(a.id,{id:demoChatId++,from:'agent',text:reply,suggestedTask:job?text:null});a.chatting=false;log(`${a.nick}: "${reply}"`);renderPane()},1500);
+    pushChat(a.id,{id:demoChatId++,from:'agent',text:reply,suggestedTask:job?text:null});a.chatting=false;log(`${a.nick}: "${reply}"`);convoPush({kind:'agent',from:a.id,text:reply,task:job?text:null});renderPane()},1500);
 }
 
 /* ---------- command bar ---------- */
@@ -1343,16 +1514,18 @@ function demoCommand(text){
   return`${a.nick} is busy. In this demo, try another agent or wait.`;
 }
 $('#cmdForm').onsubmit=async e=>{
-  e.preventDefault();const box=$('#cmdText'),out=$('#cmdReply'),text=box.value.trim();if(!text)return;
+  e.preventDefault();const box=$('#cmdText'),text=box.value.trim();if(!text)return;let chatReply=false;
   const btn=$('#cmdForm button');btn.disabled=true;
   let reply,bad=false;
   if(LIVE){
-    try{const r=await fetch('api/command',{method:'POST',headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:JSON.stringify({text})});
-      const j=await r.json().catch(()=>({}));reply=r.ok?j.reply:(j.error||'That did not work.');bad=!r.ok;if(r.ok&&j.chat)cmdChatFor=j.agentId}
+    try{const r=await fetch('api/command',{method:'POST',headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:JSON.stringify({text,files:cmdFiles})});
+      const j=await r.json().catch(()=>({}));reply=r.ok?j.reply:(j.error||'That did not work.');bad=!r.ok;chatReply=Boolean(r.ok&&j.chat)}
     catch{reply='Could not reach Agentdex. Is its window still open?';bad=true}
   }else reply=demoCommand(text);
-  btn.disabled=false;out.hidden=false;out.textContent=reply;out.classList.toggle('bad',bad);
-  if(!bad)box.value='';box.focus();
+  btn.disabled=false;
+  // The team chat already shows tasks and talks; only add Agentdex's own answer when it says something new.
+  if(LIVE&&!bad&&(chatReply||/ is on it/.test(reply))){}else{if(!LIVE)convoPush({kind:'you',to:null,text,label:'task'});convoSystem(reply,bad)}
+  if(!bad){box.value='';cmdFiles=[];renderFiles()}box.focus();
 };
 document.addEventListener('keydown',e=>{
   if(e.key!=='/'||e.target.closest&&e.target.closest('input,textarea,select')||!$('#setup').hidden||current)return;

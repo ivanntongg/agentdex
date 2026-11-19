@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
-![Version 0.7.1](https://img.shields.io/badge/version-0.7.1-5462a6)
+![Version 0.8.0](https://img.shields.io/badge/version-0.8.0-5462a6)
 ![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
 
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
@@ -121,7 +121,9 @@ Every real task uses a little API credit. For cheaper, quicker runs, open SETUP 
 
 ## Tell your team
 
-Under the map is one box for everything. Press **/** anywhere in the town to jump to it.
+Under the map is the **team chat**: one conversation with everyone. Your jobs, agents' answers, finished results and YES / NO questions all show up there, and it is saved with the town. The **field log** with every event in town sits on the right, under the menu.
+
+Below the team chat is one box for everything. Press **/** anywhere in the town to jump to it. Type **@** to pick an agent from a list, or click one of the agent buttons above the box.
 
 | You type | What happens |
 |---|---|
@@ -134,6 +136,14 @@ Under the map is one box for everything. Press **/** anywhere in the town to jum
 | `rename scout to max` | Gives an agent a new name (one word, 2 to 12 letters or numbers) |
 
 You can also rename an agent with **RENAME** on its summary. The same commands work from WhatsApp.
+
+### Give your agents files
+
+Drag files anywhere onto the town, or press the paperclip in the command box or an agent's chat. Files go into `workspace/inbox`, and your next message or task tells the agent which files to use. Text files work in both modes; PDFs and images work best with **My Claude plan**, because Claude Code reads them directly. Files up to 25 MB. Needs `npm run real`.
+
+### Agents remember their work
+
+After every task, an agent remembers what it did, its summary and the files it made (its last 20 tasks). It uses that memory in later tasks and chats, so "update the comparison you did yesterday" works. You can see it under **Remembers** on the agent's summary. Memory is saved with the town.
 
 ## Talk to your agents
 

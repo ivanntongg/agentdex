@@ -13,7 +13,9 @@ export function createPersistence({ store, path = 'agentdex.state.json', delayMs
       const interrupted = store.restore(JSON.parse(readFileSync(path, 'utf8')));
       const n = store.agents.size;
       store.note(`Welcome back. Your town was restored: ${n} agent${n === 1 ? '' : 's'}, names, levels, chats and the field log.`, 'ok');
-      for (const t of interrupted) store.note(`${t.nick} was working on "${t.title}" when Agentdex closed. Give it again to restart it.`, 'need');
+      for (const t of interrupted) {
+        store.note(t.chat ? `${t.nick} was answering you when Agentdex closed. Ask again to get its answer.` : `${t.nick} was working on "${t.title}" when Agentdex closed. Give it again to restart it.`, 'need');
+      }
       return { loaded: true, interrupted };
     } catch (err) {
       const aside = `${path}.broken-${Date.now()}`;
