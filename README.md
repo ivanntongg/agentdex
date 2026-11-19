@@ -1,104 +1,128 @@
 # Agentdex
 
-A GBA-style pixel town for managing AI agents. Your agents are original creatures you spawn from a dex, they walk between buildings when real work happens, and they ask for your approval in a classic dialog box.
+**A pixel town where your AI agents live, work, and ask before they do anything that matters.**
 
-You play the Professor: walk around town, pet and poke your agents, and answer their requests.
+![The Agentdex town: agents walking between buildings, a party list with HP bars, and an agent asking "ROLLO wants to use DEPLOY on api-prod!" with YES / NO](docs/town.png)
 
-## Run it
+- Your AI agents are creatures in a handheld-style town. When one **walks to a building**, it really started or handed over work.
+- Before anything risky, an agent stops and asks you in a **YES / NO dialog box**. A second agent can review the work first.
+- You walk around as the Professor: give agents jobs, pet them, poke them, and watch everything in the field log.
+- Optional: **control it from WhatsApp** while your computer runs at home.
 
-Needs Node 20 or newer. No dependencies to install.
+Real agents are powered by [Claude](https://www.anthropic.com/claude) and work only inside one folder on your computer. A free practice mode with pretend agents needs no account.
 
-```bash
-npm start
-```
+---
 
-Open http://localhost:8787. The header shows **LIVE**: the server owns the agents and a built-in simulator drives them.
+## Install
 
-Opening `index.html` straight from disk still works. The header then shows **DEMO** and everything runs in the browser.
+You need about 15 minutes. You will type a few commands into a **terminal**: on a Mac open the **Terminal** app, on Windows open **PowerShell** from the Start menu. Paste each command, press Enter, and wait for it to finish before the next one.
 
-| Variable | Default | Purpose |
+### 1. Install the two free tools
+
+| Tool | Get it | Check it worked |
 |---|---|---|
-| `PORT` | `8787` | Port to listen on |
-| `HOST` | `127.0.0.1` | Set `0.0.0.0` to reach it from your phone on the same network |
-| `AGENTDEX_SIM` | on | `0` turns the simulator off so a real runtime can drive the town |
-| `AGENTDEX_TOKEN` | none | If set, every POST needs `Authorization: Bearer <token>`. Set it whenever `HOST` is not localhost |
+| **Node.js** (version 20 or newer) | Download the **LTS** version from [nodejs.org](https://nodejs.org) and run the installer | `node -v` shows `v20` or higher |
+| **Git** | **Mac:** run `git --version` and click Install if asked. **Windows:** install from [git-scm.com](https://git-scm.com/download/win) with the default options | `git --version` shows a version |
+
+Close and reopen the terminal after installing, so it finds them.
+
+### 2. Download Agentdex
 
 ```bash
-npm test
+git clone https://github.com/ivanntongg/agentdex.git
 ```
 
-## Run real Claude agents
+```bash
+cd agentdex
+```
 
 ```bash
 npm install
 ```
 
+### 3. Start it
+
 ```bash
 npm run real
 ```
 
-Open http://localhost:8787. The first time, the **SETUP** screen opens by itself: paste your Claude API key, pick a model and how hard the agents should think, and press SAVE & TEST. Settings are saved in `agentdex.config.json` on your computer (git-ignored, readable only by you). You can reopen SETUP from the button in the top bar at any time.
+Open **http://localhost:8787** in your browser. Keep the terminal open while you use it; press **Ctrl + C** in the terminal to stop.
 
-Four agents arrive at the CENTER: PATCH (code), SCOUT (research), QUILL (writing) and CHECKS (reviewer). Open one, type a job into **GIVE TASK** and press SEND.
+### 4. Connect Claude (first time only)
 
-What happens next is real:
+The **SETUP** screen opens by itself. You need a Claude API key:
 
-- The agent walks to its building and runs a Claude tool-use loop (`claude-opus-5-5`, effort `medium`).
-- It works in the `workspace/` folder. Files under `workspace/drafts/` are written freely; **any other write stops and asks you YES / NO in the dialog box**.
-- HP is the agent's context: it drops as the conversation grows. At 0 the agent faints; RESET SESSION brings it back.
-- With "Ask a reviewer" ticked, the agent walks to the GYM and CHECKS reviews the files it wrote. If CHECKS asks for changes, the agent gets one round to fix them.
-- SCOUT and QUILL can search the web (up to 5 searches per request).
-- Every request asks the API to retry on a fallback model if Claude declines it (`fallbacks: "default"`).
+1. Sign in to the [Claude Console](https://platform.claude.com), add some credit, open **API keys** and create a key (it starts with `sk-ant-`).
+2. Paste it into SETUP, choose how hard the agents should think (Medium is a good start) and press **SAVE & TEST**.
+3. When it says **CONNECTED**, close SETUP. Four agents are waiting at the CENTER.
 
-Each task costs real API tokens. Lower `AGENTDEX_EFFORT` to `low` for cheaper, quicker runs.
+Your key is saved only on your computer, in `agentdex.config.json`. Treat it like a password: never share it or commit it.
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `AGENTDEX_WORKSPACE` | `./workspace` | The only folder agents can touch. Paths that escape it, including through symlinks, are refused |
-| `AGENTDEX_MODEL` | `claude-opus-5-5` | Model for every agent |
-| `AGENTDEX_EFFORT` | `medium` | `low`, `medium`, `high`, `xhigh` or `max` |
+**Just want to look around first?** Run `npm start` instead of `npm run real`. It starts practice mode with pretend agents: free, and no key needed.
 
-To keep the server and the agents as two processes, start the server with `AGENTDEX_SIM=0 npm start`, then run `npm run agents` (set `AGENTDEX_URL` if the server is elsewhere).
+### Update later
 
-## Control it from WhatsApp
+```bash
+git pull
+```
 
-Leave your computer running Agentdex at home and talk to your agents from your phone:
+```bash
+npm install
+```
 
-- `scout compare 3 note-taking apps` gives SCOUT a task (any agent name works)
-- `status` lists what everyone is doing
-- approval requests arrive with **YES / NO buttons**; you can also reply `yes` or `no`
-- `reset scout` clears an agent that fainted
-- you get a message when a task finishes or an agent faints
+<details>
+<summary><strong>Optional: a desktop icon that starts everything with a double-click</strong></summary>
 
-It uses Meta's official WhatsApp Business API (free test number, up to 5 recipients) and a tunnel such as ngrok so WhatsApp can reach your computer. **The SETUP screen walks you through it in five steps**, with copy buttons and a test message.
+These assume you cloned Agentdex into your home folder (where the terminal starts).
 
-How it stays safe:
+**Mac:** paste this whole block into Terminal. It creates `Agentdex.command` on your Desktop.
 
-- Only the WhatsApp webhook is exposed, on its own port (8788). The town and its controls stay private on your computer.
-- Every webhook request must carry Meta's signature (HMAC-SHA256 with your app secret); anything else is refused.
-- Only the number you enter can give orders; messages from any other number are ignored.
-- WhatsApp lets a bot message you only within 24 hours of your last message. Send `status` once a day if you want alerts; the SETUP screen tells you when this window has closed.
+```bash
+cat > ~/Desktop/Agentdex.command <<'EOF'
+#!/bin/zsh -l
+cd ~/agentdex || { echo "Agentdex folder not found in your home folder."; read; exit 1; }
+(sleep 3; open http://localhost:8787) &
+npm run real
+EOF
+chmod +x ~/Desktop/Agentdex.command
+```
 
-## Connect your own agent runtime
+**Windows:** paste this whole block into PowerShell. It creates `Agentdex.bat` on your Desktop. If Windows says it "protected your PC", choose **More info**, then **Run anyway**.
 
-Your runtime posts events (`task.started`, `task.progress`, `approval.requested`, ...) to `POST /api/ingest` and listens to `GET /api/events` for your answers. The full protocol, with a curl example, is in [docs/EVENTS.md](docs/EVENTS.md).
+```powershell
+@'
+@echo off
+title Agentdex
+cd /d "%USERPROFILE%\agentdex" || (echo Agentdex folder not found in your user folder. & pause & exit /b 1)
+start "" /min powershell -NoProfile -Command "Start-Sleep 3; Start-Process 'http://localhost:8787'"
+call npm run real
+pause
+'@ | Set-Content -Encoding ASCII "$([Environment]::GetFolderPath('Desktop'))\Agentdex.bat"
+```
 
-## Project layout
+</details>
 
-| Path | What it is |
+---
+
+## Your first task
+
+1. In **PARTY** on the right, click **SCOUT**.
+2. In **GIVE TASK**, type something small and specific, for example *Compare 3 free note-taking apps for a student and save a one-page summary to notes/apps.md*. Leave **Ask a reviewer** ticked and press **SEND**.
+3. SCOUT walks to the LAB and starts working. Its **HP** drops as the job gets longer.
+4. Saving outside the `drafts` folder needs your permission, so SCOUT asks: *"SCOUT wants to use WRITE on notes/apps.md!"* Press **YES** or **NO**.
+5. SCOUT walks to the GYM, where **CHECKS** reviews the work. If CHECKS asks for changes, SCOUT gets one round to fix them.
+6. The field log shows a one-line summary. The files are in the `workspace` folder inside `agentdex`.
+
+| Agent | Good at |
 |---|---|
-| `index.html` | The town. Live mode when served by the server, demo mode otherwise |
-| `server/store.js` | The world state. Every change is an event; this validates and applies it |
-| `server/simulator.js` | Fake runtime that only speaks the public event API |
-| `server/app.js` | HTTP API and the live event stream |
-| `server/test/` | Store rules and HTTP tests |
-| `runtime/runtime.js` | Real agents: the Claude tool-use loop, approvals, review, HP reporting |
-| `runtime/workspace.js` | Sandboxed file tools |
-| `server/config.js` | Settings saved from the SETUP screen |
-| `bridges/whatsapp.js` | WhatsApp remote control (official Cloud API) |
-| `runtime/test/` | End-to-end tests against a stand-in for the Claude API (no key, no cost) |
+| **PATCH** | Code and technical fixes |
+| **SCOUT** | Research, with web search |
+| **QUILL** | Writing and editing, with web search |
+| **CHECKS** | Reviews other agents' work (tick "Ask a reviewer" instead of giving it tasks) |
 
-## Controls
+Every real task uses a little API credit. For cheaper, quicker runs, open SETUP and choose **Low**, or pick the **Haiku** model.
+
+## Playing
 
 | Input | Action |
 |---|---|
@@ -107,7 +131,27 @@ Your runtime posts events (`task.started`, `task.progress`, `approval.requested`
 | Z or Enter | YES in a dialog |
 | X or Esc | NO / BACK |
 
-## How the game maps to agents
+| Badge | Means | What you do |
+|---|---|---|
+| **HP** | Memory left for the current job (thousands of tokens) | Nothing, unless it gets very low |
+| **SLP** | Idle | Give it a task |
+| **PAR** | Waiting for your permission | Answer YES or NO |
+| **CNF** | Stuck repeating itself | Pet it |
+| **PSN** | Spending much faster than usual | Poke it to cap its spending |
+| **FNT** | The job failed; the field log says why | Open it and press RESET SESSION |
+
+| Building | What happens there |
+|---|---|
+| **LAB** | Research and writing |
+| **WORKSHOP** | Building: code, designs, operations |
+| **GYM** | Reviews |
+| **CENTER** | New agents arrive; tired agents get reset |
+| **MART** | Skills |
+
+The menu has **PARTY** (agents switched on, up to 6), **DEX** (the catalog of agent types: spawn new ones here) and **BOX** (switched-off agents that cost nothing).
+
+<details>
+<summary>How the game maps to agents</summary>
 
 | Game | Agent meaning |
 |---|---|
@@ -115,43 +159,135 @@ Your runtime posts events (`task.started`, `task.progress`, `approval.requested`
 | Types | Specialty: CODE, RESEARCH, DESIGN, OPS, QA, WRITE |
 | Party (max 6) | Agents running at once. A hard cost cap |
 | Box | Stored agents. Not running, cost nothing |
-| HP | Context window left (k tokens) |
-| PP | Rate limit left on each tool |
+| HP | Context window left |
+| PP | How many more times each tool can be used before a reset |
 | Level / XP | Tasks completed and reviews passed |
 | Evolution | Upgrade to a bigger model or more permissions. Needs your approval |
 | Bond (hearts) | Raised by petting |
 
-### Status conditions
-
-| Status | Meaning | What fixes it |
-|---|---|---|
-| SLP | Idle | Poke it to start a task |
-| PAR | Waiting for your approval | Answer YES or NO |
-| CNF | Looping on one step | Pet it, or wait |
-| PSN | Spending tokens fast | Poke it to cap its budget |
-| FNT | Ran out of context | Reset at the CENTER |
-
-### Town
-
-| Building | Workflow stage |
-|---|---|
-| LAB | Research |
-| WORKSHOP | Build |
-| GYM | Review |
-| CENTER | Session reset |
-| MART | Skills |
-
 Design rule: every movement on the map is a real event (a task taken, a handoff, a review, a failure). Nothing animates for decoration.
 
-## Status
+</details>
 
-Prototype. `npm start` runs the town with simulated agents; `npm run real` runs it with real Claude agents working in a local folder. All creatures, names and art are original.
+## Control it from WhatsApp
+
+Leave your computer running Agentdex at home and message your agents from your phone:
+
+| You send | What happens |
+|---|---|
+| `scout compare 3 note apps` | SCOUT gets that task (start with any agent's name) |
+| `status` | What everyone is doing, plus questions waiting for you |
+| Tap **YES** / **NO** | Answers an agent's question (typing `yes` or `no` works too) |
+| `reset scout` | Clears an agent that fainted or got stuck |
+| `help` | The list of commands |
+
+You also get a message when a job finishes or an agent faints.
+
+It uses Meta's official WhatsApp Business API (its free test number allows up to 5 recipients) and the free [ngrok](https://ngrok.com) tunnel so WhatsApp can reach your computer. **Open SETUP, part 3**: it walks you through five steps with copy buttons and a test message. Plan for about 30 minutes the first time.
+
+Your computer, the Agentdex window and the ngrok window must stay on. WhatsApp only lets the bot message you within 24 hours of your last message to it, so send `status` once a day if you want alerts.
+
+## Safety
+
+- **Agents only touch the workspace folder.** Paths that try to escape it, including through symlinks, are refused.
+- **Nothing outside `workspace/drafts` is written without your YES.** If you say NO, the agent is told and works around it.
+- **Your settings stay on your computer.** `agentdex.config.json` is readable only by your user account, is ignored by Git, and keys are never shown in full again.
+- **The town is private.** It only listens on your own computer (`localhost`), and the SETUP screen only answers requests from that computer.
+- **WhatsApp exposes only its own webhook**, on a separate port (8788). Every request must carry Meta's signature, and only the phone number you entered can give orders.
+
+## Troubleshooting
+
+| You see | Fix |
+|---|---|
+| `command not found: node` or `'node' is not recognized` | Install Node.js, then close and reopen the terminal |
+| `Port 8787 is already in use` | Agentdex is already running in another window. Close it, or restart your computer |
+| The top bar says **DEMO** | You opened the file directly. Start it from the terminal and open http://localhost:8787 |
+| SETUP says the key was rejected | Copy the key again from the Claude Console and paste it, then SAVE & TEST |
+| An agent "can't start yet" | Open SETUP and add your Claude key |
+| An agent faints with "rate limiting" or a credit message | Wait a minute or add credit in the Claude Console, then RESET SESSION |
+| The agent "works" but no files appear | You started with `npm start` (pretend agents). Use `npm run real` |
+
+---
+
+## For developers
+
+<details>
+<summary>Configuration, architecture, API and tests</summary>
+
+### Commands
+
+| Command | What it runs |
+|---|---|
+| `npm run real` | Town, real Claude agents, SETUP screen and (if configured) the WhatsApp bridge, in one process |
+| `npm start` | Town with the built-in simulator (pretend agents) |
+| `npm run agents` | Agents only, against a server started with `AGENTDEX_SIM=0 npm start` |
+| `npm test` | All tests. Real agents are tested against a stand-in for the Claude API: no key, no cost |
+
+Opening `index.html` straight from disk runs an offline demo in the browser.
+
+### Configuration
+
+Everything a user needs is on the SETUP screen. Environment variables also work; saved SETUP values win over them.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | none | Claude API key |
+| `AGENTDEX_MODEL` | `claude-opus-5-5` | Model for every agent (SETUP offers Opus, Sonnet and Haiku 5.5) |
+| `AGENTDEX_EFFORT` | `medium` | Effort level (SETUP offers low, medium, high) |
+| `AGENTDEX_WORKSPACE` | `./workspace` | The only folder agents can touch |
+| `AGENTDEX_CONFIG` | `./agentdex.config.json` | Where SETUP saves settings |
+| `PORT` | `8787` | Town port |
+| `HOST` | `127.0.0.1` | Set `0.0.0.0` to reach the town from other devices on your network |
+| `AGENTDEX_TOKEN` | none | If set, every POST needs `Authorization: Bearer <token>`. Set it whenever `HOST` is not localhost |
+| `AGENTDEX_SIM` | on | `0` turns the simulator off for `npm start` |
+| `AGENTDEX_URL` | `http://127.0.0.1:8787` | Server for `npm run agents` |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_ALLOWED` | none | WhatsApp settings (also on SETUP) |
+| `WHATSAPP_PORT` | `8788` | WhatsApp webhook port |
+
+### How it fits together
+
+```
+Town (index.html)  ◀── live event stream ──  Server (server/)  ◀── events ──  Agents (runtime/)
+your actions       ── HTTP ──────────────▶   one source of truth  ── events ──▶  Claude tool-use loops
+                                                    ▲
+                                       WhatsApp bridge (bridges/)
+```
+
+Every change to an agent is an **event** (`task.started`, `task.progress`, `approval.requested`, ...). The server validates and applies it, logs it, and streams it to every open town and to the runtime. Real agents run a Claude tool-use loop with sandboxed file tools; risky writes wait for an `approval.resolved` event from you.
+
+### Connect your own agent runtime
+
+Any agent can live in the town: post events to `POST /api/ingest` and listen to `GET /api/events` for the player's answers. The full protocol, with a working curl example, is in [docs/EVENTS.md](docs/EVENTS.md). `runtime/runtime.js` is a complete example.
+
+### Project layout
+
+| Path | What it is |
+|---|---|
+| `index.html` | The town and the SETUP screen. Live when served, offline demo when opened as a file |
+| `server/store.js` | World state. Validates and applies every event |
+| `server/app.js` | HTTP API, live event stream, setup routes |
+| `server/config.js` | Settings saved from SETUP |
+| `server/simulator.js` | Pretend agents that use only the public event API |
+| `runtime/runtime.js` | Real agents: Claude tool-use loop, approvals, review, HP reporting |
+| `runtime/workspace.js` | Sandboxed file tools |
+| `runtime/index.js` | `npm run real`: wires the server, agents, SETUP and WhatsApp together |
+| `bridges/whatsapp.js` | WhatsApp remote control (official Cloud API) |
+| `*/test/` | Tests |
+
+</details>
 
 ## Roadmap
 
-1. ~~Backend skeleton: state endpoint, event stream, ingest API.~~ Done.
-1. ~~First real runtime: Claude agents with approvals and review.~~ Done. Next: let agents hand work to each other.
-2. Commission creature art: 6 creatures at 32x32 with 2-frame walk cycles.
-3. WhatsApp approvals: PAR, FNT and evolution requests as messages with YES / NO buttons, with a PIN step for high-risk moves.
-4. Review "battle" view: work faces the reviewer, issues found land as hits.
+Done: the town, server and event protocol · real Claude agents with approvals and review · the SETUP screen · WhatsApp remote control.
+
+Next:
+
+1. Agents hand work to each other (SCOUT researches, QUILL writes it up).
+2. A second step (PIN) before high-risk approvals from WhatsApp.
+3. Creature art: 6 creatures at 32×32 with walk cycles.
+4. Review "battle" view: the work faces the reviewer, issues land as hits.
 5. Sound: short chimes for approvals and level-ups.
+
+## Status
+
+Early prototype, built in the open. All creatures, names and art are original.
