@@ -5,6 +5,7 @@
 //   POST /api/approvals/:id              { decision: "yes" | "no" }
 //   POST /api/agents                     { species, nick? }            spawn into the party
 //   POST /api/agents/:id/actions         { action: pet | poke | reset | box | unbox }
+//   POST /api/agents/:id/tasks           { title, details?, review? }   give an agent work
 //   POST /api/ingest                     one event or an array, from a real agent runtime
 //   GET  /                               the town (index.html)
 import { createServer } from 'node:http';
@@ -109,6 +110,14 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
           throw new StoreError(400, 'action must be one of pet, poke, reset, box, unbox');
       }
       send(res, 200, { event, agent: store.resolveAgent(a.id) });
+    }],
+
+    ['POST', /^\/api\/agents\/([^/]+)\/tasks$/, async (req, res, [, id]) => {
+      const { title, details, review } = await readJSON(req);
+      const a = store.resolveAgent(decodeURIComponent(id));
+      const event = store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details: details ? String(details).slice(0, 4000) : undefined, review: Boolean(review) } });
+      adapter?.onAssigned?.(a, event.data);
+      send(res, 200, { event });
     }],
 
     ['POST', /^\/api\/ingest$/, async (req, res) => {

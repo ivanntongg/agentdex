@@ -17,6 +17,7 @@ The simulator only uses the public event API, so anything it does, your runtime 
 | GET | `/api/events` | | Server-Sent Events. One `snapshot`, then a `change` for every event |
 | POST | `/api/ingest` | an event, or an array of up to 100 | Apply events from your runtime |
 | POST | `/api/approvals/:id` | `{"decision":"yes"\|"no"}` | Answer an approval |
+| POST | `/api/agents/:id/tasks` | `{"title":"...","review":true}` | Give an agent a task |
 | POST | `/api/agents` | `{"species":"fennook","nick":"SCOUT"}` | Spawn into the party |
 | POST | `/api/agents/:id/actions` | `{"action":"pet"\|"poke"\|"reset"\|"box"\|"unbox"}` | Player actions |
 
@@ -36,6 +37,7 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 
 | Type | data | Effect |
 |---|---|---|
+| `task.assigned` | `title`, `details?`, `review?` | The player gave this agent work (`POST /api/agents/:id/tasks`). Your runtime should start it |
 | `agent.spawned` | `species`, `nick?`, `ref?`, `lv?`, `boxed?` | New agent. Fails with 409 when the party has 6 |
 | `agent.moved` | `to` (LAB, MART, WORKSHOP, CENTER, GYM), `reason?` | The agent walks there. Logged only with a `reason` |
 | `task.started` | `title`, `review?`, `approval?: {tool, target}` | Status OK, phase work |
@@ -45,7 +47,7 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 | `review.finished` | `reviewerId?`, `result: approved\|changes`, `issues?` | Frees the reviewer, +25 XP to it |
 | `approval.requested` | `tool`, `target` (or `kind: "evolve"`) | Status PAR. Shows the YES / NO dialog |
 | `approval.resolved` | `approvalId`, `decision` | Normally sent by the page, not by you |
-| `task.finished` | `xp?` (default 60) or `outcome: "declined"` | Back to idle. May trigger level ups and an evolution request |
+| `task.finished` | `xp?` (default 60), `note?` (shown in the log), or `outcome: "declined"` | Back to idle. May trigger level ups and an evolution request |
 | `agent.status` | `status: OK\|SLP\|CNF\|PSN`, `reason?` | Confused (looping) or poisoned (spending fast) |
 | `agent.fainted` | `reason?` | Status FNT |
 | `agent.reset` | | Full HP and PP, back at the CENTER |

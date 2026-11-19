@@ -1,14 +1,21 @@
 {
   "name": "agentdex",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A GBA-style pixel town for managing AI agents.",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node --test server/test/*.test.js"
+    "test": "node --test server/test/*.test.js runtime/test/*.test.js",
+    "real": "node runtime/index.js --with-server",
+    "agents": "node runtime/index.js"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.10.0"
+  }
 }

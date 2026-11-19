@@ -6,7 +6,7 @@ import { SPECIES, BUILDINGS, PARTY_MAX, hpMaxFor, xpToNext } from './species.js'
 export const EVENT_TYPES = [
   'agent.spawned', 'agent.moved', 'agent.status', 'agent.fainted', 'agent.reset',
   'agent.boxed', 'agent.unboxed', 'agent.interacted', 'agent.leveled',
-  'task.started', 'task.progress', 'task.handoff', 'task.finished',
+  'task.assigned', 'task.started', 'task.progress', 'task.handoff', 'task.finished',
   'review.started', 'review.finished',
   'approval.requested', 'approval.resolved',
 ];
@@ -103,7 +103,8 @@ export function createStore() {
         event.agentId = a.id;
         touched.add(a);
         if (!data.silent) {
-          event.message = boxed ? `${a.nick} was stored in the BOX.` : `You spawned ${SPECIES[sp].name} at the CENTER! It joined your party at Lv ${lv}.`;
+          const who = a.nick === SPECIES[sp].name ? a.nick : `${a.nick} the ${SPECIES[sp].name}`;
+          event.message = boxed ? `${a.nick} was stored in the BOX.` : `${who} appeared at the CENTER and joined your party at Lv ${lv}!`;
           event.tone = 'ok';
         }
         break;
@@ -113,6 +114,14 @@ export function createStore() {
         if (!BUILDINGS.includes(data.to)) throw new StoreError(400, `Unknown building "${data.to}"`);
         a.loc = data.to;
         if (data.reason) event.message = `${a.nick} ${data.reason}`;
+        break;
+      }
+
+      case 'task.assigned': {
+        if (!data.title) throw new StoreError(400, 'task.assigned needs data.title');
+        if (a.boxed) throw new StoreError(409, `${a.nick} is in the box. Move it to the party first.`);
+        event.data.title = String(data.title).slice(0, 200);
+        event.message = `You gave ${a.nick} a task: "${event.data.title}".`;
         break;
       }
 
@@ -131,7 +140,7 @@ export function createStore() {
 
       case 'task.progress': {
         const tokens = Math.max(0, Number(data.tokens) || 0);
-        a.hp = Math.max(0, Math.round(a.hp - tokens));
+        a.hp = Math.max(0, Math.round((a.hp - tokens) * 10) / 10);
         if (data.tool) { const mv = a.moves.find((m) => m.n === data.tool); if (mv && mv.pp > 0) mv.pp--; }
         if (a.hp === 0 && a.status !== 'FNT') faint(a, event, touched);
         break;
@@ -230,7 +239,8 @@ export function createStore() {
           event.message = `${a.nick} stood down and left a note instead.`;
         } else {
           const xp = Number.isInteger(data.xp) ? data.xp : 60;
-          event.message = `${a.nick} finished "${t ? t.title : 'its task'}". +${xp} XP`;
+          const note = data.note ? ` ${String(data.note).replace(/\s+/g, ' ').slice(0, 160)}` : '';
+          event.message = `${a.nick} finished "${t ? t.title : 'its task'}". +${xp} XP${note}`;
           event.tone = 'ok';
           gainXP(a, xp, followUps);
         }
