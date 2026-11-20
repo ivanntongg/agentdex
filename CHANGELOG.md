@@ -2,6 +2,14 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.10.0 · One-command install, MIT license and a browser demo
+
+- **Run it with one command:** `npx agentdex-town`. Only Node.js is needed: no Git, no download folder. Your town, settings and workspace live in an `Agentdex` folder in your home folder, so updates never touch them. `--practice` starts pretend agents, `--help` lists the options. If Agentdex is already running, the command just opens the town.
+- **Open source under the MIT license.**
+- **Try it in the browser:** the town in demo mode is published to GitHub Pages on every change.
+- The README opens with a short animation of the town.
+- Releases on GitHub publish the npm package automatically.
+
 ## 0.9.1 · Favicon
 
 - The browser tab now shows a pixel BYTLE on a yellow tile, so Agentdex is easy to find among your tabs. Built into the page, so it also works offline. The source is `docs/icon.svg`.

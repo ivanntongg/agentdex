@@ -1,12 +1,14 @@
 {
-  "name": "agentdex",
-  "version": "0.9.1",
-  "private": true,
+  "name": "agentdex-town",
+  "version": "0.10.0",
   "description": "A pixel town where your AI agents live, work, and ask before they act. Real Claude agents, YES/NO approvals, WhatsApp remote control.",
   "keywords": [
+    "agent-dashboard",
     "ai-agents",
-    "claude",
     "anthropic",
+    "claude",
+    "claude-code",
+    "gba",
     "human-in-the-loop",
     "pixel-art",
     "whatsapp"
@@ -20,6 +22,18 @@
     "url": "git+https://github.com/ivanntongg/agentdex.git"
   },
   "type": "module",
+  "bin": {
+    "agentdex-town": "bin/agentdex.js"
+  },
+  "files": [
+    "bin/",
+    "index.html",
+    "server/*.js",
+    "runtime/*.js",
+    "bridges/*.js",
+    "docs/icon.svg",
+    "CHANGELOG.md"
+  ],
   "engines": {
     "node": ">=20"
   },
@@ -30,7 +44,7 @@
     "real": "node runtime/index.js --with-server",
     "agents": "node runtime/index.js"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "1.10.0"
   }

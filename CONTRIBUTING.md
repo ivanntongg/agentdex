@@ -68,3 +68,6 @@ These keep Agentdex trustworthy. Pull requests that break them will be asked to 
 | `runtime/` | Real Claude agents and sandboxed file tools |
 | `bridges/` | WhatsApp remote control |
 | `docs/` | Event protocol and images |
+| `bin/` | The `npx agentdex-town` command |
+
+By contributing, you agree that your contributions are released under the [MIT license](LICENSE).
