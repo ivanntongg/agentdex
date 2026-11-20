@@ -191,6 +191,16 @@ What keeps it safe:
 
 Looking for a skill costs one short, low-effort question to Claude per task, plus a little more when the agent actually shops.
 
+## Alerts on this computer
+
+Press the **bell** in the top bar:
+
+- **Sound:** a short chiptune when an agent needs you, finishes or faints, and a fanfare on a level up. On by default.
+- **Pop-ups:** a notice in the corner of your screen when the Agentdex tab is hidden, so you can work in other windows. Your browser asks once for permission.
+- **Tab title:** shows a count, like **(1) Agentdex**, while something waits for your answer.
+
+Press **TRY IT** to hear and see one.
+
 ## Your Claude plan usage
 
 With **My Claude plan**, the top bar shows how much of your plan is used, for example `Plan · 5h 35% · week 17%`. It turns yellow at 60% and red at 85%. Click it for both windows with their reset times, and **CHECK NOW** to refresh. The numbers come from Claude Code itself after each task.
@@ -259,9 +269,13 @@ Leave your computer running Agentdex at home and message your agents from your p
 
 You also get a message when a job finishes or an agent faints.
 
-It uses Meta's official WhatsApp Business API (its free test number allows up to 5 recipients) and the free [ngrok](https://ngrok.com) tunnel so WhatsApp can reach your computer. **Open SETUP, part 3**: it walks you through five steps with copy buttons and a test message. Plan for about 30 minutes the first time.
+It uses Meta's official WhatsApp Business API (its free test number allows up to 5 recipients). **Open SETUP, part 3**: five steps with copy buttons, and a checklist at the top that ticks off as each part starts working. About 20 minutes, once.
 
-Your computer, the Agentdex window and the ngrok window must stay on. WhatsApp only lets the bot message you within 24 hours of your last message to it, so send `status` once a day if you want alerts.
+- **No extra window.** Install the free [ngrok](https://ngrok.com) app once and paste your ngrok authtoken and free static domain. Agentdex opens the connection itself whenever it runs, and closes it when you stop Agentdex. The address never changes, so you give it to Meta only once.
+- **A token that doesn't expire.** SETUP shows how to make a permanent token in Meta Business settings (5 minutes). Your codes are checked as soon as you save, so a typo or an expired token shows up straight away, in plain words.
+- **Alerts keep coming.** WhatsApp only lets the bot message you within 24 hours of your last message. About an hour before that, Agentdex asks you to reply with anything to keep it open.
+
+Your computer and the Agentdex window must stay on.
 
 ## Safety
 
@@ -362,6 +376,8 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 | `runtime/skill-scout.js` | Agents decide when a skill would help, shop for one, CHECKS reviews, you approve |
 | `runtime/index.js` | `npm run real`: wires the server, agents, SETUP and WhatsApp together |
 | `bridges/whatsapp.js` | WhatsApp remote control (official Cloud API) |
+| `bridges/tunnel.js` | Runs your installed ngrok for the WhatsApp webhook, so there is no second window |
+| `bridges/common.js` | What the phone bridge says: requests, status and help |
 | `*/test/` | Tests |
 
 </details>

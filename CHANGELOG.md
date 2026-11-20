@@ -2,6 +2,16 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.12.0 · Alerts, and an easier WhatsApp setup
+
+- **Bell in the top bar:** a chiptune chime when an agent needs you, finishes or faints, pop-ups when the Agentdex tab is hidden, and a count in the tab title like "(1) Agentdex". TRY IT plays one.
+- **WhatsApp without a second window:** paste your ngrok authtoken and free static domain in SETUP and Agentdex runs the tunnel itself, starting and stopping with Agentdex. The address stays the same, so Meta needs it only once.
+- **Your codes are checked when you save:** SETUP shows your WhatsApp number when the token and phone number ID work, and says in plain words when a token expired or an ID is wrong.
+- **Permanent token guide** in SETUP, step 2.
+- **Live checklist** at the top of the WhatsApp section: codes, tunnel, Meta link, your first message.
+- **Alerts keep coming:** about an hour before WhatsApp's 24-hour window closes, the bot asks you to reply with anything.
+- Only messages from your own number count toward that window.
+
 ## 0.11.0 · Agents learn community skills
 
 - **Skills in the MART:** agents can use shared instruction packs (`SKILL.md`) from the community, found through [skills.sh](https://skills.sh).

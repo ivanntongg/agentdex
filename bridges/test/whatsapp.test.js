@@ -158,3 +158,39 @@ test('talking from WhatsApp: @mention there, reply comes back there', async () =
     assert.ok(!t.sent.some((s) => /town only reply/.test(s.body.text?.body || '')), 'chats from the town stay in the town');
   } finally { await t.close(); }
 });
+
+test('the codes are checked on save, and Meta errors are explained in plain words', async () => {
+  const calls = [];
+  const mk = (status, body) => createWhatsAppBridge({
+    dex: { subscribe() {}, post: async () => ({}) }, log: () => {},
+    fetchImpl: async (url, init) => { calls.push({ url, init }); return new Response(JSON.stringify(body), { status }); },
+    config: { token: 'EAAtoken', phoneNumberId: '1111', appSecret: SECRET, verifyToken: 'vt', allowed: ME, apiVersion: 'v23.0', port: 0 },
+  });
+  const good = mk(200, { display_phone_number: '+1 555 0100', verified_name: 'Test Number' });
+  assert.deepEqual(await good.checkCodes(), { display: '+1 555 0100', name: 'Test Number' });
+  assert.match(calls[0].url, /\/v23\.0\/1111\?fields=display_phone_number,verified_name$/);
+  assert.equal(calls[0].init.headers.authorization, 'Bearer EAAtoken');
+  const expired = mk(401, { error: { code: 190, message: 'Session has expired' } });
+  assert.equal(await expired.checkCodes(), null);
+  assert.match(expired.health().codesError, /expired or is wrong\. Make a permanent token/);
+  const badId = mk(400, { error: { code: 100, message: 'Unsupported get request' } });
+  await badId.checkCodes();
+  assert.match(badId.health().codesError, /phone number ID is wrong/);
+});
+
+test('about an hour before WhatsApp\'s 24-hour window closes, the bot asks for a quick reply, once', async () => {
+  const t = await setup();
+  try {
+    await t.deliver(says('status'));
+    await t.until(() => t.bridge.health().lastMessageAt);
+    await new Promise((r) => setTimeout(r, 100));
+    const before = t.sent.length;
+    const last = Date.parse(t.bridge.health().lastMessageAt);
+    const H = 3600_000;
+    assert.equal(t.bridge.keepAlive(last + 20 * H), false, 'too early');
+    assert.equal(t.bridge.keepAlive(last + 23 * H), true);
+    assert.equal(t.bridge.keepAlive(last + 23.2 * H), false, 'only once per message from you');
+    const nudge = await t.until(() => t.sent.slice(before).find((s) => /keep getting Agentdex alerts/.test(s.body.text?.body || '')));
+    assert.equal(nudge.body.to, ME);
+  } finally { await t.close(); }
+});

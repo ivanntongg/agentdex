@@ -4,7 +4,7 @@
 import { readFileSync, writeFileSync, renameSync, chmodSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 
-export const SECRET_FIELDS = ['anthropicKey', 'whatsappToken', 'whatsappAppSecret'];
+export const SECRET_FIELDS = ['anthropicKey', 'whatsappToken', 'whatsappAppSecret', 'ngrokAuthtoken'];
 export const MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'];
 export const EFFORTS = ['low', 'medium', 'high'];
 export const BRAINS = ['api', 'claude-code'];
@@ -17,6 +17,8 @@ const FIELDS = {
   whatsappToken: () => null,
   whatsappPhoneNumberId: (v) => (/^\d{5,20}$/.test(v) ? null : 'Phone number ID is the long number from Meta, digits only'),
   whatsappAppSecret: (v) => (/^[a-f0-9]{16,64}$/i.test(v) ? null : 'App secret is the code under App settings, Basic (letters a-f and digits)'),
+  ngrokAuthtoken: (v) => (/^[A-Za-z0-9_-]{20,120}$/.test(v) ? null : 'The ngrok authtoken is the long code under Your Authtoken on dashboard.ngrok.com'),
+  ngrokDomain: (v) => (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase()) ? null : 'The static domain looks like your-name.ngrok-free.app'),
   skillScout: (v) => (['on', 'off'].includes(v) ? null : 'skillScout must be on or off'),
   whatsappAllowed: (v) => (v.split(',').every((p) => /^\+?[\d\s-]{8,20}$/.test(p.trim())) ? null : 'Your number with country code, like +60 12 345 6789'),
 };
@@ -33,7 +35,7 @@ export function createConfig({ path = 'agentdex.config.json', env = process.env 
   const ENV = {
     brain: 'AGENTDEX_BRAIN', anthropicKey: 'ANTHROPIC_API_KEY', model: 'AGENTDEX_MODEL', effort: 'AGENTDEX_EFFORT',
     whatsappToken: 'WHATSAPP_TOKEN', whatsappPhoneNumberId: 'WHATSAPP_PHONE_NUMBER_ID',
-    whatsappAppSecret: 'WHATSAPP_APP_SECRET', whatsappAllowed: 'WHATSAPP_ALLOWED', skillScout: 'AGENTDEX_SKILL_SCOUT',
+    whatsappAppSecret: 'WHATSAPP_APP_SECRET', whatsappAllowed: 'WHATSAPP_ALLOWED', skillScout: 'AGENTDEX_SKILL_SCOUT', ngrokAuthtoken: 'NGROK_AUTHTOKEN', ngrokDomain: 'AGENTDEX_NGROK_DOMAIN',
   };
   const get = (k) => data[k] || (ENV[k] && env[ENV[k]]) || null;
 
@@ -74,10 +76,16 @@ export function createConfig({ path = 'agentdex.config.json', env = process.env 
       };
       return c.token && c.phoneNumberId && c.appSecret && c.allowed ? c : null;
     },
+    // The built-in tunnel for WhatsApp: needs your ngrok authtoken; the static domain keeps the address fixed.
+    tunnel() {
+      const authtoken = get('ngrokAuthtoken');
+      const domain = String(get('ngrokDomain') || '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase() || null;
+      return authtoken ? { authtoken, domain } : null;
+    },
     // What the SETUP screen may see.
     publicView() {
       const view = { brain: this.brain(), model: this.model(), effort: this.effort(), whatsappVerifyToken: data.whatsappVerifyToken,
-        whatsappPhoneNumberId: get('whatsappPhoneNumberId'), whatsappAllowed: get('whatsappAllowed') };
+        whatsappPhoneNumberId: get('whatsappPhoneNumberId'), whatsappAllowed: get('whatsappAllowed'), ngrokDomain: this.tunnel()?.domain || null };
       for (const k of SECRET_FIELDS) view[k] = mask(get(k));
       return view;
     },
