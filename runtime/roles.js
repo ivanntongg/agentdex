@@ -1,25 +1,24 @@
-// What each species is for, as a system prompt. Keyed by the species' first type.
+// What each species is for, as a system prompt. The job text comes from its role (server/roles.js):
+// a built-in role (maybe rewritten by the user) or a custom role the user described.
+import { roleFor, ROLE_DEFAULTS } from '../server/roles.js';
+
 const SHARED = `You work inside a sandboxed workspace folder on the user's computer. Use the file tools to look around, read and write.
 Put new work in the drafts/ folder: writing there needs no permission. Writing anywhere else asks the user first, so only do that when the task clearly needs it, and expect that they may say no.
 When you are done, reply with one or two plain sentences: what you did and which files to open. No headings, no lists.`;
 
-const ROLES = {
-  CODE: 'You are a careful software engineer. Read the relevant files before changing anything, keep changes small, and say what you could not verify.',
-  RESEARCH: 'You are a research analyst. Find sources, compare them, and write findings with links. Separate what sources say from your own judgement.',
-  DESIGN: 'You are a product designer. Produce concrete, buildable design specs: layout, states, copy, and the reasoning behind each choice.',
-  OPS: 'You are an operations engineer. Write runbooks and checks that someone tired at 3am can follow. Flag anything risky instead of doing it.',
-  WRITE: 'You are an editor and writer. Write plainly and briefly for the stated reader. Cut anything that does not earn its place.',
-  QA: 'You are a reviewer. You check other agents\' work against the task they were given.',
+const roleText = (species) => {
+  const { job } = roleFor(species);
+  return species?.custom ? `You are the team's ${species.title}. ${job}` : job;
 };
 
 export function systemPrompt(species, nick) {
-  const role = ROLES[species.types[0]] || ROLES.CODE;
+  const role = roleText(species);
   return `Your name is ${nick}. ${role}\n\n${SHARED}`;
 }
 
 // For talking, not working: in character, short, read-only, and a clear hand-off to a task.
 export function chatPrompt(species, nick) {
-  const role = ROLES[species.types[0]] || ROLES.CODE;
+  const role = roleText(species);
   return `Your name is ${nick}. ${role}
 
 Right now the user is chatting with you, not giving you a task. Answer in a few plain sentences, in your own voice. No headings or lists unless they ask.
@@ -40,7 +39,13 @@ export function splitTask(text) {
   return { reply: lines.join('\n').trim() || 'OK.', task: task || null };
 }
 
-export const usesWeb = (species) => species.types.includes('RESEARCH') || species.types.includes('WRITE');
+export const usesWeb = (species) => (species?.custom ? Boolean(species.web) : species.types.some((t) => roleFor({ types: [t] }).web));
+
+// The user's own review rules, if they rewrote the QA role.
+export function reviewerSystem() {
+  const r = roleFor({ types: ['QA'] });
+  return r.edited && r.job !== ROLE_DEFAULTS.QA.job ? `${REVIEWER_SYSTEM}\n\nThe user's own review rules, which come first:\n${r.job}` : REVIEWER_SYSTEM;
+}
 
 export const REVIEWER_SYSTEM = `You review work another agent did for the user. Judge it only against the task it was given.
 Approve work that does what was asked, even if you would have done it differently. Ask for changes only for real problems: missing parts of the task, factual errors, broken code, or files the task needed that are not there.

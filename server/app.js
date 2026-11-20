@@ -206,6 +206,17 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
       send(res, 200, { events });
     }],
 
+    // Roles: { role: { id?, name, job, web, home, look } } for a custom role, or { type, job, web } to rewrite a built-in one.
+    ['POST', /^\/api\/roles$/, async (req, res) => {
+      const body = await readJSON(req);
+      send(res, 200, { event: store.apply({ type: 'role.saved', data: body.type ? { type: String(body.type), job: body.job, web: body.web } : { role: body.role } }) });
+    }],
+    // { id } deletes a custom role; { type } puts a built-in role back as it came.
+    ['POST', /^\/api\/roles\/delete$/, async (req, res) => {
+      const body = await readJSON(req);
+      send(res, 200, { event: store.apply({ type: 'role.deleted', data: body.type ? { type: String(body.type) } : { id: String(body.id || '') } }) });
+    }],
+
     ['GET', /^\/api\/skills$/, async (req, res) => {
       if (!skills) return send(res, 200, { available: false, enabled: false, skills: [] });
       send(res, 200, { available: true, ...(await skills.state()) });
