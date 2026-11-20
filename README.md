@@ -2,12 +2,15 @@
 
 [![Tests](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml/badge.svg)](https://github.com/ivanntongg/agentdex/actions/workflows/test.yml)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-3c873a)
-![Version 0.9.1](https://img.shields.io/badge/version-0.9.1-5462a6)
+[![npm](https://img.shields.io/npm/v/agentdex-town?color=5462a6&label=npm)](https://www.npmjs.com/package/agentdex-town)
+[![License: MIT](https://img.shields.io/badge/license-MIT-5462a6)](LICENSE)
 ![Powered by Claude](https://img.shields.io/badge/agents-Claude-d97757)
 
 **A pixel town where your AI agents live, work, and ask before they do anything that matters.**
 
-![The Agentdex town: agents walking between buildings, a party list with HP bars, and an agent asking "ROLLO wants to use DEPLOY on api-prod!" with YES / NO](docs/town.png)
+![The Agentdex town in motion: agents walk between buildings, you message SCOUT in the team chat, open an agent's summary and browse the Dex](docs/town.gif)
+
+**[Try the demo in your browser](https://ivanntongg.github.io/agentdex/)** (pretend agents, nothing to install) · **Run it:** `npx agentdex-town`
 
 - Your AI agents are creatures in a handheld-style town. When one **walks to a building**, it really started or handed over work.
 - Before anything risky, an agent stops and asks you in a **YES / NO dialog box**. A second agent can review the work first.
@@ -20,7 +23,23 @@ Real agents are powered by [Claude](https://www.anthropic.com/claude) and work o
 
 ## Install
 
-You need about 15 minutes. You will type a few commands into a **terminal**: on a Mac open the **Terminal** app, on Windows open **PowerShell** from the Start menu. Paste each command, press Enter, and wait for it to finish before the next one.
+### The quick way: one command
+
+Install **Node.js** (the **LTS** version from [nodejs.org](https://nodejs.org)), open a terminal (**Terminal** on a Mac, **PowerShell** on Windows) and run:
+
+```bash
+npx agentdex-town
+```
+
+Type `y` if it asks to install. The town opens in your browser and the SETUP screen helps you connect Claude ([step 4](#4-connect-claude-first-time-only) below). Keep the terminal open while you play; press **Ctrl + C** to stop.
+
+- Your town, settings and the agents' workspace are kept in an **Agentdex** folder in your home folder (`~/Agentdex` on a Mac, `C:\Users\<you>\Agentdex` on Windows). Updates never touch it.
+- Next time, run the same command. To get the newest version, run `npx agentdex-town@latest`.
+- Pretend agents only, no Claude needed: `npx agentdex-town --practice`. All options: `npx agentdex-town --help`.
+
+### The full way: download with Git
+
+Use this if you want the desktop shortcut or to change the code. You need about 15 minutes. You will type a few commands into a **terminal**: on a Mac open the **Terminal** app, on Windows open **PowerShell** from the Start menu. Paste each command, press Enter, and wait for it to finish before the next one.
 
 ### 1. Install the two free tools
 
@@ -310,6 +329,7 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 
 | Path | What it is |
 |---|---|
+| `bin/agentdex.js` | `npx agentdex-town`: starts everything from anywhere, data in `~/Agentdex` |
 | `index.html` | The town and the SETUP screen. Live when served, offline demo when opened as a file |
 | `server/store.js` | World state. Validates and applies every event |
 | `server/app.js` | HTTP API, live event stream, setup routes |
@@ -345,3 +365,7 @@ Bug reports, ideas and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBU
 ## Status
 
 Early prototype, built in the open. All creatures, names and art are original.
+
+## License
+
+[MIT](LICENSE). Use it, change it and share it, including commercially; keep the copyright notice.
