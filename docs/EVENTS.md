@@ -67,6 +67,9 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 | `chat.failed` | `reason?`, `via?` | The agent could not answer |
 | `files.added` | `files` | The player added files to the inbox. No `agentId` |
 | `agent.renamed` | `nick` | New name: one word, 2 to 12 letters, digits, `-` or `_`; unique |
+| `guide.asked` | `text`, `via?` | The player asked the Guide (`? question` in the command bar). No `agentId` |
+| `guide.answered` | `text`, `suggestions: [{ agentId, task }]`, `newRole?: { name, job }`, `via?` | The Guide's answer. Ideas for agents that are not in the town are dropped |
+| `guide.failed` | `reason`, `via?` | The Guide could not answer |
 | `role.saved` | `role` (a custom role) or `type`, `job`, `web` (a rewritten built-in role) | No `agentId`. Custom roles become species with ids starting `c-` |
 | `role.deleted` | `id` or `type` | Removes a custom role nobody uses, or resets a built-in one |
 | `skills.updated` | `skills` (the installed list), `note?`, `tone?` | The MART changed. No `agentId`. The log keeps only a count |

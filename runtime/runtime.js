@@ -8,6 +8,7 @@ import { loadRoles, applyRoleEvent } from '../server/roles.js';
 import { ClaudeCodeError, ClaudeCodeStopped } from './claude-code.js';
 import { skillsPrompt } from './skills.js';
 import { createSkillScout } from './skill-scout.js';
+import { createGuide } from './guide.js';
 
 const WEB_SEARCH = { type: 'web_search_20260209', name: 'web_search', max_uses: 5 };
 const MOVE_FOR_TOOL = { list_files: 'READ', read_file: 'READ', write_file: 'EDIT' };
@@ -44,7 +45,10 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
   }
   const remember = (agentId, entry) => { if (!entry) return; if (!chats.has(agentId)) chats.set(agentId, []); const l = chats.get(agentId); if (!l.some((e) => e.id === entry.id)) l.push(entry); if (l.length > 60) l.shift(); };
 
-  function onChange({ event, agents: touched }) {
+  function onChange({ event, agents: touched, approvals }) {
+    if (Array.isArray(approvals)) openApprovals = approvals.length;
+    guide.remember(event);
+    if (event.type === 'guide.asked') guide.answer(event.data.text, event.data.via);
     if (event.type === 'role.saved' || event.type === 'role.deleted') { try { applyRoleEvent(event); } catch { /* the store already checked it */ } }
     for (const a of touched) agents.set(a.id, a);
     switch (event.type) {
@@ -136,16 +140,18 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
   }
 
   // A short structured question to the model, in either mode. HP is charged to agentId.
-  async function ask({ system, prompt, schema, agentId, signal }) {
+  // agentId null means nobody's HP pays for it (the Guide).
+  async function ask({ system, prompt, schema, agentId, signal, effort = 'low' }) {
     const cfg = current();
+    const charge = (tokens) => (agentId == null ? null : dex.emit('task.progress', agentId, { tokens }).catch(() => {}));
     if (cfg.engine === 'claude-code') {
-      const r = await cfg.claudeCode.structured({ prompt, systemPrompt: system, schema, model: cfg.model, effort: 'low', signal });
-      await dex.emit('task.progress', agentId, { tokens: r.tokens || 0 }).catch(() => {});
+      const r = await cfg.claudeCode.structured({ prompt, systemPrompt: system, schema, model: cfg.model, effort, signal });
+      await charge(r.tokens || 0);
       return r.output || null;
     }
     if (!cfg.anthropic) return null;
-    const res = await request({ system, messages: [{ role: 'user', content: prompt }], output_config: { effort: 'low', format: { type: 'json_schema', schema } } }, signal);
-    await dex.emit('task.progress', agentId, { tokens: (res.usage.input_tokens + res.usage.output_tokens) / 1000 }).catch(() => {});
+    const res = await request({ system, messages: [{ role: 'user', content: prompt }], output_config: { effort, format: { type: 'json_schema', schema } } }, signal);
+    await charge((res.usage.input_tokens + res.usage.output_tokens) / 1000);
     if (res.stop_reason === 'refusal') return null;
     try { return JSON.parse(res.content.filter((b) => b.type === 'text').map((b) => b.text).join('')); } catch { return null; }
   }
@@ -158,6 +164,18 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     workspaceRoot: workspace.root,
     enabled: () => current().skillScout !== false,
   }) : null;
+
+  let openApprovals = 0;
+  const guide = createGuide({
+    dex, log, skills,
+    agents: () => agents.values(),
+    approvals: () => openApprovals,
+    ask: (q) => {
+      const cfg = current();
+      if (cfg.engine !== 'claude-code' && !cfg.anthropic) throw new Error('Connect Claude on the SETUP screen so the Guide can answer.');
+      return ask(q);
+    },
+  });
 
   // Before work starts: maybe shop for a skill, walk home, and build the prompts with installed skills.
   async function prepare(agentId, task, species, signal) {

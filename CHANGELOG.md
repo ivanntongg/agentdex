@@ -2,6 +2,12 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.14.0 · The Guide, and a friendlier first screen
+
+- **Ask the Guide:** start a message with ? (or press the Guide button) to ask what your team could do. It reads your town and answers in plain words with up to three ready-made jobs, each with a GIVE TO button, and suggests a new role when nobody fits. Works in practice mode, the demo and on WhatsApp.
+- **New here? Try one:** the empty team chat shows three examples to tap.
+- Clearer hint in the message box.
+
 ## 0.13.0 · Your own roles
 
 - **NEW ROLE in the Dex:** describe a new kind of agent in your own words, pick a creature and colour, a home and web access, or start from Video editor, Social media, Tutor or Bookkeeper. Spawn it like any other agent.

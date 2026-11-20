@@ -173,6 +173,19 @@ Open an agent's summary and use **Talk to SCOUT**, or type `@scout` followed by 
 - A speech bubble shows on the map while it thinks; the conversation also appears in the field log.
 - Each message uses a little of your plan or API credit, like a short chat on claude.ai.
 
+## Ask the Guide
+
+Not sure what to ask your agents? Start a message with **?** in the team chat, or press the **Guide** button above the box:
+
+```text
+? what can my team do for me
+? I run a small YouTube gaming channel, where do I start
+```
+
+The Guide looks at your town (who is free, what each agent is good at, their recent work and your installed skills) and answers in plain words with up to three ready-made jobs. Each one has a **GIVE TO** button, so one tap starts it. If nobody on your team fits, it suggests a new role with a **CREATE THIS ROLE** button. The Guide never starts work by itself, and it works from WhatsApp too.
+
+New to Agentdex? The empty team chat shows three examples to tap: ask the Guide, give a first job, or say hi to an agent.
+
 ## Your own roles
 
 Every creature comes with a job: BYTLE codes, FENNOOK researches, QUILLOW writes, CHROMOTH designs, GEARBO runs operations and SENTRIL reviews. You can change those jobs and add your own.
@@ -272,6 +285,7 @@ Leave your computer running Agentdex at home and message your agents from your p
 | `compare 3 note apps` | The best-suited free agent gets it |
 | `scout compare 3 note apps` | SCOUT gets it (start with any agent's name) |
 | `@scout what did you find?` | Talk to SCOUT; the reply comes back to your phone |
+| `? what should my team do today` | The Guide's ideas, each as a message you can send back to start it |
 | `status` | What everyone is doing, plus questions waiting for you |
 | Tap **YES** / **NO** | Answers an agent's question (typing `yes` or `no` works too) |
 | `reset scout` | Clears an agent that fainted or got stuck |
@@ -377,6 +391,7 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 | `server/store.js` | World state. Validates and applies every event |
 | `server/app.js` | HTTP API, live event stream, setup routes |
 | `server/config.js` | Settings saved from SETUP |
+| `runtime/guide.js` | The Guide: reads the town and suggests jobs and new roles |
 | `server/roles.js` | Built-in roles (and your rewrites) and custom roles you create |
 | `server/commands.js` | The command bar and WhatsApp commands: routes a sentence to the right agent |
 | `server/simulator.js` | Pretend agents that use only the public event API |

@@ -13,6 +13,7 @@ export const EVENT_TYPES = [
   'approval.requested', 'approval.resolved',
   'skills.updated',
   'role.saved', 'role.deleted',
+  'guide.asked', 'guide.answered', 'guide.failed',
 ];
 
 export class StoreError extends Error {
@@ -106,7 +107,7 @@ export function createStore() {
     const followUps = [];
     let a = null;
 
-    if (!['agent.spawned', 'files.added', 'skills.updated', 'role.saved', 'role.deleted'].includes(type)) {
+    if (!['agent.spawned', 'files.added', 'skills.updated', 'role.saved', 'role.deleted', 'guide.asked', 'guide.answered', 'guide.failed'].includes(type)) {
       a = resolveAgent(input.agentId);
       event.agentId = a.id;
       touched.add(a);
@@ -233,6 +234,34 @@ export function createStore() {
           throw err;
         }
         event.tone = 'ok';
+        break;
+      }
+
+      // The Guide: ask it what your team could do. It answers with ideas and ready-made jobs.
+      case 'guide.asked': {
+        const text = String(data.text || '').trim().slice(0, 1000);
+        if (!text) throw new StoreError(400, 'Ask the Guide something, like: what should my team do today?');
+        event.data = { text, via: data.via || null };
+        event.message = `You asked the Guide: "${text.length > 80 ? text.slice(0, 79) + '…' : text}"`;
+        break;
+      }
+      case 'guide.answered': {
+        const text = String(data.text || '').trim().slice(0, 3000);
+        if (!text) throw new StoreError(400, 'guide.answered needs data.text');
+        const suggestions = (Array.isArray(data.suggestions) ? data.suggestions : []).slice(0, 4).flatMap((x) => {
+          const who = resolveAgent(x.agentId ?? x.nick, { required: false });
+          const task = String(x.task || '').trim().slice(0, 200);
+          return who && task ? [{ agentId: who.id, nick: who.nick, task }] : [];
+        });
+        const nr = data.newRole && String(data.newRole.name || '').trim() ? { name: String(data.newRole.name).trim().slice(0, 24), job: String(data.newRole.job || '').trim().slice(0, 2000) } : null;
+        event.data = { text, suggestions, newRole: nr, via: data.via || null };
+        event.message = `Guide: ${text.length > 120 ? text.slice(0, 119) + '…' : text}`;
+        break;
+      }
+      case 'guide.failed': {
+        event.data = { reason: String(data.reason || 'something went wrong').slice(0, 300), via: data.via || null };
+        event.message = `The Guide couldn't answer: ${event.data.reason}`;
+        event.tone = 'bad';
         break;
       }
 

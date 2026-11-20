@@ -99,7 +99,12 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     if (adapter?.onReset) { adapter.onReset(a); return null; }
     return store.apply({ type: 'agent.reset', agentId: a.id });
   }
-  const commands = createCommands({ store, actions: { resolve, assign, reset, chat, withFiles, filesDetails, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
+  function ask(text, via) {
+    const event = store.apply({ type: 'guide.asked', data: { text, via } });
+    adapter?.onGuide?.(event.data);
+    return event;
+  }
+  const commands = createCommands({ store, actions: { resolve, assign, reset, chat, ask, withFiles, filesDetails, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
 
   const routes = [
     ['GET', /^\/api\/state$/, (req, res) => send(res, 200, { ...store.snapshot(), adapter: adapter ? adapter.name : null })],

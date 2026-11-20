@@ -349,6 +349,26 @@ header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;just
 .hu.on{border-color:var(--paper-ink);box-shadow:0 0 0 2px var(--frame-b)}
 .homes{display:flex;gap:14px}
 
+.starter{display:grid;gap:10px}
+.starter p{margin:0;color:var(--muted);font-size:14px}
+.starter p b{color:var(--ink)}
+.tries{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.try{display:grid;gap:2px;text-align:left;padding:10px 12px;background:var(--raise);border:2px solid var(--raise-line);border-radius:14px;box-shadow:0 3px 0 var(--raise-shadow)}
+.try:hover{background:var(--raise-hover);border-color:var(--sel)}
+.try:active{transform:translateY(2px);box-shadow:0 1px 0 var(--raise-shadow)}
+.try b{font-size:14px}
+.try span{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.gicon{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--accent);color:var(--accent-ink);font-size:13px;vertical-align:-4px}
+.cv.guide .cv-body{background:var(--sel-soft);color:var(--ink);border:2px solid var(--sel);border-radius:14px 14px 14px 4px}
+.gideas{display:grid;gap:6px}
+.gidea{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 8px;background:var(--raise);border:2px solid var(--raise-line);border-radius:12px;font-size:14px}
+.gidea img{width:22px;height:22px}
+.gidea .btn{font-size:12px;padding:5px 10px}
+.gidea small{color:var(--good);font-weight:700}
+.gnew{font-family:var(--font-pixel);color:var(--sel);text-align:center}
+@media (max-width:520px){.gidea{grid-template-columns:24px minmax(0,1fr)}.gidea .btn,.gidea small{grid-column:2;justify-self:start}}
+.who .guide-btn{padding:3px 10px 3px 4px;background:var(--accent-soft);border-color:var(--accent-line)}
+
 /* MART: community skills */
 .mart-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .mart-row input{font:inherit;font-size:15px;color:var(--ink);background:var(--field);border:2px solid var(--field-line);border-radius:var(--r-md);padding:8px 12px;min-width:0}
@@ -485,12 +505,12 @@ header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;just
       <div class="screen-cap"><span>Walk: arrow keys, WASD or tap the map. Z near an agent to pet or poke. Z = YES, X = NO.</span><button class="pausebtn" id="pause">PAUSE TIME</button></div>
       <div class="cmdbar">
         <div class="convo-h"><span>Team chat</span><small>Everything you and your agents say</small></div>
-        <div class="convo" id="convo" aria-live="polite"><p class="convo-empty">Give a job, or type @ to talk to an agent. Their answers and results show up here.</p></div>
+        <div class="convo" id="convo" aria-live="polite"></div>
         <label for="cmdText" class="sr">Message your team</label>
         <div class="who" id="whoRow" aria-label="Talk to an agent"></div>
         <form id="cmdForm" autocomplete="off" style="grid-template-columns:auto minmax(0,1fr) auto">
           <button class="btn attach" type="button" id="cmdAttach" title="Add files" aria-label="Add files"></button>
-          <input id="cmdText" maxlength="240" role="combobox" aria-autocomplete="list" aria-controls="mentionList" aria-expanded="false" placeholder="compare 3 note apps · quill write 5 titles · type @ to pick an agent · drop files anywhere">
+          <input id="cmdText" maxlength="240" role="combobox" aria-autocomplete="list" aria-controls="mentionList" aria-expanded="false" placeholder="Give a job, like: compare 3 note apps · ? asks the Guide · @ picks an agent">
           <button class="btn primary" type="submit">SEND</button>
         </form>
         <div class="mention" id="mentionList" role="listbox" hidden></div>
@@ -1537,6 +1557,7 @@ log('ROLLO needs you: it wants to use DEPLOY on api-prod.','need');
 renderPane();refresh();
 setTimeout(showDialog,600);
 setInterval(tick,1300);
+renderConvo();
 }
 /* ---------- live mode: the Agentdex server is the source of truth ---------- */
 let TOKEN=null;
@@ -1821,7 +1842,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#setup').hidden
 
 /* ---------- team chat ---------- */
 // One conversation with everyone, rebuilt from the town's events (so it is saved with the town).
-const convo=[];const convoSeen=new Set();const answered=new Map();let sysId=0;
+const convo=[];const convoSeen=new Set();const answered=new Map();let sysId=0;let guideThinking=false;
 function convoItem(ev){
   const d=ev.data||{};
   switch(ev.type){
@@ -1834,6 +1855,9 @@ function convoItem(ev){
     case 'approval.resolved':answered.set(d.approvalId,d.decision);return{kind:'sys',text:ev.message};
     case 'chat.failed':case 'agent.fainted':return{kind:'sys',text:ev.message,bad:true};
     case 'files.added':case 'town.note':return ev.message?{kind:'sys',text:ev.message}:null;
+    case 'guide.asked':guideThinking=true;return{kind:'you',to:null,text:d.text,label:'ask'};
+    case 'guide.answered':guideThinking=false;return{kind:'guide',text:d.text,suggestions:d.suggestions||[],newRole:d.newRole||null,given:{}};
+    case 'guide.failed':guideThinking=false;return{kind:'sys',text:ev.message,bad:true};
     default:return null;
   }
 }
@@ -1845,17 +1869,30 @@ function cvTime(ts){const d=new Date(ts);return isNaN(d)?'':String(d.getHours())
 function renderConvo(){
   const el=$('#convo');if(!el)return;
   const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<40;
-  if(!convo.length){el.innerHTML='<p class="convo-empty">Give a job, or type @ to talk to an agent. Their answers and results show up here.</p>';return}
+  if(!convo.length&&!guideThinking){el.innerHTML=starterHTML();el.querySelectorAll('[data-try]').forEach(b=>b.onclick=()=>{const i=$('#cmdText');i.value=b.dataset.try;i.focus();i.setSelectionRange(i.value.length,i.value.length)});return}
   el.innerHTML=convo.slice(-80).map((c,i)=>{
     const n=convo.length-Math.min(80,convo.length)+i;
     if(c.kind==='sys')return`<div class="cv sys ${c.bad?'bad':''}">${esc(c.text)}</div>`;
-    if(c.kind==='you')return`<div class="cv you"><div class="cv-who"><time>${cvTime(c.ts)}</time>You ${c.label==='talk'?'to':'gave'} ${c.to?cvWho(c.to):'the team'}${c.label==='task'?' a task':''}</div><div class="cv-body">${esc(c.text)}</div></div>`;
+    if(c.kind==='you')return`<div class="cv you"><div class="cv-who"><time>${cvTime(c.ts)}</time>${c.label==='ask'?'You asked the Guide':`You ${c.label==='talk'?'to':'gave'} ${c.to?cvWho(c.to):'the team'}${c.label==='task'?' a task':''}`}</div><div class="cv-body">${esc(c.text)}</div></div>`;
+    if(c.kind==='guide'){
+      const ideas=c.suggestions.map((g,k)=>{const a=byId(g.agentId);return`<div class="gidea">${a?`<img class="spr" alt="" src="${sprURL(a.sp)}">`:'<span></span>'}<span><b>${esc(g.nick)}</b> ${esc(g.task)}</span>${c.given[k]?'<small>Given</small>':`<button class="btn primary" type="button" data-give="${n}:${k}" ${a?'':'disabled'}>GIVE TO ${esc(g.nick)}</button>`}</div>`}).join('');
+      const role=c.newRole?`<div class="gidea"><span class="gnew">+</span><span>New role idea: <b>${esc(c.newRole.name)}</b></span><button class="btn" type="button" data-mkrole="${n}">CREATE THIS ROLE</button></div>`:'';
+      return`<div class="cv agent guide"><div class="cv-who"><span class="gicon">${BULB}</span>Guide<time>${cvTime(c.ts)}</time></div><div class="cv-body">${esc(c.text)}</div>${ideas||role?`<div class="gideas">${ideas}${role}</div>`:''}</div>`;
+    }
     const ans=c.approvalId!=null?answered.get(c.approvalId):null;
     const acts=c.approvalId!=null?(ans?`<div class="cv-acts"><small>You said ${ans==='yes'?'YES':'NO'}.</small></div>`:`<div class="cv-acts"><button class="btn primary" type="button" data-ap="${c.approvalId}" data-d="yes">YES</button><button class="btn" type="button" data-ap="${c.approvalId}" data-d="no">NO</button>${c.link&&/^https:\/\//.test(c.link)?`<a class="btn" href="${esc(c.link)}" target="_blank" rel="noopener">VIEW SKILL</a>`:''}</div>`)
       :c.task?`<div class="cv-acts"><button class="btn primary" type="button" data-cvtask="${n}">DO IT AS A TASK</button><small>${esc(c.task)}</small></div>`:'';
     const flags=c.flags&&c.flags.length&&!ans?`<ul class="cv-flags">${c.flags.map(f=>`<li>! ${esc(f)}</li>`).join('')}</ul>`:'';
     return`<div class="cv agent ${c.tone||''}"><div class="cv-who">${cvWho(c.from)}<time>${cvTime(c.ts)}</time></div><div class="cv-body">${esc(c.text)}</div>${flags}${acts}</div>`;
   }).join('');
+  if(guideThinking)el.insertAdjacentHTML('beforeend','<div class="cv sys"><span class="gicon">'+BULB+'</span> The Guide is thinking...</div>');
+  el.querySelectorAll('[data-give]').forEach(b=>b.onclick=async()=>{const [ci,k]=b.dataset.give.split(':').map(Number);const c=convo[ci],g=c&&c.suggestions[k];if(!g)return;b.disabled=true;
+    if(LIVE){const r=await api(`api/agents/${g.agentId}/tasks`,{title:g.task,review:party.some(x=>SPEC[x.sp].reviewer&&x.status!=='FNT')});if(!r){b.disabled=false;return}}
+    else{const a=byId(g.agentId);if(a&&a.phase==='idle'&&!a.path.length)startTask(a,{t:g.task});else{convoSystem(`${g.nick} is busy. In this demo, try again when it is free.`);b.disabled=false;return}}
+    c.given[k]=true;renderConvo()});
+  el.querySelectorAll('[data-mkrole]').forEach(b=>b.onclick=()=>{const c=convo[+b.dataset.mkrole];if(!c||!c.newRole)return;
+    tab='dex';roleEdit={mode:'new',draft:{name:c.newRole.name,job:c.newRole.job,web:true,home:'LAB',look:{base:'quillow',hue:190}}};renderPane();
+    const m=document.querySelector('.menu');m&&m.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'})});
   el.querySelectorAll('[data-ap]').forEach(b=>b.onclick=async()=>{b.parentElement.querySelectorAll('button').forEach(x=>x.disabled=true);await api(`api/approvals/${b.dataset.ap}`,{decision:b.dataset.d})});
   el.querySelectorAll('[data-cvtask]').forEach(b=>b.onclick=async()=>{const c=convo[+b.dataset.cvtask];if(!c)return;b.disabled=true;
     if(LIVE)await api(`api/agents/${c.from}/tasks`,{title:c.task,review:party.some(x=>SPEC[x.sp].reviewer&&x.status!=='FNT')});
@@ -1893,9 +1930,17 @@ addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();dragDepth=
   addFiles([...e.dataTransfer.files],tab==='party'&&view==='sum'&&byId(selId)?'agent':'cmd')});
 
 const STATUS_WORD=a=>a.status==='PAR'?'waiting for you':a.status==='FNT'?'fainted':a.chatting?'answering':a.task?'working':'free';
+const BULB=pixIcon(["..xxxxx..",".x.....x.","x.......x","x...x...x","x...x...x",".x..x..x.","..x...x..","..xxxxx..","..xxxxx..","...xxx..."]);
+function starterHTML(){
+  const a=party.find(x=>!SPEC[x.sp].reviewer);const nick=a?a.nick.toLowerCase():'scout';
+  const tries=[['? what can my team do for me','Ask the Guide for ideas'],['compare 3 free note-taking apps for a student','Give your first job'],[`@${nick} hi, what are you good at?`,`Say hi to ${a?a.nick:'an agent'}`]];
+  return`<div class="starter"><p><b>New here? Try one.</b> Tap it, then press SEND. Everything your team says shows up here.</p>
+    <div class="tries">${tries.map(([t,l])=>`<button type="button" class="try" data-try="${esc(t)}"><b>${esc(l)}</b><span>${esc(t)}</span></button>`).join('')}</div></div>`;
+}
 function renderWho(){
   const row=$('#whoRow');if(!row)return;
-  row.innerHTML=party.length?'<span>Talk to:</span>'+party.map(a=>`<button type="button" data-nick="${esc(a.nick)}" title="${esc(a.nick)} is ${STATUS_WORD(a)}"><img class="spr" alt="" src="${sprURL(a.sp,a.status==='FNT'?'gray':'')}">${esc(a.nick)}</button>`).join(''):'';
+  row.innerHTML='<button type="button" class="guide-btn" id="guideBtn" title="Ask the Guide what your team could do"><span class="gicon">'+BULB+'</span>Guide</button>'+(party.length?'<span>Talk to:</span>':'')+party.map(a=>`<button type="button" data-nick="${esc(a.nick)}" title="${esc(a.nick)} is ${STATUS_WORD(a)}"><img class="spr" alt="" src="${sprURL(a.sp,a.status==='FNT'?'gray':'')}">${esc(a.nick)}</button>`).join('');
+  $('#guideBtn').onclick=()=>{const i=$('#cmdText');i.value='? '+i.value.replace(/^\?\s*/,'');i.focus();i.setSelectionRange(i.value.length,i.value.length);closeMention()};
   row.querySelectorAll('[data-nick]').forEach(b=>b.onclick=()=>{const i=$('#cmdText');i.value=`@${b.dataset.nick} `+i.value.replace(/^@\S+\s*/,'');i.focus();i.setSelectionRange(i.value.length,i.value.length);closeMention()});
 }
 // Type @ to pick an agent from a list.
@@ -1949,7 +1994,8 @@ const DEMO_SKILLS={RESEARCH:/\b(research|compare|find|search|look|investigate|an
 function demoCommand(text){
   const lower=text.toLowerCase(),[first,...rest]=text.split(/\s+/);
   const byNick=w=>party.find(a=>a.nick.toUpperCase()===String(w||'').replace(/^@/,'').replace(/[:,.!]$/,'').toUpperCase());
-  if(['help','?'].includes(lower))return'Type a job (compare 3 note apps), start with a name (quill write 5 titles), talk with @ (@scout how is it going?), or: status, yes, no, reset scout, rename scout to max.';
+  if(['help','?'].includes(lower))return'Type a job (compare 3 note apps), start with a name (quill write 5 titles), talk with @ (@scout how is it going?), ask the Guide with ? (? what should my team do), or: status, yes, no, reset scout, rename scout to max.';
+  if(text.startsWith('?')){demoGuide(text.slice(1).trim());return''}
   if(lower==='status')return party.map(a=>`${a.nick}: ${a.status==='PAR'?'waiting for your OK':a.task?'working on "'+a.task.t+'"':'free'}`).join('\n');
   if(lower==='yes'||lower==='no'){if(current&&current.kind!=='act'){answer(lower==='yes'?0:1);return'Answered.'}return'Nothing is waiting for an answer.'}
   if(first.toLowerCase()==='reset'&&rest[0]){const a=byNick(rest[0]);if(!a)return`No agent called ${rest[0]}.`;a.task=null;a.status='OK';goTo(a,'CENTER','heal');return`Resetting ${a.nick}.`}
@@ -1965,6 +2011,18 @@ function demoCommand(text){
   if(a.phase==='idle'&&!a.path.length){startTask(a,{t:title.slice(0,200)});return`Sent to ${a.nick}.`}
   return`${a.nick} is busy. In this demo, try another agent or wait.`;
 }
+// The demo's Guide: example ideas for the free agents. The real one reads your actual town.
+function demoGuide(q){
+  convoPush({kind:'you',to:null,text:q,label:'ask'});guideThinking=true;renderConvo();
+  setTimeout(()=>{
+    const free=party.filter(a=>!SPEC[a.sp].reviewer&&a.status!=='FNT').sort((x,y)=>(x.phase==='idle'?0:1)-(y.phase==='idle'?0:1)).slice(0,3);
+    const suggestions=free.map(a=>({agentId:a.id,nick:a.nick,task:pick(POOL[SPEC[a.sp].types[0]]||POOL.WRITE).t}));
+    const wantsVideo=/video|youtube|edit|clip|tiktok|reel/i.test(q)&&!Object.values(SPEC).some(x=>x.custom&&/video/i.test(x.title||''));
+    const t=ROLE_TEMPLATES[0];
+    guideThinking=false;
+    convoPush({kind:'guide',text:`Here are ideas for who is free right now.${wantsVideo?' Nobody on your team does video yet, so a Video editor role could help.':''} In this demo the ideas are examples; with Claude connected, the Guide reads your real agents, skills and recent work.`,suggestions,newRole:wantsVideo?{name:t.name,job:t.job}:null,given:{}});
+  },reduce?0:1200);
+}
 $('#cmdForm').onsubmit=async e=>{
   e.preventDefault();const box=$('#cmdText'),text=box.value.trim();if(!text)return;let chatReply=false;
   const btn=$('#cmdForm button');btn.disabled=true;
@@ -1975,6 +2033,7 @@ $('#cmdForm').onsubmit=async e=>{
     catch{reply='Could not reach Agentdex. Is its window still open?';bad=true}
   }else reply=demoCommand(text);
   btn.disabled=false;
+  if(!LIVE&&reply===''){box.value='';box.focus();return} // the demo Guide answers in the chat itself
   // The team chat already shows tasks and talks; only add Agentdex's own answer when it says something new.
   if(LIVE&&!bad&&(chatReply||/ is on it/.test(reply))){}else{if(!LIVE)convoPush({kind:'you',to:null,text,label:'task'});convoSystem(reply,bad)}
   if(!bad){box.value='';cmdFiles=[];renderFiles()}box.focus();
