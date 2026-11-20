@@ -20,6 +20,7 @@ import { createClaudeCode, ClaudeCodeError } from './claude-code.js';
 import { createConfig, ConfigError } from '../server/config.js';
 import { StoreError } from '../server/store.js';
 import { createWhatsAppBridge } from '../bridges/whatsapp.js';
+import { findNgrok, startTunnel } from '../bridges/tunnel.js';
 import { createSkills, parseRef, SkillError } from './skills.js';
 import { SPECIES } from '../server/species.js';
 
@@ -64,20 +65,46 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   let bridge = null;
   let bridgeCtl = null;
   let bridgeError = null;
-  async function applyWhatsApp() {
-    if (bridge) { bridgeCtl.abort(); await bridge.stop(); bridge = null; }
-    bridgeError = null;
+  let tunnel = null;
+  let tunnelState = { url: null, error: null };
+  let appliedKey = null;
+  process.once('exit', () => tunnel?.stop());
+  // Starts (or restarts) the WhatsApp bridge and its built-in ngrok tunnel. Other settings changes leave them alone.
+  let applying = Promise.resolve();
+  let forceWhatsApp = false; // set when SETUP saves WhatsApp, so SAVE always retries
+  const applyWhatsApp = (opts) => (applying = applying.then(() => doApplyWhatsApp(opts)).catch((err) => console.error(`WhatsApp: ${err.message}`)));
+  async function doApplyWhatsApp({ force = false } = {}) {
     const c = config.whatsapp();
+    const t = config.tunnel();
+    const key = JSON.stringify([c, t]);
+    if (!force && key === appliedKey && (bridge || !c)) return;
+    appliedKey = key;
+    if (bridge) { bridgeCtl.abort(); await bridge.stop(); bridge = null; }
+    if (tunnel) { const old = tunnel; tunnel = null; await old.stop(); }
+    bridgeError = null;
+    tunnelState = { url: null, error: null };
     if (!c || !dex) return;
     try {
       bridgeCtl = new AbortController();
       bridge = createWhatsAppBridge({ dex, config: c });
       await bridge.start(bridgeCtl.signal);
       console.log(`WhatsApp bridge listening on http://127.0.0.1:${c.port}/webhooks/whatsapp`);
+      await bridge.checkCodes();
     } catch (err) {
       bridge = null;
       bridgeError = err.code === 'EADDRINUSE' ? `Port ${c.port} is busy. Close the other program using it, or set WHATSAPP_PORT.` : err.message;
       console.error(`WhatsApp bridge: ${bridgeError}`);
+      return;
+    }
+    if (!t) return;
+    try {
+      const me = await startTunnel({ bin: env.AGENTDEX_NGROK_BIN || findNgrok(), port: c.port, authtoken: t.authtoken, domain: t.domain, onExit: (why) => { if (tunnel === me) { tunnel = null; tunnelState = { url: null, error: why }; } } });
+      tunnel = me;
+      tunnelState = { url: tunnel.url, error: null };
+      console.log(`WhatsApp tunnel open: ${tunnel.url}`);
+    } catch (err) {
+      tunnelState = { url: null, error: err.message };
+      console.error(`WhatsApp tunnel: ${err.message}`);
     }
   }
 
@@ -93,13 +120,19 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
           complete: Boolean(wa), running: Boolean(bridge), error: bridgeError,
           port: wa?.port || Number(env.WHATSAPP_PORT || 8788), path: '/webhooks/whatsapp',
           health: bridge ? bridge.health() : null,
+          tunnel: { ...tunnelState, configured: Boolean(config.tunnel()), installed: Boolean(env.AGENTDEX_NGROK_BIN || findNgrok()) },
         },
       };
     },
     async save(body) {
+      forceWhatsApp = Object.keys(body || {}).some((k) => /^(whatsapp|ngrok)/.test(k));
+      const wa = forceWhatsApp;
       try { config.save(body); } catch (err) {
+        forceWhatsApp = false;
         throw err instanceof ConfigError ? new StoreError(400, err.message) : err;
       }
+      // Wait for WhatsApp and its tunnel to come up, so SETUP shows the real result.
+      if (wa) await Promise.race([applying, new Promise((r) => setTimeout(r, 25_000))]);
     },
     async testClaude() {
       if (config.brain() === 'claude-code') {
@@ -194,7 +227,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   });
 
   await runtime.scout.sync().catch((err) => console.error(`Could not load installed skills: ${err.message}`));
-  config.onChange(() => { applyWhatsApp(); });
+  config.onChange(() => { const force = forceWhatsApp; forceWhatsApp = false; applyWhatsApp({ force }); });
   await applyWhatsApp();
 
   console.log(`Workspace: ${workspace.root}`);

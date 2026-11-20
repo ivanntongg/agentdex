@@ -130,7 +130,7 @@ img.spr{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
 .wrap{max-width:1240px;margin:0 auto;display:grid;gap:16px}
 
 /* top bar */
-header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px}
+header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px}
 .brand h1{margin:0;font-family:var(--font-pixel);font-weight:700;font-size:clamp(26px,4vw,36px);letter-spacing:.04em;color:var(--logo);text-shadow:3px 3px 0 var(--logo-shade)}
 .hud{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .chip{font-weight:600;font-size:12.5px;padding:6px 12px;background:var(--raise);border:2px solid var(--raise-line);border-radius:999px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--ink)}
@@ -140,6 +140,11 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .chip.setup-btn:hover,.chip.plan-chip:hover,.chip.theme:hover{background:var(--raise-hover)}
 .chip.setup-btn:active,.chip.plan-chip:active,.chip.needs:active,.chip.theme:active{transform:translateY(2px);box-shadow:0 1px 0 var(--raise-shadow)}
 .chip.theme{padding:6px 9px;font-size:15px;color:var(--muted)}
+.chip.theme.off{opacity:.6}
+.alertpop{position:absolute;right:0;top:calc(100% + 8px);z-index:40;width:min(340px,100%);display:grid;gap:10px;padding:14px;background:var(--panel);border:2px solid var(--edge);border-radius:var(--r-lg);box-shadow:0 4px 0 var(--edge-shadow)}
+.alertpop>b{font-size:15px;color:var(--head)}
+.alertpop .chk{font-size:14px;color:var(--ink);align-items:flex-start}
+.alertpop .chk input{margin-top:3px}
 .chip.theme:hover{color:var(--ink)}
 .chip.needs{background:var(--accent);border-color:var(--accent-line);color:var(--accent-ink);box-shadow:0 3px 0 var(--accent-shadow)}
 .chip.needs.zero{background:var(--raise);border-color:var(--raise-line);color:var(--muted);box-shadow:0 3px 0 var(--raise-shadow)}
@@ -405,6 +410,14 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .health{display:grid;gap:4px;font-size:14px;color:var(--ink)}
 .health b{color:var(--good);font-weight:600}
 .setup-note{font-size:14px;color:var(--muted)}
+.checks{list-style:none;margin:0;padding:10px 12px;display:grid;gap:6px;background:var(--well);border:2px solid var(--well-line);border-radius:var(--r-md);font-size:14px}
+.checks li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start;overflow-wrap:anywhere}
+.checks li::before{content:"";width:12px;height:12px;margin-top:4px;border-radius:50%;border:2px solid var(--faint)}
+.checks li.ok::before{background:var(--good);border-color:var(--good)}
+.checks li.ok{color:var(--ink)}.checks li.wait{color:var(--muted)}
+.howto{background:var(--well);border:2px solid var(--well-line);border-radius:var(--r-md);padding:8px 12px;font-size:14px}
+.howto summary{cursor:pointer;font-weight:700;color:var(--head)}
+.howto ol{margin:8px 0 2px;padding-left:20px;display:grid;gap:4px}
 
 @media (max-width:520px){.moves{grid-template-columns:1fr}.sum-top{grid-template-columns:80px minmax(0,1fr)}.portrait{width:80px;height:80px}.portrait img{width:64px;height:64px}.chip{padding:5px 10px}}
 @media (prefers-reduced-motion:reduce){.hp-bar i{transition:none}*{transition:none!important}}
@@ -424,7 +437,16 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
       <span class="chip mode" id="mode" title="Demo runs in your browser. Live follows the Agentdex server.">DEMO</span>
       <button class="chip needs" id="cNeeds"><b id="cNeedN">0</b> need you</button>
       <span class="chip"><span id="clock">Day 1 · 09:41</span></span>
+      <button class="chip theme" id="bellBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="alertPop" aria-label="Alerts"></button>
       <button class="chip theme" id="themeBtn" type="button" aria-label="Switch theme"></button>
+    </div>
+    <div class="alertpop" id="alertPop" role="dialog" aria-label="Alerts" hidden>
+      <b>Alerts</b>
+      <label class="chk"><input type="checkbox" id="alSound"> Play a sound when an agent needs you, finishes or faints</label>
+      <label class="chk"><input type="checkbox" id="alPop"> Show a pop-up when this tab is hidden</label>
+      <p class="mart-note" id="alNote"></p>
+      <div class="acts"><button class="btn" type="button" id="alTest">TRY IT</button></div>
+      <p class="mart-note">The tab title also shows a count, like (1) Agentdex, while something waits for you.</p>
     </div>
   </header>
 
@@ -509,6 +531,61 @@ function paintTheme(){const b=document.getElementById('themeBtn');if(!b)return;c
 document.getElementById('themeBtn').onclick=()=>{const t=isDark()?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('agentdex-theme',t)}catch{}paintTheme()};
 darkMQ.addEventListener?.('change',paintTheme);
 paintTheme();
+
+/* ---------- alerts: a chiptune chime, a pop-up when the tab is hidden, and a count in the tab title ---------- */
+const BELL=pixIcon(["....x....","..xxxxx..",".xxxxxxx.",".xxxxxxx.",".xxxxxxx.",".xxxxxxx.","xxxxxxxxx","xxxxxxxxx",".........","...xxx..."]);
+const BELL_OFF=pixIcon(["x...x....",".xxxxxx..",".xxxxxxx.",".xxxxxxx.",".xxx.xxx.",".xxxx.xx.","xxxxxx.xx","xxxxxxx.x",".........","...xxx..x"]);
+const alerts={sound:true,popup:false};
+try{Object.assign(alerts,JSON.parse(localStorage.getItem('agentdex-alerts')||'{}'))}catch{}
+const saveAlerts=()=>{try{localStorage.setItem('agentdex-alerts',JSON.stringify(alerts))}catch{}};
+let actx=null;
+function audioCtx(){
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+  if(!actx)actx=new AC();if(actx.state==='suspended')actx.resume().catch(()=>{});return actx;
+}
+// Browsers only allow sound after you have clicked or typed on the page once.
+['pointerdown','keydown'].forEach(t=>addEventListener(t,()=>{if(alerts.sound)audioCtx()},{once:true,passive:true}));
+const TUNES={need:[[784,.09],[1047,.16]],done:[[659,.07],[784,.07],[1047,.14]],bad:[[392,.12],[294,.22]],lvl:[[523,.06],[659,.06],[784,.06],[1047,.18]]};
+const lastChime={};
+function chime(kind,force=false){
+  if(!alerts.sound&&!force)return;
+  const now=Date.now();if(!force&&now-(lastChime[kind]||0)<4000)return;lastChime[kind]=now;
+  const c=audioCtx();if(!c)return;
+  let t=c.currentTime+.02;
+  for(const [f,d] of TUNES[kind]){
+    const o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=f;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.05,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.03);t+=d*.92;
+  }
+}
+const canPop=()=>'Notification' in window;
+function popup(kind,text,force=false){
+  if(!canPop()||Notification.permission!=='granted')return;
+  if(!force&&(!alerts.popup||!document.hidden||kind==='lvl'))return;
+  try{const n=new Notification('Agentdex',{body:text,icon:document.querySelector('link[rel=icon]')?.href,tag:'agentdex-'+kind});n.onclick=()=>{window.focus();n.close()}}catch{}
+}
+function alertFor(kind,text){chime(kind);popup(kind,text)}
+function paintBell(){
+  const b=document.getElementById('bellBtn');if(!b)return;
+  b.innerHTML=alerts.sound||alerts.popup?BELL:BELL_OFF;b.classList.toggle('off',!alerts.sound&&!alerts.popup);
+  b.title=`Alerts: sound ${alerts.sound?'on':'off'}, pop-ups ${alerts.popup?'on':'off'}`;
+  const note=document.getElementById('alNote');if(!note)return;
+  note.textContent=!canPop()?'This browser cannot show pop-ups.':Notification.permission==='denied'?'Pop-ups are blocked for this page. Allow notifications in your browser\'s site settings, then tick the box again.':'';
+}
+(()=>{
+  const btn=document.getElementById('bellBtn'),pop=document.getElementById('alertPop');
+  const close=()=>{pop.hidden=true;btn.setAttribute('aria-expanded','false')};
+  btn.onclick=e=>{e.stopPropagation();const open=pop.hidden;pop.hidden=!open;btn.setAttribute('aria-expanded',String(open));
+    document.getElementById('alSound').checked=alerts.sound;document.getElementById('alPop').checked=alerts.popup&&canPop()&&Notification.permission==='granted';paintBell()};
+  document.addEventListener('click',e=>{if(!pop.hidden&&!pop.contains(e.target))close()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!pop.hidden){close();btn.focus()}});
+  document.getElementById('alSound').onchange=e=>{alerts.sound=e.target.checked;saveAlerts();paintBell();if(alerts.sound)chime('done',true)};
+  document.getElementById('alPop').onchange=async e=>{
+    if(e.target.checked&&canPop()&&Notification.permission==='default'){try{await Notification.requestPermission()}catch{}}
+    alerts.popup=e.target.checked&&canPop()&&Notification.permission==='granted';e.target.checked=alerts.popup;saveAlerts();paintBell()};
+  document.getElementById('alTest').onclick=()=>{chime('need',true);popup('need','This is how Agentdex tells you an agent needs you.',true)};
+  paintBell();
+})();
 document.getElementById('cmdAttach').innerHTML=CLIP;
 
 /* ---------- sprites: left halves, mirrored ---------- */
@@ -753,6 +830,7 @@ function faint(a){
   a.status='FNT';a.phase='fainted';a.faintT=0;
   const r=party.find(x=>x.reviewing===a.id);if(r)r.reviewing=null;
   log(`${a.nick} fainted! It ran out of context mid-task on "${a.task?a.task.t:'work'}".`,'bad');
+  alertFor('bad',`${a.nick} fainted and needs a reset.`);
 }
 function workDone(a){
   const r=reviewer();
@@ -766,17 +844,18 @@ function workDone(a){
     a.phase='wait';a.status='PAR';
     queue.push({kind:'ap',id:a.id});
     log(`${a.nick} needs you: it wants to use ${a.task.ap.m} on ${a.task.ap.on}.`,'need');
+    alertFor('need',`${a.nick} wants to use ${a.task.ap.m} on ${a.task.ap.on}.`);
     showDialog();return;
   }
   finish(a,true);
 }
 function finish(a,ok){
   const t=a.task;a.task=null;a.phase='idle';a.status='SLP';
-  if(ok){log(`${a.nick} finished "${t.t}". +${60} XP`,'ok');gainXP(a,60)}
+  if(ok){log(`${a.nick} finished "${t.t}". +${60} XP`,'ok');alertFor('done',`${a.nick} finished "${t.t}".`);gainXP(a,60)}
 }
 function gainXP(a,n){
   a.xp+=n;
-  while(a.xp>=nextNeed(a.lv)){a.xp-=nextNeed(a.lv);a.lv++;a.hpMax+=4;log(`${a.nick} grew to Lv. ${a.lv}!`,'lvl')}
+  while(a.xp>=nextNeed(a.lv)){a.xp-=nextNeed(a.lv);a.lv++;a.hpMax+=4;log(`${a.nick} grew to Lv. ${a.lv}!`,'lvl');chime('lvl')}
   const e=SPEC[a.sp].evo;
   if(e&&a.lv>=e.lv&&!a.evoAsked){a.evoAsked=true;queue.push({kind:'evo',id:a.id});log(`${a.nick} is ready to evolve. It needs your OK.`,'need');showDialog()}
 }
@@ -1267,6 +1346,7 @@ function refresh(){
   $('#cWork').textContent=work;$('#cIdle').textContent=idle;
   const needs=queue.filter(q=>q.kind!=='act').length;
   $('#cNeedN').textContent=needs;$('#cNeeds').classList.toggle('zero',!needs);
+  const title=needs?`(${needs}) Agentdex`:'Agentdex';if(document.title!==title)document.title=title;
   $('#clock').textContent=`Day ${day} · ${hhmm()}`;
   if(tab!=='dex'&&tab!=='mart')renderPane();
 }
@@ -1339,6 +1419,12 @@ function onChange(p){
   if(ev.type==='approval.resolved'&&ev.data.kind==='evolve'&&ev.data.to&&!fx.some(f=>f.type==='evo'&&f.id===ev.agentId))fx.push({type:'evo',id:ev.agentId,t:0});
   if(ev.message){addLog(ev);renderLog()}
   if(ev.type==='skills.updated')loadMart();
+  const who=byId(ev.agentId);
+  if(ev.type==='approval.requested')alertFor('need',ev.message||'An agent needs you.');
+  else if(ev.type==='task.finished')alertFor('done',ev.message||'An agent finished.');
+  else if(ev.type==='agent.fainted')alertFor('bad',ev.message||'An agent fainted.');
+  else if(ev.type==='chat.replied'&&ev.data.entry)alertFor('done',`${who?who.nick:'An agent'}: ${ev.data.entry.text.slice(0,140)}`);
+  else if(ev.type==='agent.leveled')chime('lvl');
   addConvoEvent(ev);renderConvo();
   if((ev.type==='chat.sent'||ev.type==='chat.replied')&&ev.data.entry)pushChat(ev.agentId,ev.data.entry);
 
@@ -1417,10 +1503,13 @@ function renderSetup(note){
   const s=setupState,st=s.settings,c=s.claude,w=s.whatsapp;
   const cc=c.brain==='claude-code';
   const claudePill=cc?(!c.lastCheck?pill('wait','NOT TESTED'):c.lastCheck.ok?pill('ok','CONNECTED'):pill('no','PROBLEM')):!c.hasKey?pill('no','NOT CONNECTED'):c.lastCheck&&!c.lastCheck.ok?pill('no','PROBLEM'):c.lastCheck?pill('ok','CONNECTED'):pill('wait','SAVED, NOT TESTED');
-  const waPill=!w.complete?pill('wait','OFF'):w.error?pill('no','PROBLEM'):w.health&&w.health.lastMessageAt?pill('ok','CONNECTED'):w.health&&w.health.verifiedAt?pill('ok','LINKED TO META'):pill('wait','WAITING FOR META');
+  const wh=w.health||{},wt=w.tunnel||{};
+  const waPill=!w.complete?pill('wait','OFF'):w.error||wh.codesError||wt.error?pill('no','NEEDS A FIX'):wh.lastMessageAt?pill('ok','CONNECTED'):wh.verifiedAt?pill('ok','LINKED TO META'):pill('wait','NOT FINISHED');
   const effort=[['low','Low','Quick and cheapest'],['medium','Medium','Balanced. Best for most jobs'],['high','High','Most careful, costs more']];
   const models=[['claude-opus-5-5','Opus 5.5 · smartest (recommended)'],['claude-sonnet-5-5','Sonnet 5.5 · fast and capable, cheaper'],['claude-haiku-5-5','Haiku 5.5 · quickest and cheapest']];
-  const h=w.health||{};
+  const h=w.health||{},tn=w.tunnel||{};
+  const hookUrl=tn.url?tn.url+w.path:st.ngrokDomain?`https://${st.ngrokDomain}${w.path}`:'';
+  const chk=(ok,txt)=>`<li class="${ok?'ok':'wait'}">${txt}</li>`;
   body.innerHTML=`
   <form class="scard" id="fClaude" novalidate>
     <h3><span class="num">1</span>Claude ${claudePill}</h3>
@@ -1461,35 +1550,47 @@ function renderSetup(note){
 
   <form class="scard" id="fWa" novalidate>
     <h3><span class="num">3</span>WhatsApp <small>(optional)</small> ${waPill}</h3>
-    <p>Optional. Message your agents, get their questions with YES / NO buttons, and hear when they finish, while this computer stays on at home. Uses Meta's official WhatsApp API, which is free for personal testing.</p>
+    <p>Message your agents, answer their questions with YES / NO buttons and hear when they finish, while this computer stays on at home. Uses Meta's official WhatsApp API, free for personal use. Takes about 20 minutes once.</p>
+    ${w.complete?`<ul class="checks">
+      ${chk(h.number,h.number?`Codes work: ${esc(h.number.display||'')} ${h.number.name?'('+esc(h.number.name)+')':''}`:h.codesError?esc(h.codesError):'Checking your codes...')}
+      ${chk(tn.url,tn.url?`Tunnel open: ${esc(tn.url)}`:tn.error?esc(tn.error):tn.configured?'Opening the tunnel...':'Tunnel not set up yet (step 3)')}
+      ${chk(h.verifiedAt,h.verifiedAt?`Meta is linked (${ago(h.verifiedAt)})`:'Meta not linked yet (step 4)')}
+      ${chk(h.lastMessageAt,h.lastMessageAt?`Last message from you ${ago(h.lastMessageAt)}`:'No message from you yet (step 5)')}
+    </ul>`:''}
     <ol class="wsteps">
-      <li><div><p><b>Create a free Meta app.</b> Go to <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>, create an app, and add the <b>WhatsApp</b> product. On its <b>API Setup</b> page, add your own phone number as a recipient and confirm the code WhatsApp sends you.</p></div></li>
-      <li><div><p><b>Copy four things into the boxes.</b> The first two are on <b>API Setup</b>; the app secret is under <b>App settings, Basic</b>.</p>
+      <li><div><p><b>Create a free Meta app.</b> Go to <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>, create an app and add the <b>WhatsApp</b> product. On its <b>API Setup</b> page, add your own phone number as a recipient and confirm the code WhatsApp sends you.</p></div></li>
+      <li><div><p><b>Copy four things.</b> The phone number ID is on <b>API Setup</b>; the app secret is under <b>App settings, Basic</b>.</p>
         <div class="grid2">
-          <div class="field"><label for="waToken">Access token</label><input id="waToken" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappToken?'Saved '+esc(st.whatsappToken):'Long code starting with EA...'}"><small>The temporary token stops working after about a day. A System User token lasts.</small></div>
+          <div class="field"><label for="waToken">Access token</label><input id="waToken" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappToken?'Saved '+esc(st.whatsappToken):'Long code starting with EA...'}"><small>Use a permanent token (below). The one on API Setup stops working after a day.</small></div>
           <div class="field"><label for="waPhoneId">Phone number ID</label><input id="waPhoneId" inputmode="numeric" autocomplete="off" value="${esc(st.whatsappPhoneNumberId||'')}" placeholder="e.g. 123456789012345"></div>
           <div class="field"><label for="waSecret">App secret</label><input id="waSecret" type="password" autocomplete="off" spellcheck="false" placeholder="${st.whatsappAppSecret?'Saved '+esc(st.whatsappAppSecret):'32 letters and numbers'}"></div>
           <div class="field"><label for="waAllowed">Your WhatsApp number</label><input id="waAllowed" inputmode="tel" autocomplete="tel" value="${esc(st.whatsappAllowed||'')}" placeholder="+60 12 345 6789"><small>Only this number can give orders.</small></div>
         </div>
+        <details class="howto"><summary>Make a token that never expires (5 minutes, do it once)</summary><ol>
+          <li>Open <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener">Meta Business settings, System users</a> and press <b>Add</b>. Name it <i>agentdex</i>, role <b>Admin</b>.</li>
+          <li>Press <b>Assign assets</b>, choose <b>Apps</b>, pick your app and turn on <b>Full control</b>.</li>
+          <li>Press <b>Generate token</b>, pick your app, set expiry to <b>Never</b>, tick <b>whatsapp_business_messaging</b> and <b>whatsapp_business_management</b>.</li>
+          <li>Copy the token into <b>Access token</b> above.</li></ol></details></div></li>
+      <li><div><p><b>Let WhatsApp reach this computer.</b> Agentdex opens the connection itself with the free <b>ngrok</b> app, so there is no extra window to keep open.</p>
+        <p>${tn.installed?'<b>ngrok is installed.</b>':'Install ngrok once (or <a href="https://ngrok.com/download" target="_blank" rel="noopener">download it</a>):'}</p>
+        ${tn.installed?'':`<span class="flabel">Windows</span>${copyBtn('winget install ngrok -s msstore')}<span class="flabel">Mac</span>${copyBtn('brew install ngrok')}`}
+        <p>Sign up free at <a href="https://dashboard.ngrok.com/signup" target="_blank" rel="noopener">dashboard.ngrok.com</a>. Copy <b>Your Authtoken</b>, and your free static domain under <b>Domains</b>, so the address never changes.</p>
+        <div class="grid2">
+          <div class="field"><label for="ngTok">ngrok authtoken</label><input id="ngTok" type="password" autocomplete="off" spellcheck="false" placeholder="${st.ngrokAuthtoken?'Saved '+esc(st.ngrokAuthtoken):'Long code from Your Authtoken'}"></div>
+          <div class="field"><label for="ngDomain">Static domain</label><input id="ngDomain" autocomplete="off" spellcheck="false" value="${esc(st.ngrokDomain||'')}" placeholder="your-name.ngrok-free.app"></div>
+        </div>
         <div class="acts"><button class="btn primary" type="submit">SAVE WHATSAPP</button></div>
         ${note&&note.wa?`<div class="result no">${esc(note.wa)}</div>`:''}
         ${w.error?`<div class="result no">${esc(w.error)}</div>`:''}</div></li>
-      <li><div><p><b>Open a tunnel</b> so WhatsApp can reach this computer. Install the free <a href="https://ngrok.com/download" target="_blank" rel="noopener">ngrok</a>, then run this in a new terminal window and keep it open. It prints an address starting with <b>https://</b>.</p>
-        ${copyBtn(`ngrok http ${w.port}`)}
-        <div class="field"><label for="waTunnel">Paste the https address ngrok shows</label><input id="waTunnel" type="url" placeholder="https://something.ngrok-free.app" autocomplete="off"></div></div></li>
-      <li><div><p><b>Tell Meta where to send messages.</b> In your Meta app open <b>WhatsApp, Configuration</b>, press <b>Edit</b> next to Webhook, paste these two, then press <b>Verify and save</b>. Afterwards, tick <b>messages</b> under webhook fields.</p>
-        <span class="flabel">Callback URL</span><div id="waUrl">${copyBtn('Paste your ngrok address above first')}</div>
+      <li><div><p><b>Tell Meta where to send messages.</b> In your Meta app open <b>WhatsApp, Configuration</b>, press <b>Edit</b> next to Webhook, paste these two, press <b>Verify and save</b>, then tick <b>messages</b> under webhook fields. You only do this once.</p>
+        <span class="flabel">Callback URL</span>${hookUrl?copyBtn(hookUrl):'<p class="setup-note">Shows here after step 3.</p>'}
         <span class="flabel">Verify token</span>${copyBtn(st.whatsappVerifyToken)}</div></li>
-      <li><div><p><b>Say hi.</b> From your phone, send <b>hi</b> to the WhatsApp test number shown on API Setup. Then press the button below.</p>
+      <li><div><p><b>Say hi.</b> From your phone, send <b>hi</b> to the WhatsApp number shown on API Setup, then press the button.</p>
         <div class="acts"><button class="btn primary" type="button" id="waTest">SEND TEST MESSAGE</button></div>
         <div id="waTestResult"></div>
-        <div class="health">
-          <div>Meta link: ${h.verifiedAt?`<b>verified ${ago(h.verifiedAt)}</b>`:'not yet (finish step 4)'}</div>
-          <div>Last message from you: ${h.lastMessageAt?`<b>${ago(h.lastMessageAt)}</b>`:'none yet'}</div>
-          ${h.lastError?`<div class="result no">${esc(h.lastError)}</div>`:''}
-        </div></div></li>
+        ${h.lastError?`<div class="result no">${esc(h.lastError)}</div>`:''}</div></li>
     </ol>
-    <p class="setup-note">From your phone, send <b>help</b> to see commands. Example: <i>scout compare 3 note-taking apps</i>. WhatsApp only lets the bot message you within 24 hours of your last message, so send "status" once a day if you want alerts.</p>
+    <p class="setup-note">From your phone, send <b>help</b> to see commands. Example: <i>scout compare 3 note-taking apps</i>. WhatsApp only lets the bot message you within 24 hours of your last message, so about an hour before that, Agentdex asks you to reply with anything to keep alerts coming.</p>
   </form>`;
   bindSetup();
 }
@@ -1516,17 +1617,11 @@ function bindSetup(){
   if(fw)fw.onsubmit=async e=>{
     e.preventDefault();const patch={whatsappPhoneNumberId:$('#waPhoneId').value,whatsappAllowed:$('#waAllowed').value};
     const t=$('#waToken').value.trim(),sec=$('#waSecret').value.trim();if(t)patch.whatsappToken=t;if(sec)patch.whatsappAppSecret=sec;
+    const nt=$('#ngTok').value.trim(),nd=$('#ngDomain').value.trim();if(nt)patch.ngrokAuthtoken=nt;if(nd)patch.ngrokDomain=nd;
+    const btn=fw.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='CONNECTING...';
     const r=await setupCall('POST','api/setup',patch);
     await checkSetup(false);renderSetup(r.ok?null:{wa:r.data.error||'Could not save.'});
   };
-  const tun=$('#waTunnel');
-  if(tun){
-    try{tun.value=localStorage.getItem('agentdex-tunnel')||''}catch{}
-    const upd=()=>{const v=tun.value.trim().replace(/\/+$/,'');try{localStorage.setItem('agentdex-tunnel',v)}catch{}
-      $('#waUrl').innerHTML=/^https:\/\/[^\s/]+/.test(v)?copyBtn(v.match(/^https:\/\/[^\s/]+/)[0]+setupState.whatsapp.path):copyBtn('Paste your ngrok address above first');
-      $('#waUrl').querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='COPIED'}catch{b.textContent='SELECT IT'}setTimeout(()=>{b.textContent='COPY'},1500)})};
-    tun.oninput=upd;upd();
-  }
   const wt=$('#waTest');
   if(wt)wt.onclick=async()=>{wt.disabled=true;wt.textContent='SENDING...';
     const r=await setupCall('POST','api/setup/test-whatsapp');

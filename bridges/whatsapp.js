@@ -8,9 +8,9 @@
 // and tap YES / NO on approval messages.
 import { createServer } from 'node:http';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { approvalText, statusTextFor, helpText, clip, NOTIFY } from './common.js';
 
 const MAX_BODY = 1024 * 1024;
-const NOTIFY = new Set(['approval.requested', 'task.finished', 'agent.fainted']);
 
 export function whatsappConfigFromEnv(env = process.env) {
   if (!env.WHATSAPP_TOKEN) return null;
@@ -29,7 +29,16 @@ export function whatsappConfigFromEnv(env = process.env) {
 }
 
 const digits = (s) => String(s || '').replace(/\D/g, '');
-const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+const HOUR = 3600_000;
+
+// Meta's error codes, in words a person can act on.
+export function graphError(e, status) {
+  const code = e?.code;
+  if (code === 190) return 'Your WhatsApp access token has expired or is wrong. Make a permanent token (step 2 in SETUP), paste it and save again.';
+  if (code === 100 || code === 803) return 'The phone number ID is wrong, or this token cannot see it. Copy both again from API Setup in your Meta app.';
+  if (code === 10 || code === 200) return 'The token is missing a permission. Give it whatsapp_business_messaging and whatsapp_business_management.';
+  return `WhatsApp refused it (${status}${code ? `, code ${code}` : ''}): ${e?.message || 'no reason given'}`;
+}
 
 export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = console.log }) {
   const allowed = new Set(String(config.allowed).split(',').map(digits).filter(Boolean));
@@ -39,7 +48,9 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
   let approvals = [];
   const seen = new Set();
   let windowWarned = false;
-  const health = { verifiedAt: null, lastMessageAt: null, lastSentAt: null, lastError: null };
+  const health = { verifiedAt: null, lastMessageAt: null, lastSentAt: null, lastError: null, number: null, codesError: null };
+  let reminded = null;
+  let keepTimer = null;
 
   // ---------- sending ----------
   async function send(to, payload) {
@@ -58,7 +69,7 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
       health.lastError = 'WhatsApp only lets the bot message you within 24 hours of your last message. Send the bot any message, like "status".';
       return;
     }
-    health.lastError = `WhatsApp refused the message (${res.status}${code ? `, code ${code}` : ''}): ${body?.error?.message || res.statusText}`;
+    health.lastError = graphError(body?.error, res.status);
     log(health.lastError);
     throw new Error(health.lastError);
   }
@@ -69,18 +80,7 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
   });
   const everyone = (fn) => Promise.all([...allowed].map((to) => fn(to).catch((err) => log(`WhatsApp: ${err.message}`))));
 
-  const approvalPrompt = (ap) => {
-    const a = agents.get(ap.agentId);
-    const who = a ? a.nick : 'An agent';
-    if (ap.kind === 'skill') {
-      const k = ap.skill;
-      const notes = (k.flags || []).filter((f) => f.level !== 'info').map((f) => `! ${f.text}`).join('\n');
-      return `${who} wants to learn the skill "${k.name}" from ${k.source}${k.installs ? ` (${k.installs} installs)` : ''}.\n${k.description || ''}${k.review ? `\n${k.review.by || 'Review'}: ${k.review.summary || k.review.verdict}` : ''}${notes ? `\n${notes}` : ''}\n${k.url}`;
-    }
-    return ap.kind === 'evolve'
-      ? `${who} is ready to evolve into ${ap.toName}: a bigger model with more permissions. Allow it?`
-      : `${who} wants to use ${ap.tool} on ${ap.target}.${ap.taskTitle ? `\nTask: ${ap.taskTitle}` : ''}`;
-  };
+  const approvalPrompt = (ap) => approvalText(ap, agents);
   const askApproval = (to, ap) => buttons(to, approvalPrompt(ap), [[`ap:${ap.id}:yes`, 'YES'], [`ap:${ap.id}:no`, 'NO']]);
 
   // ---------- following the town ----------
@@ -113,26 +113,8 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
 
   // ---------- understanding your messages ----------
   const party = () => [...agents.values()].filter((a) => !a.boxed);
-  const statusText = () => {
-    const lines = party().map((a) => {
-      const now = a.status === 'PAR' ? 'waiting for your OK'
-        : a.status === 'FNT' ? 'fainted, needs a reset'
-        : a.reviewingId ? 'reviewing'
-        : a.task ? `working on "${clip(a.task.title, 60)}"` : 'idle';
-      return `${a.nick} (Lv ${a.lv}): ${now}. HP ${Math.round(a.hp)}/${a.hpMax}`;
-    });
-    return [`Party (${lines.length})`, ...lines, approvals.length ? `${approvals.length} request(s) need you. Sending them now.` : 'Nothing needs you.'].join('\n');
-  };
-  const HELP = [
-    'Agentdex remote control',
-    '• status: what everyone is doing',
-    '• compare 3 note apps: the best-suited free agent takes it',
-    '• scout compare 3 note apps: start with a name to choose the agent',
-    '• @scout how is it going?: talk to an agent without giving it a task',
-    '• yes / no: answer the open request (or tap the buttons)',
-    '• reset scout: clear an agent that fainted or got stuck',
-    '• rename scout to max: give an agent a new name',
-  ].join('\n');
+  const statusText = () => statusTextFor(party(), approvals);
+  const HELP = helpText('WhatsApp');
 
   async function resolve(from, approvalId, decision) {
     try {
@@ -187,10 +169,10 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
       for (const change of entry.changes || []) {
         for (const m of change.value?.messages || []) {
           if (seen.has(m.id)) continue; // Meta retries deliveries
-          health.lastMessageAt = new Date().toISOString();
           seen.add(m.id);
           if (seen.size > 1000) seen.delete(seen.values().next().value);
           if (!allowed.has(digits(m.from))) { log(`WhatsApp: ignored a message from a number that is not in WHATSAPP_ALLOWED`); continue; }
+          health.lastMessageAt = new Date().toISOString(); // only your messages open WhatsApp's 24-hour window
           try { await handleMessage(m); } catch (err) { log(`WhatsApp: ${err.message}`); }
         }
       }
@@ -227,16 +209,44 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
     await handlePayload(payload);
   });
 
+  // Checks the token and phone number ID straight away, so a typo shows up in SETUP, not hours later.
+  async function checkCodes() {
+    try {
+      const res = await fetchImpl(`https://graph.facebook.com/${config.apiVersion}/${config.phoneNumberId}?fields=display_phone_number,verified_name`, { headers: { authorization: `Bearer ${config.token}` } });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) { health.number = { display: body.display_phone_number || null, name: body.verified_name || null }; health.codesError = null; return health.number; }
+      health.number = null; health.codesError = graphError(body?.error, res.status); return null;
+    } catch (err) {
+      health.codesError = `Could not reach WhatsApp: ${err.message}`; return null;
+    }
+  }
+
+  // WhatsApp lets the bot message you only within 24 hours of your last message. About an hour
+  // before that closes, ask for a quick reply so alerts keep coming. Once per message from you.
+  function keepAlive(now = Date.now()) {
+    const last = health.lastMessageAt ? Date.parse(health.lastMessageAt) : null;
+    if (!last || reminded === last) return false;
+    const age = now - last;
+    if (age < 22.5 * HOUR || age >= 23.9 * HOUR) return false;
+    reminded = last;
+    everyone((to) => text(to, 'Reply with anything (like "status") to keep getting Agentdex alerts here. WhatsApp only lets me message you for 24 hours after your last message.'));
+    return true;
+  }
+
   return {
     server,
+    checkCodes,
+    keepAlive,
     onSnapshot,
     onChange,
     handlePayload,
     start(signal) {
       dex.subscribe({ onSnapshot, onChange, signal, onError: (err) => log(`WhatsApp bridge lost the town (${err.message}); reconnecting.`) });
+      keepTimer = setInterval(() => keepAlive(), 10 * 60_000);
+      keepTimer.unref?.();
       return new Promise((r) => server.listen(config.port, '127.0.0.1', r));
     },
-    stop: () => new Promise((r) => { server.closeAllConnections?.(); server.close(r); }),
+    stop: () => new Promise((r) => { clearInterval(keepTimer); server.closeAllConnections?.(); server.close(r); }),
     health: () => ({ ...health }),
     // Sends a hello to every allowed number. Throws with WhatsApp's reason if it fails.
     async sendTest() {
