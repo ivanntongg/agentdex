@@ -8,7 +8,7 @@
 // and tap YES / NO on approval messages.
 import { createServer } from 'node:http';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { approvalText, statusTextFor, helpText, clip, NOTIFY } from './common.js';
+import { approvalText, statusTextFor, helpText, guideText, clip, NOTIFY } from './common.js';
 
 const MAX_BODY = 1024 * 1024;
 
@@ -100,6 +100,11 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
         ? `${a ? a.nick : 'Agent'}: ${event.data.entry.text}${task && a ? `\n\nTo make it a task, send:\n${a.nick.toLowerCase()} ${task}` : ''}`
         : event.message;
       await everyone((to) => text(to, body));
+      return;
+    }
+    // The Guide's answers to questions asked on WhatsApp come back here, with jobs you can send as they are.
+    if ((event.type === 'guide.answered' || event.type === 'guide.failed') && event.data?.via === 'whatsapp') {
+      await everyone((to) => text(to, guideText(event)));
       return;
     }
     if (!NOTIFY.has(event.type)) return;

@@ -35,6 +35,7 @@ export function helpText(app = 'WhatsApp') {
     '• compare 3 note apps: the best-suited free agent takes it',
     '• scout compare 3 note apps: start with a name to choose the agent',
     '• @scout how is it going?: talk to an agent without giving it a task',
+    '• ? what should my team do today: ask the Guide for ideas',
     `• yes / no: answer the open request (or tap the buttons${app === 'Telegram' ? ' under it' : ''})`,
     '• reset scout: clear an agent that fainted or got stuck',
     '• rename scout to max: give an agent a new name',
@@ -43,3 +44,11 @@ export function helpText(app = 'WhatsApp') {
 
 // Events that are worth a message on your phone.
 export const NOTIFY = new Set(['approval.requested', 'task.finished', 'agent.fainted']);
+
+// The Guide's answer as a phone message: its reply, then each idea as a message you can send back.
+export function guideText(event) {
+  if (event.type === 'guide.failed') return event.message || 'The Guide could not answer.';
+  const d = event.data || {};
+  const ideas = (d.suggestions || []).map((x) => `• ${x.nick.toLowerCase()} ${x.task}`);
+  return [`Guide: ${d.text}`, ideas.length ? `\nTo start one, send it as it is:\n${ideas.join('\n')}` : '', d.newRole ? `\nIdea for a new role: ${d.newRole.name}. Create it in the town's DEX.` : ''].filter(Boolean).join('\n');
+}

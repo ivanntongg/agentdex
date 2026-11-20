@@ -173,6 +173,15 @@ export function createSimulator({ tickMs = 1300, random = Math.random } = {}) {
       };
       if (tickMs > 0) setTimeout(reply, tickMs * 2); else reply();
     },
+    // Practice Guide: canned ideas, one per free agent, from the practice task list.
+    onGuide(asked) {
+      const answer = () => {
+        const free = store.party().filter((a) => !SPECIES[a.species].reviewer && a.status !== 'FNT').slice(0, 3);
+        const suggestions = free.map((a) => ({ agentId: a.id, task: pick(POOL[SPECIES[a.species].types[0]] || POOL.WRITE).title }));
+        emit('guide.answered', null, { text: 'Here are a few ideas for your team right now. This is the practice Guide, so the ideas are examples. With Claude connected, the Guide looks at your real agents, skills and recent work.', suggestions, via: asked.via });
+      };
+      if (tickMs > 0) setTimeout(answer, tickMs * 2); else answer();
+    },
     onRemoved(a) { sims.delete(a.id); },
   };
 }

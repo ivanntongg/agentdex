@@ -20,6 +20,7 @@ export const HELP = [
   '• compare 3 note-taking apps: the best-suited free agent takes it',
   '• quill write 5 video titles: start with a name to choose the agent',
   '• @scout how is it going?: talk to an agent without giving it a task',
+  '• ? what should my team do today: ask the Guide for ideas',
   '• status: what everyone is doing',
   '• yes / no: answer the open request',
   '• reset scout: clear an agent that fainted or got stuck',
@@ -98,6 +99,14 @@ export function createCommands({ store, actions }) {
       if (open.length > 1) return { reply: `${open.length} requests are open. Answer each one in its YES / NO box.` };
       const ev = await actions.resolve(open[0].id, lower);
       return { reply: ev.message || 'Done.', agentId: open[0].agentId };
+    }
+
+    // ? what should my team do today  -> the Guide answers with ideas and ready-made jobs
+    if (text.startsWith('?') && text.length > 1) {
+      const q = text.slice(1).trim();
+      if (!actions.ask) return { reply: 'The Guide is not available here.' };
+      await actions.ask(q, via);
+      return { reply: 'The Guide is thinking. Its ideas appear in the team chat.', chat: true };
     }
 
     const [first, ...rest] = text.split(/\s+/);
