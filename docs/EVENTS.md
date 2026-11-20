@@ -22,6 +22,11 @@ The simulator only uses the public event API, so anything it does, your runtime 
 | POST | `/api/files?name=report.pdf` | the file's bytes | Saves into `workspace/inbox` (real mode, up to 25 MB). Returns `{ path }`. Pass paths as `files: [...]` to `/api/command`, `/api/agents/:id/chat` or `/tasks` |
 | POST | `/api/command` | `{"text":"compare 3 note apps"}` | One sentence from the command bar: routes a task to the best agent, or runs status / yes / no / reset / rename. Returns `{ reply }` |
 | POST | `/api/agents` | `{"species":"fennook","nick":"SCOUT"}` | Spawn into the party |
+| GET | `/api/skills` | | Installed skills, and whether agents may look for skills on their own (real mode) |
+| POST | `/api/skills/search` | `{"q":"youtube titles"}` | Searches skills.sh. Returns `{ results }` |
+| POST | `/api/skills/request` | `{"id":"owner/repo/skill"}` | A free agent fetches it, CHECKS reviews it, then the player gets a YES / NO |
+| POST | `/api/skills/remove` | `{"slug":"youtube-titles"}` | Uninstalls a skill |
+| POST | `/api/skills/settings` | `{"enabled":false}` | Lets agents look for skills on their own, or not |
 | POST | `/api/agents/:id/actions` | `{"action":"pet"\|"poke"\|"reset"\|"rename"\|"box"\|"unbox"}` (rename also takes `nick`) | Player actions |
 
 If `AGENTDEX_TOKEN` is set, every POST needs `Authorization: Bearer <token>`. To give the page the token, open it once with `?token=<token>`; it is kept in that browser.
@@ -48,7 +53,7 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 | `task.handoff` | `reviewerId?` | Logged handoff before a review |
 | `review.started` | `reviewerId` | The reviewer is busy with this agent |
 | `review.finished` | `reviewerId?`, `result: approved\|changes`, `issues?` | Frees the reviewer, +25 XP to it |
-| `approval.requested` | `tool`, `target` (or `kind: "evolve"`) | Status PAR. Shows the YES / NO dialog |
+| `approval.requested` | `tool`, `target`, or `kind: "evolve"`, or `kind: "skill"` with `skill: { id, name, description, source, url, installs?, flags?, review? }` | Status PAR. Shows the YES / NO dialog |
 | `approval.resolved` | `approvalId`, `decision` | Normally sent by the page, not by you |
 | `task.finished` | `xp?` (default 60), `note?` (shown in the log), `files?` (written files, kept in the agent's memory), or `outcome: "declined"` | Back to idle. May trigger level ups and an evolution request |
 | `agent.status` | `status: OK\|SLP\|CNF\|PSN`, `reason?` | Confused (looping) or poisoned (spending fast) |
@@ -60,6 +65,7 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 | `chat.failed` | `reason?`, `via?` | The agent could not answer |
 | `files.added` | `files` | The player added files to the inbox. No `agentId` |
 | `agent.renamed` | `nick` | New name: one word, 2 to 12 letters, digits, `-` or `_`; unique |
+| `skills.updated` | `skills` (the installed list), `note?`, `tone?` | The MART changed. No `agentId`. The log keeps only a count |
 | `agent.interacted` | `action: pet\|poke`, `message?` | Pet raises the bond. Poke is up to your runtime |
 
 ## Hearing the player's answers

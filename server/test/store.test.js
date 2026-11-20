@@ -109,3 +109,29 @@ test('subscribers get the event, touched agents and open approvals', () => {
   assert.equal(seen[1].agents[0].status, 'PAR');
   assert.equal(seen[1].approvals.length, 1);
 });
+
+test('skills: the installed list is mirrored, and an agent asks before learning one', () => {
+  const s = createStore();
+  const quill = s.apply({ type: 'agent.spawned', data: { species: 'quillow', nick: 'QUILL' } }).agentId;
+  s.apply({ type: 'task.started', agentId: quill, data: { title: 'Write 5 titles' } });
+  const skill = { id: 'a/b/youtube-titles', name: 'youtube-titles', description: 'Titles that get clicks.', source: 'a/b', url: 'https://github.com/a/b/blob/HEAD/SKILL.md', installs: 43, flags: [{ level: 'info', text: 'Expects to run programs.' }], review: { by: 'CHECKS', verdict: 'safe', summary: 'Plain writing advice.' } };
+  const ev = s.apply({ type: 'approval.requested', agentId: quill, data: { kind: 'skill', skill } });
+  assert.match(ev.message, /QUILL wants to learn the skill "youtube-titles" from a\/b\. CHECKS: Plain writing advice\./);
+  const ap = s.snapshot().approvals[0];
+  assert.equal(ap.kind, 'skill');
+  assert.equal(ap.skill.installs, 43);
+  assert.equal(s.resolveAgent(quill).status, 'PAR');
+
+  const no = s.apply({ type: 'approval.resolved', agentId: quill, data: { approvalId: ap.id, decision: 'no' } });
+  assert.match(no.message, /You said no to "youtube-titles"\. QUILL carries on without it\./);
+  assert.equal(s.resolveAgent(quill).status, 'OK', 'back to work on its task');
+
+  assert.throws(() => s.apply({ type: 'approval.requested', agentId: quill, data: { kind: 'skill', skill: { name: 'x' } } }), /needs data.skill/);
+
+  const up = s.apply({ type: 'skills.updated', data: { skills: [{ slug: 'youtube-titles', name: 'youtube-titles', description: 'x'.repeat(900), source: 'a/b', by: 'QUILL', installedAt: '2026-11-20' }], note: 'QUILL learned "youtube-titles".', tone: 'ok' } });
+  assert.equal(up.agentId, null);
+  assert.deepEqual(up.data, { count: 1 }, 'the log keeps a count, not the whole list');
+  assert.equal(up.message, 'QUILL learned "youtube-titles".');
+  assert.equal(s.snapshot().skills[0].description.length, 400);
+  assert.throws(() => s.apply({ type: 'skills.updated', data: {} }), /needs data.skills/);
+});

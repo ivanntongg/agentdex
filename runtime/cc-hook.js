@@ -56,6 +56,7 @@ async function main() {
     decide('deny', `${target} is outside the workspace. Only files inside the workspace folder can be written.`);
   }
   const shown = rel.split(path.sep).join('/');
+  if (shown === '.agentdex' || shown.startsWith('.agentdex/')) decide('deny', `${shown} belongs to Agentdex (installed skills). You can read it but not change it.`);
   if (shown === 'drafts' || shown.startsWith('drafts/')) decide('allow', 'Files in drafts/ need no permission.');
 
   const headers = { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) };

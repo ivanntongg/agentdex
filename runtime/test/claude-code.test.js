@@ -152,6 +152,7 @@ test('the hook on its own: drafts allowed, outside and symlink escapes denied, n
   assert.equal(run('/etc/passwd').permissionDecision, 'deny');
   assert.equal(run(path.join(ws, 'link/x.txt')).permissionDecision, 'deny');
   assert.match(run(path.join(ws, 'notes/a.md')).permissionDecisionReason, /Could not reach Agentdex/);
+  assert.match(run(path.join(ws, '.agentdex/skills/x/SKILL.md')).permissionDecisionReason, /belongs to Agentdex/, 'installed skills cannot be edited');
   assert.equal(run(path.join(ws, 'drafts/c.md'), {}).permissionDecision, 'deny', 'no Agentdex link, no writes');
 });
 

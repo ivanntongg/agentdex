@@ -6,6 +6,7 @@ import path from 'node:path';
 const MAX_READ = 200 * 1024;
 const MAX_WRITE = 500 * 1024;
 const FREE_DIR = 'drafts';
+const PROTECTED = '.agentdex';
 
 export class WorkspaceError extends Error {}
 
@@ -27,6 +28,9 @@ export async function createWorkspace(rootDir) {
     if (realRel === '..' || realRel.startsWith('..' + path.sep) || path.isAbsolute(realRel)) throw new WorkspaceError(`${p} points outside the workspace`);
     return { abs: target, rel: rel || '.' };
   }
+
+  // Agentdex's own folder (installed skills) can be read but never written by agents.
+  const isProtected = (rel) => rel === PROTECTED || rel.startsWith(PROTECTED + path.sep);
 
   // True when writing this path needs the user's approval.
   async function needsApproval(p) {
@@ -50,6 +54,7 @@ export async function createWorkspace(rootDir) {
     },
     async write_file({ path: p, content }) {
       const { abs, rel } = await resolve(p);
+      if (isProtected(rel)) throw new WorkspaceError(`${rel} belongs to Agentdex (installed skills). Agents can read it but not change it.`);
       if (typeof content !== 'string') throw new WorkspaceError('content must be a string');
       if (Buffer.byteLength(content) > MAX_WRITE) throw new WorkspaceError(`content is over ${MAX_WRITE / 1024} KB`);
       await mkdir(path.dirname(abs), { recursive: true });
@@ -58,7 +63,7 @@ export async function createWorkspace(rootDir) {
     },
   };
 
-  return { root, resolve, needsApproval, tools };
+  return { root, resolve, needsApproval, isProtected, tools };
 }
 
 export const FILE_TOOLS = [

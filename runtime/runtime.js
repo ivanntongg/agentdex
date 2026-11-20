@@ -5,6 +5,8 @@ import { SPECIES } from '../server/species.js';
 import { FILE_TOOLS, WorkspaceError } from './workspace.js';
 import { REVIEWER_SYSTEM, REVIEW_SCHEMA, systemPrompt, usesWeb, chatPrompt, splitTask } from './roles.js';
 import { ClaudeCodeError, ClaudeCodeStopped } from './claude-code.js';
+import { skillsPrompt } from './skills.js';
+import { createSkillScout } from './skill-scout.js';
 
 const WEB_SEARCH = { type: 'web_search_20260209', name: 'web_search', max_uses: 5 };
 const MOVE_FOR_TOOL = { list_files: 'READ', read_file: 'READ', write_file: 'EDIT' };
@@ -13,7 +15,9 @@ class Stopped extends Error {}
 
 // Pass either a fixed client (anthropic, model, effort) or settings(): { anthropic, model, effort },
 // read before every request so changes on the SETUP screen apply straight away.
-export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-5-5', effort = 'medium', settings = null, maxTurns = 30, log = console.log }) {
+// skills (optional): the community skills library (skills.js). With it, agents can look for a skill
+// before a task when settings().skillScout is on, and installed skills are listed in their prompts.
+export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-5-5', effort = 'medium', settings = null, skills = null, maxTurns = 30, log = console.log }) {
   const current = settings || (() => ({ anthropic, model, effort }));
   const agents = new Map();      // id -> latest agent snapshot from the server
   const queues = new Map();      // id -> [task]
@@ -94,8 +98,9 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     await dex.emit('agent.fainted', agentId, { reason }).catch(() => {});
   }
 
-  async function waitForApproval(agentId, tool, target, signal) {
-    const ev = await dex.emit('approval.requested', agentId, { tool, target });
+  const waitForApproval = (agentId, tool, target, signal) => waitForApprovalData(agentId, { tool, target }, signal);
+  async function waitForApprovalData(agentId, data, signal) {
+    const ev = await dex.emit('approval.requested', agentId, data);
     const id = ev.data.approvalId;
     if (early.has(id)) { const d = early.get(id); early.delete(id); return d; }
     return new Promise((resolve, reject) => {
@@ -109,6 +114,9 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     const fn = workspace.tools[block.name];
     if (!fn) return { content: `Unknown tool ${block.name}`, is_error: true };
     try {
+      if (block.name === 'write_file' && workspace.isProtected?.((await workspace.resolve(input.path)).rel)) {
+        return { content: 'That folder holds installed skills. You can read them but not change them; put your work in drafts/.', is_error: true };
+      }
       if (block.name === 'write_file' && await workspace.needsApproval(input.path)) {
         const { rel } = await workspace.resolve(input.path);
         const decision = await waitForApproval(agent.id, 'WRITE', rel, signal);
@@ -122,6 +130,42 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
       if (err instanceof WorkspaceError) return { content: err.message, is_error: true };
       return { content: `Tool failed: ${err.message}`, is_error: true };
     }
+  }
+
+  // A short structured question to the model, in either mode. HP is charged to agentId.
+  async function ask({ system, prompt, schema, agentId, signal }) {
+    const cfg = current();
+    if (cfg.engine === 'claude-code') {
+      const r = await cfg.claudeCode.structured({ prompt, systemPrompt: system, schema, model: cfg.model, effort: 'low', signal });
+      await dex.emit('task.progress', agentId, { tokens: r.tokens || 0 }).catch(() => {});
+      return r.output || null;
+    }
+    if (!cfg.anthropic) return null;
+    const res = await request({ system, messages: [{ role: 'user', content: prompt }], output_config: { effort: 'low', format: { type: 'json_schema', schema } } }, signal);
+    await dex.emit('task.progress', agentId, { tokens: (res.usage.input_tokens + res.usage.output_tokens) / 1000 }).catch(() => {});
+    if (res.stop_reason === 'refusal') return null;
+    try { return JSON.parse(res.content.filter((b) => b.type === 'text').map((b) => b.text).join('')); } catch { return null; }
+  }
+
+  const freeReviewer = () => [...agents.values()].find((r) => !r.boxed && SPECIES[r.species].reviewer && r.status !== 'FNT' && !r.reviewingId) || null;
+  const scout = skills ? createSkillScout({
+    skills, dex, ask, log,
+    waitForApproval: waitForApprovalData,
+    reviewer: freeReviewer,
+    workspaceRoot: workspace.root,
+    enabled: () => current().skillScout !== false,
+  }) : null;
+
+  // Before work starts: maybe shop for a skill, walk home, and build the prompts with installed skills.
+  async function prepare(agentId, task, species, signal) {
+    const learned = scout ? await scout.forTask(agents.get(agentId), task, signal) : null;
+    if (agents.get(agentId)?.loc !== species.home) await dex.emit('agent.moved', agentId, { to: species.home });
+    const list = skills ? await skills.list().catch(() => []) : [];
+    const block = skillsPrompt(list);
+    return {
+      system: `${systemPrompt(species, agents.get(agentId).nick)}${block ? `\n\n${block}` : ''}`,
+      learnedNote: learned ? `\n\nYou just installed the skill "${learned.name}". Read .agentdex/skills/${learned.slug}/SKILL.md first and follow it for this task.` : '',
+    };
   }
 
   // One full tool-use loop. Returns the final text, or null if the agent ran out of context.
@@ -193,16 +237,16 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
       await dex.emit('agent.interacted', agentId, { action: 'poke', tone: 'bad', message: `${agent.nick} can't start "${task.title}" yet: add your Claude API key on the SETUP screen, then give the task again.` });
       return;
     }
-    if (agent.loc !== species.home) await dex.emit('agent.moved', agentId, { to: species.home });
     await dex.emit('task.started', agentId, { title: task.title, review: task.review });
     log(`[${agent.nick}] started: ${task.title}`);
+    const prep = await prepare(agentId, task, species, signal);
 
     const ctx = {
-      system: systemPrompt(species, agent.nick),
+      system: prep.system,
       tools: usesWeb(species) ? [...FILE_TOOLS, WEB_SEARCH] : FILE_TOOLS,
-      messages: [{ role: 'user', content: `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}${memoryBlock(agent) ? `\n\n${memoryBlock(agent)}` : ''}` }],
+      messages: [{ role: 'user', content: `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}${memoryBlock(agent) ? `\n\n${memoryBlock(agent)}` : ''}${prep.learnedNote}` }],
       context: 0,
-      hpAtStart: agent.hp,
+      hpAtStart: agents.get(agentId)?.hp ?? agent.hp,
       written: new Set(),
     };
 
@@ -246,7 +290,8 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     const via = entry.via;
     try {
       const cfg = current();
-      const system = `${chatPrompt(SPECIES[agent.species], agent.nick)}\n\n${await chatContext(agent)}`;
+      const skillBlock = skills ? skillsPrompt(await skills.list().catch(() => [])) : '';
+      const system = `${chatPrompt(SPECIES[agent.species], agent.nick)}\n\n${await chatContext(agent)}${skillBlock ? `\n\n${skillBlock}` : ''}`;
       const history = (chats.get(agentId) || []).slice(-20);
       let text;
       if (cfg.engine === 'claude-code') {
@@ -288,18 +333,18 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
   // Same flow as runTask, but each round of work is one `claude -p` run (see claude-code.js).
   async function runWithClaudeCode(agent, task, species, cfg, signal) {
     const agentId = agent.id;
-    if (agent.loc !== species.home) await dex.emit('agent.moved', agentId, { to: species.home });
     await dex.emit('task.started', agentId, { title: task.title, review: task.review });
     log(`[${agent.nick}] started with Claude Code: ${task.title}`);
-    const ask = `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}${memoryBlock(agent) ? `\n\n${memoryBlock(agent)}` : ''}`;
+    const prep = await prepare(agentId, task, species, signal);
+    const taskText = `Task: ${task.title}${task.details ? `\n\nDetails: ${task.details}` : ''}${memoryBlock(agent) ? `\n\n${memoryBlock(agent)}` : ''}${prep.learnedNote}`;
     const work = (prompt) => cfg.claudeCode.runTask({
       agentId, prompt, signal,
-      systemPrompt: systemPrompt(species, agent.nick),
+      systemPrompt: prep.system,
       web: usesWeb(species), model: cfg.model, effort: cfg.effort,
       hpBudget: agents.get(agentId)?.hp ?? agent.hp,
       onProgress: (tokens, tool) => { dex.emit('task.progress', agentId, { tokens, tool }).catch(() => {}); },
     });
-    let r = await work(ask);
+    let r = await work(taskText);
     if (r.fainted) return;
     let { summary } = r;
     const written = new Set(r.written);
@@ -308,7 +353,7 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
       const v = await review(agent, reviewer, task, summary, written, signal);
       if (v.verdict === 'changes') {
         await dex.emit('agent.moved', agentId, { to: species.home });
-        r = await work(`${ask}\n\nYou already worked on this task; your files are in the workspace. Your summary was: ${summary}\n\n${reviewer.nick} reviewed it and asked for changes:\n${v.issues.map((i) => `- ${i}`).join('\n')}\n\nFix these, then reply with your one or two sentence summary again.`);
+        r = await work(`${taskText}\n\nYou already worked on this task; your files are in the workspace. Your summary was: ${summary}\n\n${reviewer.nick} reviewed it and asked for changes:\n${v.issues.map((i) => `- ${i}`).join('\n')}\n\nFix these, then reply with your one or two sentence summary again.`);
         if (r.fainted) return;
         summary = r.summary;
         for (const f of r.written || []) written.add(f);
@@ -323,6 +368,7 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     onChange,
     enqueue,
     agents,
+    scout,
     whenIdle: () => new Promise((r) => { if (!running.size) r(); else idle.add(r); }),
   };
 }

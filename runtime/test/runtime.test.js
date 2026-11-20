@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -44,7 +44,7 @@ const lastToolResult = (body) => {
   return Array.isArray(last.content) ? last.content.find((b) => b.type === 'tool_result') : null;
 };
 
-async function setup(script) {
+async function setup(script, { skills = null, review = false } = {}) {
   const claude = await mockClaude(script);
   const store = createStore();
   const app = createApp({ store });
@@ -54,7 +54,7 @@ async function setup(script) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'agentdex-ws-'));
   const workspace = await createWorkspace(dir);
   const logs = [];
-  const runtime = createRuntime({ anthropic: new Anthropic({ apiKey: 'test', baseURL: claude.url, maxRetries: 0 }), dex, workspace, log: (m) => logs.push(m) });
+  const runtime = createRuntime({ anthropic: new Anthropic({ apiKey: 'test', baseURL: claude.url, maxRetries: 0 }), dex, workspace, skills, log: (m) => logs.push(m) });
   const ctl = new AbortController();
   dex.subscribe({ onSnapshot: runtime.onSnapshot, onChange: runtime.onChange, signal: ctl.signal });
   await dex.post('/api/ingest', [
@@ -178,6 +178,10 @@ test('the workspace refuses paths that escape it', async () => {
   assert.equal(await ws.needsApproval('drafts'), false);
   assert.equal(await ws.needsApproval('draftsy/a.md'), true);
   assert.equal(await ws.needsApproval('src/a.js'), true);
+  await mkdir(path.join(dir, '.agentdex', 'skills', 'x'), { recursive: true });
+  await writeFile(path.join(dir, '.agentdex', 'skills', 'x', 'SKILL.md'), '# x');
+  assert.equal(await ws.tools.read_file({ path: '.agentdex/skills/x/SKILL.md' }), '# x', 'agents can read installed skills');
+  await assert.rejects(ws.tools.write_file({ path: '.agentdex/skills/x/SKILL.md', content: 'evil' }), /belongs to Agentdex/);
 });
 
 test('talking to an agent over the API: read-only tools, and a suggested task', async () => {
@@ -218,5 +222,48 @@ test('agents remember earlier tasks and build on them', async () => {
     assert.doesNotMatch(prompts[0], /earlier tasks/, 'nothing to remember the first time');
     assert.match(prompts[1], /What you did in earlier tasks/);
     assert.match(prompts[1], /"Compare 3 note apps" -> Compared 3 apps in drafts\/apps\.md\. \(files: drafts\/apps\.md\)/);
+  } finally { await t.close(); }
+});
+
+test('skills end to end: the agent shops at the MART, CHECKS reads it, you say YES, and the task uses it', async () => {
+  const SKILL = '---\nname: commit-messages\ndescription: Write clear commit messages.\n---\n\nUse the imperative mood.';
+  const installed = [];
+  const skills = {
+    list: async () => installed,
+    search: async () => [{ id: 'a/b/commit-messages', name: 'commit-messages', source: 'a/b', installs: 120 }],
+    fetchSkill: async (id) => ({ id, name: 'commit-messages', description: 'Write clear commit messages.', source: 'a/b', url: 'https://github.com/a/b', sha256: 'x', text: SKILL, flags: [] }),
+    install: async (sk, meta) => { const x = { ...sk, ...meta, slug: 'commit-messages' }; installed.push(x); return x; },
+    mirror: async (root) => {
+      for (const sk of installed) { await mkdir(path.join(root, '.agentdex/skills', sk.slug), { recursive: true }); await writeFile(path.join(root, '.agentdex/skills', sk.slug, 'SKILL.md'), sk.text); }
+      return installed;
+    },
+  };
+  let taskBody = null;
+  const t = await setup((body) => {
+    const schema = body.output_config?.format?.schema;
+    if (schema?.properties?.lookFor) return { content: [text('{"lookFor":true,"query":"commit messages"}')], stop_reason: 'end_turn' };
+    if (schema?.properties?.pick) return { content: [text('{"pick":"a/b/commit-messages","why":"fits"}')], stop_reason: 'end_turn' };
+    if (schema?.properties?.verdict?.enum?.includes('safe')) return { content: [text('{"verdict":"safe","summary":"Plain writing advice."}')], stop_reason: 'end_turn' };
+    taskBody = taskBody || body;
+    return { content: [text('Wrote drafts/msg.md following the skill.')], stop_reason: 'end_turn' };
+  }, { skills });
+  try {
+    await post(t.url, '/api/agents/patch/tasks', { title: 'Write a commit message for the login fix' });
+    const ap = await t.until((s) => s.approvals.find((a) => a.kind === 'skill'));
+    assert.equal(ap.skill.name, 'commit-messages');
+    assert.deepEqual(ap.skill.review, { by: 'CHECKS', verdict: 'safe', summary: 'Plain writing advice.' });
+    const s1 = await t.dex.state();
+    assert.equal(s1.agents.find((a) => a.ref === 'patch').loc, 'MART', 'it walked to the MART to shop');
+    const decide = t.claude.requests.find((r) => r.body.output_config?.format?.schema?.properties?.lookFor);
+    assert.equal(decide.body.output_config.effort, 'low', 'shopping decisions are cheap');
+
+    await post(t.url, `/api/approvals/${ap.id}`, { decision: 'yes' });
+    await t.until((s) => s.log.some((e) => e.type === 'task.finished'));
+    const s2 = await t.dex.state();
+    assert.equal(s2.skills[0].name, 'commit-messages', 'the town shows it in the MART');
+    assert.ok(s2.log.some((e) => /PATCH learned "commit-messages"/.test(e.message || '')));
+    assert.match(taskBody.system, /\.agentdex\/skills\/commit-messages\/SKILL\.md/, 'installed skills are in the prompt');
+    assert.match(taskBody.messages[0].content, /You just installed the skill "commit-messages"/);
+    assert.equal(await readFile(path.join(t.workspace.root, '.agentdex/skills/commit-messages/SKILL.md'), 'utf8'), SKILL);
   } finally { await t.close(); }
 });

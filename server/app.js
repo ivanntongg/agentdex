@@ -33,7 +33,8 @@ const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
 // setup (optional): { status(), save(body), testClaude(), testWhatsApp() } for the SETUP screen.
 // workspaceRoot (optional): enables uploads into <workspace>/inbox.
-export function createApp({ store, adapter = null, token = null, indexPath = null, setup = null, workspaceRoot = null }) {
+// skills (optional): { state(), search(q), request({ id, agentId }), remove(slug), setEnabled(bool) } for the MART.
+export function createApp({ store, adapter = null, token = null, indexPath = null, setup = null, workspaceRoot = null, skills = null }) {
   const clients = new Set();
 
   store.subscribe((payload) => {
@@ -203,6 +204,20 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
       if (list.length > 100) throw new StoreError(413, 'Send at most 100 events per request');
       const events = list.map((e) => store.apply(e));
       send(res, 200, { events });
+    }],
+
+    ['GET', /^\/api\/skills$/, async (req, res) => {
+      if (!skills) return send(res, 200, { available: false, enabled: false, skills: [] });
+      send(res, 200, { available: true, ...(await skills.state()) });
+    }],
+    ['POST', /^\/api\/skills\/(search|request|remove|settings)$/, async (req, res, [, what]) => {
+      if (!skills) throw new StoreError(404, 'Skills work when Agentdex runs with real agents (npm run real).');
+      const body = await readJSON(req);
+      if (what === 'search') return send(res, 200, { results: await skills.search(String(body.q || '')) });
+      if (what === 'request') return send(res, 202, await skills.request({ id: String(body.id || ''), agentId: body.agentId ?? null }));
+      if (what === 'remove') { await skills.remove(String(body.slug || '')); return send(res, 200, await skills.state()); }
+      await skills.setEnabled(Boolean(body.enabled));
+      send(res, 200, await skills.state());
     }],
 
     ['GET', /^\/api\/setup$/, async (req, res) => {

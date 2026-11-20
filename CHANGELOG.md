@@ -2,6 +2,15 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.11.0 · Agents learn community skills
+
+- **Skills in the MART:** agents can use shared instruction packs (`SKILL.md`) from the community, found through [skills.sh](https://skills.sh).
+- **Agents shop for themselves:** before a task, an agent decides whether a skill would clearly help. If so it walks to the MART, searches, reads the best few and picks one.
+- **Safe by design:** quick checks drop skills that try to override rules, hide text or send secrets anywhere; CHECKS reads the chosen skill; nothing installs without your YES (in the town, the team chat with a VIEW SKILL link, or WhatsApp). Only the text is used, never scripts. Installed skills are frozen and agents can read but not edit them.
+- **MART tab:** see installed skills, search and GET one yourself, remove skills, and switch off "Agents may look for skills on their own".
+- Agents mention installed skills when you chat with them.
+- New test that the page's script compiles, so a typo can't ship.
+
 ## 0.10.0 · One-command install, MIT license and a browser demo
 
 - **Run it with one command:** `npx agentdex-town`. Only Node.js is needed: no Git, no download folder. Your town, settings and workspace live in an `Agentdex` folder in your home folder, so updates never touch them. `--practice` starts pretend agents, `--help` lists the options. If Agentdex is already running, the command just opens the town.

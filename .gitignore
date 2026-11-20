@@ -6,3 +6,4 @@ agentdex.config.json.tmp
 agentdex.state.json
 agentdex.state.json.tmp
 agentdex.state.json.broken-*
+skills/

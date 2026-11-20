@@ -17,6 +17,7 @@ const FIELDS = {
   whatsappToken: () => null,
   whatsappPhoneNumberId: (v) => (/^\d{5,20}$/.test(v) ? null : 'Phone number ID is the long number from Meta, digits only'),
   whatsappAppSecret: (v) => (/^[a-f0-9]{16,64}$/i.test(v) ? null : 'App secret is the code under App settings, Basic (letters a-f and digits)'),
+  skillScout: (v) => (['on', 'off'].includes(v) ? null : 'skillScout must be on or off'),
   whatsappAllowed: (v) => (v.split(',').every((p) => /^\+?[\d\s-]{8,20}$/.test(p.trim())) ? null : 'Your number with country code, like +60 12 345 6789'),
 };
 
@@ -32,7 +33,7 @@ export function createConfig({ path = 'agentdex.config.json', env = process.env 
   const ENV = {
     brain: 'AGENTDEX_BRAIN', anthropicKey: 'ANTHROPIC_API_KEY', model: 'AGENTDEX_MODEL', effort: 'AGENTDEX_EFFORT',
     whatsappToken: 'WHATSAPP_TOKEN', whatsappPhoneNumberId: 'WHATSAPP_PHONE_NUMBER_ID',
-    whatsappAppSecret: 'WHATSAPP_APP_SECRET', whatsappAllowed: 'WHATSAPP_ALLOWED',
+    whatsappAppSecret: 'WHATSAPP_APP_SECRET', whatsappAllowed: 'WHATSAPP_ALLOWED', skillScout: 'AGENTDEX_SKILL_SCOUT',
   };
   const get = (k) => data[k] || (ENV[k] && env[ENV[k]]) || null;
 
@@ -63,6 +64,7 @@ export function createConfig({ path = 'agentdex.config.json', env = process.env 
     brain: () => (BRAINS.includes(get('brain')) ? get('brain') : 'api'),
     model: () => get('model') || 'claude-opus-5-5',
     effort: () => get('effort') || 'medium',
+    skillScout: () => get('skillScout') !== 'off', // agents may look for community skills on their own
     verifyToken: () => data.whatsappVerifyToken,
     whatsapp() {
       const c = {
