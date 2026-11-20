@@ -9,7 +9,8 @@
 // and these only as variables:
 //   PORT (8787), HOST (127.0.0.1), AGENTDEX_TOKEN, AGENTDEX_URL, AGENTDEX_WORKSPACE (./workspace),
 //   AGENTDEX_CONFIG (./agentdex.config.json), AGENTDEX_STATE (./agentdex.state.json, the saved town), WHATSAPP_PORT (8788),
-//   AGENTDEX_BRAIN (api | claude-code), AGENTDEX_CLAUDE_BIN (path to the claude command, default "claude")
+//   AGENTDEX_BRAIN (api | claude-code), AGENTDEX_CLAUDE_BIN (path to the claude command, default "claude"),
+//   AGENTDEX_SKILLS_DIR (./skills, installed community skills), AGENTDEX_SKILL_SCOUT (on | off)
 import Anthropic from '@anthropic-ai/sdk';
 import { fileURLToPath } from 'node:url';
 import { createAgentdexClient } from './agentdex.js';
@@ -19,6 +20,8 @@ import { createClaudeCode, ClaudeCodeError } from './claude-code.js';
 import { createConfig, ConfigError } from '../server/config.js';
 import { StoreError } from '../server/store.js';
 import { createWhatsAppBridge } from '../bridges/whatsapp.js';
+import { createSkills, parseRef, SkillError } from './skills.js';
+import { SPECIES } from '../server/species.js';
 
 const STARTERS = [
   { ref: 'patch', species: 'bytle', nick: 'PATCH' },
@@ -42,6 +45,8 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   let url = env.AGENTDEX_URL || 'http://127.0.0.1:8787';
   const config = createConfig({ path: env.AGENTDEX_CONFIG || 'agentdex.config.json', env });
   const workspace = await createWorkspace(env.AGENTDEX_WORKSPACE || 'workspace');
+  const skillLib = createSkills({ dir: env.AGENTDEX_SKILLS_DIR || 'skills' });
+  let runtime = null;
 
   // One Claude client, rebuilt when the key changes.
   let client = null;
@@ -124,6 +129,31 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
     },
   };
 
+  // The MART: installed skills, search, and asking for one. Installing always needs a YES in the town.
+  const asStoreError = (err) => (err instanceof SkillError ? new StoreError(400, err.message) : err);
+  const skillsApi = {
+    async state() { return { enabled: config.skillScout(), skills: await skillLib.list() }; },
+    async search(q) {
+      try {
+        const have = new Set((await skillLib.list()).map((s) => s.id));
+        return (await skillLib.search(q)).map((r) => ({ ...r, installed: have.has(r.id) }));
+      } catch (err) { throw asStoreError(err); }
+    },
+    async request({ id, agentId }) {
+      try { parseRef(id); } catch (err) { throw asStoreError(err); }
+      const free = (a) => a && !a.boxed && !a.task && !a.chatting && a.status !== 'FNT' && a.status !== 'PAR';
+      const all = [...runtime.agents.values()];
+      const agent = agentId != null ? all.find((a) => String(a.id) === String(agentId) || a.ref === agentId) : all.find((a) => free(a) && !a.reviewingId && !SPECIES[a.species]?.reviewer);
+      if (!free(agent)) throw new StoreError(409, agentId != null ? 'That agent is busy. Pick a free one, or try again in a moment.' : 'Everyone is busy right now. Try again when an agent is free.');
+      runtime.scout.request(agent, id, AbortSignal.timeout(30 * 60_000)).catch((err) => {
+        dex.emit('agent.interacted', agent.id, { action: 'poke', tone: 'bad', message: `${agent.nick} couldn't get that skill: ${err.message}` }).catch(() => {});
+      });
+      return { message: `${agent.nick} went to the MART to get it. You'll get a YES / NO in a moment.` };
+    },
+    async remove(slug) { try { await runtime.scout.remove(slug); } catch (err) { throw asStoreError(err); } },
+    async setEnabled(on) { config.save({ skillScout: on ? 'on' : 'off' }); },
+  };
+
   if (withServer) {
     const { createStore } = await import('../server/store.js');
     const { createApp } = await import('../server/app.js');
@@ -138,7 +168,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
     const save = () => { persistence.flush(); };
     for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK']) process.once(sig, () => { save(); process.exit(0); });
     process.once('exit', save);
-    const app = createApp({ store, token, setup, workspaceRoot: workspace.root, indexPath: fileURLToPath(new URL('../index.html', import.meta.url)) });
+    const app = createApp({ store, token, setup, skills: skillsApi, workspaceRoot: workspace.root, indexPath: fileURLToPath(new URL('../index.html', import.meta.url)) });
     await new Promise((resolve, reject) => { app.once('error', reject); app.listen(port, host, resolve); }).catch((err) => {
       throw new Error(err.code === 'EADDRINUSE' ? `Port ${port} is already in use. Agentdex may already be running in another window.` : err.message);
     });
@@ -148,7 +178,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
 
   dex = createAgentdexClient({ url, token });
   claudeCode = createClaudeCode({ bin: env.AGENTDEX_CLAUDE_BIN || 'claude', workspace, url, token, onPlanUsage: (u) => { planUsage = u; } });
-  const runtime = createRuntime({ dex, workspace, settings: () => ({ engine: config.brain(), claudeCode, anthropic: claude(), model: config.model(), effort: config.effort() }) });
+  runtime = createRuntime({ dex, workspace, skills: skillLib, settings: () => ({ engine: config.brain(), claudeCode, anthropic: claude(), model: config.model(), effort: config.effort(), skillScout: config.skillScout() }) });
 
   const state = await dex.state().catch((err) => { throw new Error(`Cannot reach Agentdex at ${url}: ${err.message}`); });
   if (state.adapter === 'simulator') console.warn('Warning: the server is running its simulator. Start it with AGENTDEX_SIM=0 so the fake agents stay out of the way.');
@@ -163,6 +193,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
     onError: (err) => console.error(`Lost the event stream (${err.message}); reconnecting.`),
   });
 
+  await runtime.scout.sync().catch((err) => console.error(`Could not load installed skills: ${err.message}`));
   config.onChange(() => { applyWhatsApp(); });
   await applyWhatsApp();
 

@@ -10,6 +10,7 @@ export const EVENT_TYPES = [
   'task.assigned', 'task.started', 'task.progress', 'task.handoff', 'task.finished',
   'review.started', 'review.finished',
   'approval.requested', 'approval.resolved',
+  'skills.updated',
 ];
 
 export class StoreError extends Error {
@@ -26,6 +27,7 @@ export function createStore() {
   let nextChatId = 1;
   const CHAT_LIMIT = 60;
   const MEMORY_LIMIT = 20;
+  let skills = []; // installed community skills, mirrored from the runtime (the files on disk are the truth)
   const log = [];
   const subscribers = new Set();
   let seq = 0;
@@ -54,6 +56,7 @@ export function createStore() {
       approvals: [...approvals.values()].map(clone),
       log: log.slice(-100).map(clone),
       chats: Object.fromEntries([...chats].map(([id, list]) => [id, list.map(clone)])),
+      skills: skills.map(clone),
     };
   }
 
@@ -90,7 +93,7 @@ export function createStore() {
     const followUps = [];
     let a = null;
 
-    if (type !== 'agent.spawned' && type !== 'files.added') {
+    if (type !== 'agent.spawned' && type !== 'files.added' && type !== 'skills.updated') {
       a = resolveAgent(input.agentId);
       event.agentId = a.id;
       touched.add(a);
@@ -194,8 +197,22 @@ export function createStore() {
         break;
       }
 
+      case 'skills.updated': {
+        if (!Array.isArray(data.skills)) throw new StoreError(400, 'skills.updated needs data.skills');
+        const str = (v, n) => String(v ?? '').slice(0, n);
+        skills = data.skills.slice(0, 100).map((x) => ({
+          slug: str(x.slug, 40), name: str(x.name, 64), description: str(x.description, 400), source: str(x.source, 120),
+          url: str(x.url, 300), by: x.by ? str(x.by, 12) : null, installedAt: str(x.installedAt, 40),
+          review: x.review ? { by: str(x.review.by, 12), verdict: str(x.review.verdict, 12), summary: str(x.review.summary, 300) } : null,
+        }));
+        event.data = { count: skills.length };
+        event.message = data.note ? str(data.note, 300) : null;
+        if (data.tone) event.tone = ['ok', 'bad', 'need', 'info'].includes(data.tone) ? data.tone : 'info';
+        break;
+      }
+
       case 'approval.requested': {
-        const kind = data.kind === 'evolve' ? 'evolve' : 'tool';
+        const kind = ['evolve', 'skill'].includes(data.kind) ? data.kind : 'tool';
         const ap = { id: nextApprovalId++, agentId: a.id, kind, createdAt: event.ts };
         if (kind === 'tool') {
           const tool = data.tool || a.task?.approval?.tool;
@@ -204,6 +221,21 @@ export function createStore() {
           Object.assign(ap, { tool, target, taskTitle: a.task?.title || null });
           a.status = 'PAR'; a.phase = 'wait';
           event.message = `${a.nick} needs you: it wants to use ${tool} on ${target}.`;
+        } else if (kind === 'skill') {
+          const s = data.skill || {};
+          if (!s.id || !s.name || !s.source) throw new StoreError(400, 'A skill request needs data.skill with id, name and source');
+          const str = (v, n) => String(v ?? '').slice(0, n);
+          ap.skill = {
+            id: str(s.id, 200), name: str(s.name, 64), description: str(s.description, 400), source: str(s.source, 120), url: str(s.url, 300),
+            installs: Number(s.installs) || 0,
+            flags: (Array.isArray(s.flags) ? s.flags : []).slice(0, 8).map((f) => ({ level: str(f.level, 8), text: str(f.text, 160) })),
+            review: s.review ? { by: str(s.review.by, 12), verdict: str(s.review.verdict, 12), summary: str(s.review.summary, 300) } : null,
+          };
+          ap.taskTitle = a.task?.title || null;
+          a.status = 'PAR'; a.phase = 'wait';
+          const r = ap.skill.review;
+          event.data.skill = clone(ap.skill);
+          event.message = `${a.nick} wants to learn the skill "${ap.skill.name}" from ${ap.skill.source}.${r ? ` ${r.by || 'Review'}: ${r.summary || r.verdict}` : ' Nobody reviewed it, so read it before you say YES.'}`;
         } else {
           const evo = SPECIES[a.species].evolve;
           if (!evo) throw new StoreError(409, `${a.nick} cannot evolve`);
@@ -231,6 +263,11 @@ export function createStore() {
           event.message = yes ? `You allowed ${ap.tool}. ${a.nick} used ${ap.tool} on ${ap.target}!` : `You declined ${ap.tool}.`;
           event.tone = yes ? 'ok' : 'info';
           Object.assign(event.data, { tool: ap.tool, target: ap.target });
+        } else if (ap.kind === 'skill') {
+          if (a.task) { a.status = 'OK'; a.phase = 'work'; } else { a.status = 'SLP'; a.phase = 'idle'; }
+          event.data.skill = { id: ap.skill.id, name: ap.skill.name };
+          event.message = yes ? `${a.nick} is learning "${ap.skill.name}".` : `You said no to "${ap.skill.name}". ${a.nick} carries on without it.`;
+          event.tone = yes ? 'ok' : 'info';
         } else if (yes) {
           const from = SPECIES[a.species].name;
           a.species = ap.to;

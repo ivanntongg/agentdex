@@ -228,7 +228,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 
 /* side menu */
 .menu{padding:12px;display:grid;gap:12px;min-width:0}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--well);border:2px solid var(--well-line);border-radius:999px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;background:var(--well);border:2px solid var(--well-line);border-radius:999px}
 .tab{font-weight:700;font-size:13px;letter-spacing:.04em;padding:7px 4px;border-radius:999px;color:var(--muted);text-align:center}
 .tab:hover{color:var(--ink)}
 .tab[aria-selected="true"]{background:var(--tab-on);color:var(--tab-on-ink)}
@@ -321,6 +321,24 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .chk{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .chk input{accent-color:var(--sel)}
 .boxnote{font-size:14px;color:var(--muted);padding:2px}
+
+/* MART: community skills */
+.mart-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.mart-row input{font:inherit;font-size:15px;color:var(--ink);background:var(--field);border:2px solid var(--field-line);border-radius:var(--r-md);padding:8px 12px;min-width:0}
+.mres{display:grid;gap:6px}
+.mres-i{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;background:var(--raise);border:2px solid var(--raise-line);border-radius:12px}
+.mres-i b{font-weight:700;font-size:14.5px;overflow-wrap:anywhere}
+.mres-i small{display:block;color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.mres-i .btn{font-size:12px;padding:5px 10px}
+.sk{display:grid;gap:6px;padding:10px 12px;background:var(--raise);border:2px solid var(--raise-line);border-radius:14px;box-shadow:0 3px 0 var(--raise-shadow)}
+.sk-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sk-h b{font-weight:700;font-size:15px;overflow-wrap:anywhere}
+.sk-h small,.sk-meta{color:var(--muted);font-size:12.5px}
+.sk p{margin:0;font-size:13.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.sk .acts .btn,.sk .acts a.btn{font-size:12px;padding:5px 10px;text-decoration:none;display:inline-flex;align-items:center}
+.mart-note{margin:0;font-size:12.5px;color:var(--faint);line-height:1.4}
+.cv-flags{margin:0;padding:0;list-style:none;display:grid;gap:2px;font-size:12.5px;color:var(--bad)}
+.cv-acts a.btn{text-decoration:none;display:inline-flex;align-items:center}
 
 /* field log */
 .sidelog{padding:12px;display:grid;gap:8px;min-width:0}
@@ -443,6 +461,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
           <button class="tab" role="tab" id="t-party" aria-selected="true">PARTY</button>
           <button class="tab" role="tab" id="t-dex" aria-selected="false">DEX</button>
           <button class="tab" role="tab" id="t-box" aria-selected="false">BOX</button>
+          <button class="tab" role="tab" id="t-mart" aria-selected="false">MART</button>
         </div>
         <div class="pane" id="pane"></div>
       </aside>
@@ -687,7 +706,10 @@ function arrive(a){
     case 'work':a.phase='work';a.workLeft=5+(Math.random()*5|0);break;
     case 'review':{const r=reviewer();a.phase='review';a.workLeft=3;if(r){r.reviewing=a.id;r.status='OK';log(`${r.nick} is reviewing "${a.task.t}".`)}break}
     case 'heal':a.hp=a.hpMax;a.status='SLP';a.phase='idle';a.task=null;a.moves.forEach(m=>m.pp=m.max);log(`${a.nick}'s session was reset at the CENTER. Context cleared, HP restored.`,'ok');break;
-    case 'learn':{a.phase='idle';log(`${a.nick} browsed the MART for new skills.`);break}
+    case 'learn':{a.phase='idle';
+      const o=MART_DEMO_OFFERS.find(x=>!mart.skills.some(k=>k.name===x.name)&&!queue.some(q=>q.kind==='sk'&&q.skill.name===x.name));
+      if(o&&!SPEC[a.sp].reviewer&&Math.random()<0.6){queue.push({kind:'sk',id:a.id,skill:o});log(`${a.nick} found the skill "${o.name}" at the MART. CHECKS: ${o.review.summary} It needs your OK.`,'need');showDialog()}
+      else log(`${a.nick} browsed the MART for new skills.`);break}
     default:a.phase='idle';
   }
   refresh();
@@ -764,6 +786,7 @@ let typing=null,choice=0,current=null;
 function dlgContent(q){
   const a=byId(q.id);
   if(q.kind==='ap'){const ap=q.tool?{m:q.tool,on:q.target}:a.task.ap;return{meta:`${a.nick} · Lv ${a.lv} · ${q.taskTitle||(a.task?a.task.t:'Request')}`,html:`<span class="hl">${esc(a.nick)}</span> wants to use <span class="hl">${esc(ap.m)}</span> on ${esc(ap.on)}!`,ch:['YES','NO']}}
+  if(q.kind==='sk'){const k=q.skill;return{meta:`${a.nick} · MART · New skill${k.installs?` · ${Number(k.installs).toLocaleString()} installs`:''}`,html:`<span class="hl">${esc(a.nick)}</span> wants to learn <span class="hl">${esc(k.name)}</span> from ${esc(k.source)}.${esc(skillLine(k))}`,ch:['YES','NO']}}
   if(q.kind==='evo'){const e=SPEC[a.sp].evo;return{meta:`${a.nick} · Lv ${a.lv} · Upgrade`,html:`What? <span class="hl">${esc(a.nick)}</span> is evolving into <span class="hl">${SPEC[e.to].name}</span>. Bigger brain, more permissions. Allow it?`,ch:['YES','NO']}}
   if(q.kind==='act'){
     const mood={OK:'is hard at work.',SLP:'is dozing.',PAR:'is waiting on your answer.',CNF:'is going in circles.',PSN:'is burning through its budget.',FNT:'is out cold.'}[a.status];
@@ -825,11 +848,17 @@ function answer(i){
   const q=queue.shift();current=null;$('#dlg').hidden=true;
   const a=q.id?byId(q.id):null;
   const yes=i===0;
-  if(LIVE&&(q.kind==='ap'||q.kind==='evo')){
+  if(LIVE&&(q.kind==='ap'||q.kind==='evo'||q.kind==='sk')){
     if(q.kind==='evo'&&yes&&a)fx.push({type:'evo',id:a.id,t:0});
     api(`api/approvals/${q.apId}`,{decision:yes?'yes':'no'});
     refresh();setTimeout(showDialog,reduce?0:250);return}
   if(q.kind==='act'&&a){doAct(a,i)}
+  else if(q.kind==='sk'&&a){
+    const k=q.skill;
+    if(yes){mart.skills.push({slug:k.name,name:k.name,description:k.description,source:k.source,url:'',by:a.nick,installedAt:new Date().toISOString(),review:k.review});log(`${a.nick} learned "${k.name}". It's in the MART now.`,'ok');mart.results=null}
+    else log(`You said no to "${k.name}". ${a.nick} carries on without it.`);
+    if(tab==='mart')renderPane();
+  }
   else if(q.kind==='ap'&&a){
     const ap=a.task.ap;
     const mv=a.moves.find(m=>m.n===ap.m);if(mv&&yes&&mv.pp>0)mv.pp--;
@@ -1029,7 +1058,7 @@ function slotHTML(a,clickable=true){
 const STATUS_TXT={OK:'Healthy and on task',SLP:'Idle. Ready for a task',PAR:'Paralyzed. Waiting for your approval',CNF:'Confused. Looping on one step, will change approach',PSN:'Poisoned. Spending tokens 2.6x faster',FNT:'Fainted. Ran out of context, heading for a reset'};
 function typeChips(ts){return ts.map(t=>`<span class="type" style="background:${TYPES[t]}">${t}</span>`).join('')}
 function renderPane(){
-  ['party','dex','box'].forEach(t=>$('#t-'+t).setAttribute('aria-selected',String(t===tab)));
+  ['party','dex','box','mart'].forEach(t=>$('#t-'+t).setAttribute('aria-selected',String(t===tab)));
   const p=$('#pane');
   if(tab==='party'){
     if(view==='sum'&&byId(selId)){
@@ -1059,6 +1088,8 @@ function renderPane(){
     p.innerHTML=h;
     p.querySelectorAll('.dx').forEach(b=>b.onclick=()=>{dexSel=b.dataset.k;renderPane()});
     const sb=$('#spawn');if(sb)sb.onclick=()=>spawn(dexSel);
+  }else if(tab==='mart'){
+    p.innerHTML=martHTML();bindMart();
   }else{
     let h=`<div class="pane-h"><span>Box 1 · ${box.length} stored</span><span>Not running · $0</span></div>`;
     h+=box.length?box.map(a=>`<div class="boxgrid">${slotHTML(a).replace('class="slot','class="slot boxed')}<div class="acts"><button class="btn primary" data-wd="${a.id}" ${party.length>=6?'disabled':''}>MOVE TO PARTY</button></div></div>`).join(''):'<p class="boxnote">The box is empty. Send an agent here from its summary to stop it running.</p>';
@@ -1070,6 +1101,58 @@ function renderPane(){
       log(`${a.nick} left the box and joined your party.`);fx.push({type:'spawn',id:a.id,t:0});tab='party';view='list';renderPane()});
   }
 }
+/* ---------- MART: community skills ---------- */
+// Skills are shared instruction packs (a SKILL.md). Agents may look for one before a task; you can search
+// here too. Either way CHECKS reads it and nothing is installed without your YES.
+const mart={skills:[],enabled:true,available:false,results:null,q:'',msg:'',busy:false};
+const MART_DEMO=[
+  {slug:'changelog-style',name:'changelog-style',description:'Write release notes people actually read: lead with what changed for the user, group by impact, link the details.',source:'demo/skills',url:'',by:'PATCH',review:{by:'CHECKS',verdict:'safe',summary:'Plain writing advice, nothing risky.'}},
+];
+const MART_DEMO_OFFERS=[
+  {id:'demo/skills/commit-messages',name:'commit-messages',description:'Short, specific commit messages in the imperative mood, with the why in the body.',source:'demo/skills',installs:1240,flags:[],review:{by:'CHECKS',verdict:'safe',summary:'Plain writing advice, nothing risky.'}},
+  {id:'demo/skills/source-checklist',name:'source-checklist',description:'Check every claim against two independent sources and say how sure you are.',source:'demo/skills',installs:860,flags:[],review:{by:'CHECKS',verdict:'safe',summary:'A research checklist, nothing risky.'}},
+];
+async function loadMart(){
+  if(!LIVE)return;
+  try{const r=await fetch('api/skills');const j=await r.json();mart.available=Boolean(j.available);mart.enabled=Boolean(j.enabled);mart.skills=j.skills||[]}catch{}
+  if(tab==='mart')renderPane();
+}
+const daysAgo=ts=>{const d=(Date.now()-new Date(ts))/864e5;return !ts||isNaN(d)?'':d<1?'today':d<2?'yesterday':`${Math.floor(d)} days ago`};
+function martHTML(){
+  const live=LIVE&&mart.available;
+  const list=mart.skills.length?mart.skills.slice().reverse().map(k=>`<div class="sk">
+      <div class="sk-h"><b>${esc(k.name)}</b><small>${esc(k.source)}</small></div>
+      <p>${esc(k.description||'')}</p>
+      <div class="sk-meta">${k.by?`Added by ${esc(k.by)}`:'Added by you'}${k.installedAt?` ${daysAgo(k.installedAt)}`:''}${k.review?` · ${esc(k.review.by||'Review')}: ${esc(k.review.summary||k.review.verdict)}`:''}</div>
+      <div class="acts">${k.url?`<a class="btn" href="${esc(k.url)}" target="_blank" rel="noopener">VIEW</a>`:''}<button class="btn" type="button" data-rm="${esc(k.slug)}">REMOVE</button></div>
+    </div>`).join(''):'<p class="boxnote">No skills yet. When an agent needs special know-how, it finds a skill and asks you before installing it.</p>';
+  const res=mart.results==null?'':mart.results.length?`<div class="mres">${mart.results.map(r=>`<div class="mres-i"><span><b>${esc(r.name)}</b><small>${esc(r.source)} · ${Number(r.installs||0).toLocaleString()} installs</small></span>${r.installed?'<small>Installed</small>':`<button class="btn primary" type="button" data-get="${esc(r.id)}">GET</button>`}</div>`).join('')}</div>`:'<p class="boxnote">Nothing found. Try other words.</p>';
+  return`<div class="pane-h"><span>MART · ${mart.skills.length} skill${mart.skills.length===1?'':'s'}</span><span>Shared know-how</span></div>
+    <label class="chk"><input type="checkbox" id="martAuto" ${mart.enabled?'checked':''} ${live?'':'disabled'}> Agents may look for skills on their own</label>
+    <form class="give" id="martForm" autocomplete="off"><label for="martQ">Find a community skill</label>
+      <div class="mart-row"><input id="martQ" maxlength="100" placeholder="e.g. youtube titles" value="${esc(mart.q)}" ${live||!LIVE?'':'disabled'}><button class="btn primary" type="submit" ${mart.busy?'disabled':''}>${mart.busy?'...':'SEARCH'}</button></div>
+      ${mart.msg?`<small class="boxnote">${esc(mart.msg)}</small>`:''}
+    </form>
+    ${res}
+    ${list}
+    <p class="mart-note">Skills are written instructions shared by the community. Agents never run code from them, ${party.some(a=>SPEC[a.sp].reviewer)?'CHECKS reads each one first, ':''}and nothing is installed without your YES.${LIVE?'':' In this demo, searching shows pretend skills.'}</p>`;
+}
+function bindMart(){
+  const f=$('#martForm');if(!f)return;
+  f.onsubmit=async e=>{e.preventDefault();const q=$('#martQ').value.trim();if(!q)return;mart.q=q;
+    if(!LIVE){mart.results=MART_DEMO_OFFERS.filter(o=>!mart.skills.some(k=>k.name===o.name)).map(o=>({...o,installed:false}));mart.msg='';renderPane();return}
+    mart.busy=true;mart.msg='';renderPane();
+    const r=await api('api/skills/search',{q});mart.busy=false;mart.results=r?r.results:[];if(!r)mart.msg='Search did not work. Check your internet connection.';renderPane()};
+  const auto=$('#martAuto');if(auto)auto.onchange=async()=>{const r=await api('api/skills/settings',{enabled:auto.checked});if(r){mart.enabled=r.enabled;log(r.enabled?'Agents may look for community skills again.':'Agents will not look for skills on their own now.')}};
+  $('#pane').querySelectorAll('[data-get]').forEach(b=>b.onclick=async()=>{b.disabled=true;
+    if(!LIVE){const o=MART_DEMO_OFFERS.find(x=>x.id===b.dataset.get);const a=party.find(x=>x.phase==='idle'&&!SPEC[x.sp].reviewer)||party[0];if(o&&a){if(a.phase==='idle'&&!a.path.length&&a.loc!=='MART')goTo(a,'MART','shop');queue.push({kind:'sk',id:a.id,skill:o});log(`${a.nick} fetched "${o.name}". It needs your OK.`,'need');showDialog()}return}
+    const r=await api('api/skills/request',{id:b.dataset.get});if(r){mart.msg=r.message;convoSystem(r.message)}else b.disabled=false;renderPane()});
+  $('#pane').querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{
+    if(!LIVE){mart.skills=mart.skills.filter(k=>k.slug!==b.dataset.rm);log(`You removed the skill "${b.dataset.rm}" from the MART.`);renderPane();return}
+    b.disabled=true;const r=await api('api/skills/remove',{slug:b.dataset.rm});if(r){mart.skills=r.skills||[];renderPane()}});
+}
+function skillLine(k){return k.review?` ${k.review.by||'Review'}: ${k.review.summary||k.review.verdict}`:' Not reviewed: read it first (VIEW SKILL in the team chat).'}
+
 function dexDetail(){
   if(dexSel.startsWith('u'))return`<div class="card"><div class="sum-name">?????</div><p class="memo" style="margin:6px 0 0">Not discovered yet. Connect a new tool or data source to find agents that can use it.</p></div>`;
   const s=SPEC[dexSel];const full=party.length>=6;
@@ -1172,7 +1255,7 @@ function spawn(k){
   log(`You spawned ${SPEC[k].name} at the CENTER! It joined your party at Lv 5.`,'ok');
   selId=a.id;tab='party';view='list';renderPane();
 }
-['party','dex','box'].forEach(t=>$('#t-'+t).onclick=()=>{tab=t;if(t==='party')view='list';renderPane()});
+['party','dex','box','mart'].forEach(t=>$('#t-'+t).onclick=()=>{tab=t;if(t==='party')view='list';if(t==='mart')loadMart();renderPane()});
 
 function renderLog(){
   $('#log').innerHTML=logs.map(l=>`<div class="ev ${l.cls}"><time>${l.t}</time><span>${esc(l.msg)}</span></div>`).join('');
@@ -1185,11 +1268,12 @@ function refresh(){
   const needs=queue.filter(q=>q.kind!=='act').length;
   $('#cNeedN').textContent=needs;$('#cNeeds').classList.toggle('zero',!needs);
   $('#clock').textContent=`Day ${day} · ${hhmm()}`;
-  if(tab!=='dex')renderPane();
+  if(tab!=='dex'&&tab!=='mart')renderPane();
 }
 
 /* ---------- demo mode: everything simulated in the browser ---------- */
 function startDemo(){
+mart.skills=MART_DEMO.slice();
 log('Good morning, Professor. 5 agents in your party, 1 in the box.');
 log('Walk up to an agent and press Z (or tap it) to pet, poke or check on it.');
 const patch=party[0],rollo=party[3],scout=party[1];
@@ -1230,7 +1314,7 @@ function syncAgent(sa){
 }
 function syncApprovals(list){
   const keep=queue.filter(q=>q.kind==='act'||list.some(s=>s.id===q.apId));
-  for(const s of list)if(!keep.some(q=>q.apId===s.id))keep.push({kind:s.kind==='tool'?'ap':'evo',id:s.agentId,apId:s.id,tool:s.tool,target:s.target,taskTitle:s.taskTitle});
+  for(const s of list)if(!keep.some(q=>q.apId===s.id))keep.push({kind:s.kind==='tool'?'ap':s.kind==='skill'?'sk':'evo',id:s.agentId,apId:s.id,tool:s.tool,target:s.target,taskTitle:s.taskTitle,skill:s.skill});
   queue.length=0;queue.push(...keep);
   if(current&&current.apId&&!list.some(s=>s.id===current.apId)){clearInterval(typing);typing=null;current=null;$('#dlg').hidden=true}
   showDialog();
@@ -1245,6 +1329,7 @@ function hydrate(s){
   convo.length=0;convoSeen.clear();answered.clear();s.log.forEach(addConvoEvent);renderConvo();
   if(selId&&!byId(selId))selId=null;
   syncApprovals(s.approvals);
+  mart.skills=s.skills||mart.skills;loadMart();
   setMode('live');renderPane();refresh();
 }
 function onChange(p){
@@ -1253,6 +1338,7 @@ function onChange(p){
   if(ev.type==='agent.spawned'||ev.type==='agent.unboxed'){const a=byId(ev.agentId);if(a)fx.push({type:'spawn',id:a.id,t:0})}
   if(ev.type==='approval.resolved'&&ev.data.kind==='evolve'&&ev.data.to&&!fx.some(f=>f.type==='evo'&&f.id===ev.agentId))fx.push({type:'evo',id:ev.agentId,t:0});
   if(ev.message){addLog(ev);renderLog()}
+  if(ev.type==='skills.updated')loadMart();
   addConvoEvent(ev);renderConvo();
   if((ev.type==='chat.sent'||ev.type==='chat.replied')&&ev.data.entry)pushChat(ev.agentId,ev.data.entry);
 
@@ -1472,7 +1558,8 @@ function convoItem(ev){
     case 'chat.sent':return d.entry?{kind:'you',to:ev.agentId,text:d.entry.text,label:'talk'}:null;
     case 'chat.replied':return d.entry?{kind:'agent',from:ev.agentId,text:d.entry.text,task:d.entry.suggestedTask}:null;
     case 'task.finished':return{kind:'agent',from:ev.agentId,text:ev.message,tone:'done'};
-    case 'approval.requested':return{kind:'agent',from:ev.agentId,text:ev.message,approvalId:d.approvalId,tone:'need'};
+    case 'approval.requested':return{kind:'agent',from:ev.agentId,text:ev.message,approvalId:d.approvalId,tone:'need',link:d.skill?d.skill.url:null,flags:d.skill?(d.skill.flags||[]).filter(f=>f.level!=='info').map(f=>f.text):null};
+    case 'skills.updated':return ev.message?{kind:'sys',text:ev.message}:null;
     case 'approval.resolved':answered.set(d.approvalId,d.decision);return{kind:'sys',text:ev.message};
     case 'chat.failed':case 'agent.fainted':return{kind:'sys',text:ev.message,bad:true};
     case 'files.added':case 'town.note':return ev.message?{kind:'sys',text:ev.message}:null;
@@ -1493,9 +1580,10 @@ function renderConvo(){
     if(c.kind==='sys')return`<div class="cv sys ${c.bad?'bad':''}">${esc(c.text)}</div>`;
     if(c.kind==='you')return`<div class="cv you"><div class="cv-who"><time>${cvTime(c.ts)}</time>You ${c.label==='talk'?'to':'gave'} ${c.to?cvWho(c.to):'the team'}${c.label==='task'?' a task':''}</div><div class="cv-body">${esc(c.text)}</div></div>`;
     const ans=c.approvalId!=null?answered.get(c.approvalId):null;
-    const acts=c.approvalId!=null?(ans?`<div class="cv-acts"><small>You said ${ans==='yes'?'YES':'NO'}.</small></div>`:`<div class="cv-acts"><button class="btn primary" type="button" data-ap="${c.approvalId}" data-d="yes">YES</button><button class="btn" type="button" data-ap="${c.approvalId}" data-d="no">NO</button></div>`)
+    const acts=c.approvalId!=null?(ans?`<div class="cv-acts"><small>You said ${ans==='yes'?'YES':'NO'}.</small></div>`:`<div class="cv-acts"><button class="btn primary" type="button" data-ap="${c.approvalId}" data-d="yes">YES</button><button class="btn" type="button" data-ap="${c.approvalId}" data-d="no">NO</button>${c.link&&/^https:\/\//.test(c.link)?`<a class="btn" href="${esc(c.link)}" target="_blank" rel="noopener">VIEW SKILL</a>`:''}</div>`)
       :c.task?`<div class="cv-acts"><button class="btn primary" type="button" data-cvtask="${n}">DO IT AS A TASK</button><small>${esc(c.task)}</small></div>`:'';
-    return`<div class="cv agent ${c.tone||''}"><div class="cv-who">${cvWho(c.from)}<time>${cvTime(c.ts)}</time></div><div class="cv-body">${esc(c.text)}</div>${acts}</div>`;
+    const flags=c.flags&&c.flags.length&&!ans?`<ul class="cv-flags">${c.flags.map(f=>`<li>! ${esc(f)}</li>`).join('')}</ul>`:'';
+    return`<div class="cv agent ${c.tone||''}"><div class="cv-who">${cvWho(c.from)}<time>${cvTime(c.ts)}</time></div><div class="cv-body">${esc(c.text)}</div>${flags}${acts}</div>`;
   }).join('');
   el.querySelectorAll('[data-ap]').forEach(b=>b.onclick=async()=>{b.parentElement.querySelectorAll('button').forEach(x=>x.disabled=true);await api(`api/approvals/${b.dataset.ap}`,{decision:b.dataset.d})});
   el.querySelectorAll('[data-cvtask]').forEach(b=>b.onclick=async()=>{const c=convo[+b.dataset.cvtask];if(!c)return;b.disabled=true;

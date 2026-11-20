@@ -173,6 +173,24 @@ Open an agent's summary and use **Talk to SCOUT**, or type `@scout` followed by 
 - A speech bubble shows on the map while it thinks; the conversation also appears in the field log.
 - Each message uses a little of your plan or API credit, like a short chat on claude.ai.
 
+## Skills: agents learn from the community
+
+A **skill** is a shared set of written instructions, like a style guide or a method: "how to write YouTube titles that get clicks", "how to check sources". Thousands are published on GitHub and listed on [skills.sh](https://skills.sh). Agentdex lets your agents find and use them, safely.
+
+- **Agents look for skills by themselves.** Before a task, an agent asks itself whether special know-how would help. If so, it walks to the **MART**, searches, reads the top few and picks one (or none).
+- **CHECKS reads it first.** It looks for anything shady: instructions to send files or keys anywhere, to ignore the agent's rules, or hidden text. A skill CHECKS calls unsafe is never offered to you.
+- **You say YES or NO**, in the town, the team chat (with a **VIEW SKILL** link) or on WhatsApp. Nothing is installed without your YES, and a skill you said no to is not offered again.
+- **Use it straight away.** On YES the agent reads the skill and follows it for the task. Every agent can use it from then on.
+- **Find one yourself:** open the **MART** tab, search, and press **GET**. Remove skills there too, and switch off **Agents may look for skills on their own** if you'd rather they didn't.
+
+What keeps it safe:
+
+- Only the skill's text (`SKILL.md`) is downloaded. Scripts in a skill are never downloaded or run, and Agentdex agents can't run code anyway.
+- The text is frozen when you install it, so a skill can't quietly change later.
+- Installed skills live outside the agents' reach (the `skills` folder next to your settings). Agents get a read-only copy and cannot edit it.
+
+Looking for a skill costs one short, low-effort question to Claude per task, plus a little more when the agent actually shops.
+
 ## Your Claude plan usage
 
 With **My Claude plan**, the top bar shows how much of your plan is used, for example `Plan · 5h 35% · week 17%`. It turns yellow at 60% and red at 85%. Click it for both windows with their reset times, and **CHECK NOW** to refresh. The numbers come from Claude Code itself after each task.
@@ -340,6 +358,8 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 | `runtime/workspace.js` | Sandboxed file tools |
 | `runtime/claude-code.js` | "My Claude plan" mode: runs tasks through the official Claude Code app |
 | `runtime/cc-hook.js` | Claude Code hook that turns writes outside drafts into YES / NO requests |
+| `runtime/skills.js` | Community skills: search skills.sh, fetch a SKILL.md from GitHub, safety checks, install |
+| `runtime/skill-scout.js` | Agents decide when a skill would help, shop for one, CHECKS reviews, you approve |
 | `runtime/index.js` | `npm run real`: wires the server, agents, SETUP and WhatsApp together |
 | `bridges/whatsapp.js` | WhatsApp remote control (official Cloud API) |
 | `*/test/` | Tests |
@@ -348,7 +368,7 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 
 ## Roadmap
 
-Done: the town, server and event protocol · real Claude agents with approvals and review · the SETUP screen · WhatsApp remote control · run agents on your Claude plan through Claude Code.
+Done: the town, server and event protocol · real Claude agents with approvals and review · the SETUP screen · WhatsApp remote control · run agents on your Claude plan through Claude Code · one-command install · community skills in the MART.
 
 Next:
 

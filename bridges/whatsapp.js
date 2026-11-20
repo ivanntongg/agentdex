@@ -72,6 +72,11 @@ export function createWhatsAppBridge({ dex, config, fetchImpl = fetch, log = con
   const approvalPrompt = (ap) => {
     const a = agents.get(ap.agentId);
     const who = a ? a.nick : 'An agent';
+    if (ap.kind === 'skill') {
+      const k = ap.skill;
+      const notes = (k.flags || []).filter((f) => f.level !== 'info').map((f) => `! ${f.text}`).join('\n');
+      return `${who} wants to learn the skill "${k.name}" from ${k.source}${k.installs ? ` (${k.installs} installs)` : ''}.\n${k.description || ''}${k.review ? `\n${k.review.by || 'Review'}: ${k.review.summary || k.review.verdict}` : ''}${notes ? `\n${notes}` : ''}\n${k.url}`;
+    }
     return ap.kind === 'evolve'
       ? `${who} is ready to evolve into ${ap.toName}: a bigger model with more permissions. Allow it?`
       : `${who} wants to use ${ap.tool} on ${ap.target}.${ap.taskTitle ? `\nTask: ${ap.taskTitle}` : ''}`;
