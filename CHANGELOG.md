@@ -2,6 +2,10 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.15.1 · Daily GTA 6 clipping plan
+
+- New ready-made plan and project: **Daily GTA 6 clipping**. Every morning SCOUT lists open clipping campaigns (pay per 1,000 views, budget left, rules), finds yesterday's best GTA 6 moments from streamers who allow clipping, and QUILL writes each clip's hook, title and caption as a checklist for CapCut.
+
 ## 0.15.0 · Projects and weekly plans
 
 - **Projects:** a brief and a folder per channel or goal. Pick one above the team chat and every job gets the brief and saves into its folder.
