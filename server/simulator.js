@@ -40,7 +40,7 @@ export function createSimulator({ tickMs = 1300, random = Math.random } = {}) {
   const sims = new Map(); // agentId -> { wait, then, workLeft, cnf, faintT }
 
   const pick = (arr) => arr[Math.floor(random() * arr.length)];
-  const sim = (a) => { if (!sims.has(a.id)) sims.set(a.id, { wait: 0, then: null, workLeft: 0, cnf: 0, faintT: 0 }); return sims.get(a.id); };
+  const sim = (a) => { if (!sims.has(a.id)) sims.set(a.id, { wait: 0, then: null, workLeft: 0, cnf: 0, faintT: 0, queue: [] }); return sims.get(a.id); };
   const emit = (type, agentId, data) => store.apply({ type, agentId, data });
   const later = (a, ticks, fn) => { const s = sim(a); s.wait = ticks; s.then = fn; };
   const reviewer = () => store.party().find((a) => SPECIES[a.species].reviewer && a.status !== 'FNT' && !a.reviewingId);
@@ -100,6 +100,7 @@ export function createSimulator({ tickMs = 1300, random = Math.random } = {}) {
     if (a.status === 'CNF') { if (--s.cnf <= 0) emit('agent.status', a.id, { status: 'OK' }); return; }
     if (a.phase === 'idle') {
       if (SPECIES[a.species].reviewer) return;
+      if (s.queue.length) return startTask(a, s.queue.shift()); // your jobs first, like real agents
       if (random() < 0.2) startTask(a);
       else if (random() < 0.015 && a.loc !== 'MART') travel(a, 'MART', () => emit('agent.moved', a.id, { to: 'MART', reason: 'browsed the MART for new skills.' }));
       return;
@@ -158,7 +159,10 @@ export function createSimulator({ tickMs = 1300, random = Math.random } = {}) {
       later(a, TRAVEL_TICKS, () => emit('agent.reset', a.id));
     },
     onAssigned(a, task) {
-      if (a.phase === 'idle' && sim(a).wait === 0 && !SPECIES[a.species].reviewer) startTask(a, { title: task.title, review: task.review });
+      if (SPECIES[a.species].reviewer) return;
+      const job = { title: task.title, review: task.review };
+      if (a.phase === 'idle' && sim(a).wait === 0) startTask(a, job);
+      else sim(a).queue.push(job); // busy: it starts when the current task is done
     },
     onChat(a, entry) {
       const s = sim(a);

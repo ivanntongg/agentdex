@@ -14,6 +14,8 @@ export const EVENT_TYPES = [
   'skills.updated',
   'role.saved', 'role.deleted',
   'guide.asked', 'guide.answered', 'guide.failed',
+  'project.saved', 'project.deleted',
+  'pipeline.saved', 'pipeline.deleted', 'pipeline.started', 'pipeline.stepped', 'pipeline.finished',
 ];
 
 export class StoreError extends Error {
@@ -21,6 +23,12 @@ export class StoreError extends Error {
 }
 
 const LOG_LIMIT = 200;
+const AGENTLESS = new Set(['agent.spawned', 'files.added', 'skills.updated', 'role.saved', 'role.deleted', 'guide.asked', 'guide.answered', 'guide.failed',
+  'project.saved', 'project.deleted', 'pipeline.saved', 'pipeline.deleted', 'pipeline.started', 'pipeline.finished']);
+export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const DAY_NAMES = { daily: 'every day', manual: 'only when you press RUN', sun: 'every Sunday', mon: 'every Monday', tue: 'every Tuesday', wed: 'every Wednesday', thu: 'every Thursday', fri: 'every Friday', sat: 'every Saturday' };
+export const whenText = (sc) => (sc.day === 'manual' ? DAY_NAMES.manual : `${DAY_NAMES[sc.day]} at ${sc.time}`);
+const slugOf = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
 const clone = (o) => structuredClone(o);
 
 export function createStore() {
@@ -30,6 +38,9 @@ export function createStore() {
   let nextChatId = 1;
   const CHAT_LIMIT = 60;
   const MEMORY_LIMIT = 20;
+  const projects = new Map();  // id -> { id, name, brief, folder, createdAt }
+  const pipelines = new Map(); // id -> weekly plan, see 'pipeline.saved'
+  let nextPipelineId = 1;
   let skills = []; // installed community skills, mirrored from the runtime (the files on disk are the truth)
   const log = [];
   const subscribers = new Set();
@@ -61,6 +72,8 @@ export function createStore() {
       chats: Object.fromEntries([...chats].map(([id, list]) => [id, list.map(clone)])),
       skills: skills.map(clone),
       roles: rolesState(),
+      projects: [...projects.values()].map(clone),
+      pipelines: [...pipelines.values()].map(clone),
     };
   }
 
@@ -107,7 +120,7 @@ export function createStore() {
     const followUps = [];
     let a = null;
 
-    if (!['agent.spawned', 'files.added', 'skills.updated', 'role.saved', 'role.deleted', 'guide.asked', 'guide.answered', 'guide.failed'].includes(type)) {
+    if (!AGENTLESS.has(type)) {
       a = resolveAgent(input.agentId);
       event.agentId = a.id;
       touched.add(a);
@@ -152,7 +165,8 @@ export function createStore() {
         if (!data.title) throw new StoreError(400, 'task.assigned needs data.title');
         if (a.boxed) throw new StoreError(409, `${a.nick} is in the box. Move it to the party first.`);
         event.data.title = String(data.title).slice(0, 200);
-        event.message = `You gave ${a.nick} a task: "${event.data.title}".`;
+        if (data.project) { const pj = projects.get(String(data.project)); event.data.project = pj ? pj.id : null; event.data.projectName = pj ? pj.name : null; }
+        event.message = `You gave ${a.nick} a task: "${event.data.title}"${event.data.projectName ? ` (${event.data.projectName})` : ''}.`;
         break;
       }
 
@@ -265,6 +279,113 @@ export function createStore() {
         break;
       }
 
+      case 'project.saved': {
+        const p = data.project || {};
+        const name = String(p.name || '').trim().replace(/\s+/g, ' ');
+        if (!/^[A-Za-z0-9][A-Za-z0-9 '&.!-]{1,39}$/.test(name)) throw new StoreError(400, 'Give the project a name of 2 to 40 letters, like "Streamer highlights".');
+        const brief = String(p.brief || '').trim();
+        if (brief.length < 20) throw new StoreError(400, 'Describe the project in a sentence or two: what it is, who it is for, and any rules.');
+        if (brief.length > 3000) throw new StoreError(400, 'Keep the project brief under 3000 characters.');
+        const editing = p.id && projects.get(p.id);
+        if (p.id && !editing) throw new StoreError(404, 'That project no longer exists.');
+        const id = editing ? p.id : `p-${slugOf(name) || 'project'}`;
+        if (!editing && projects.has(id)) throw new StoreError(409, 'A project with that name already exists.');
+        const proj = { id, name, brief, folder: editing ? editing.folder : `drafts/${id.slice(2)}`, createdAt: editing ? editing.createdAt : event.ts };
+        projects.set(id, proj);
+        event.data = { project: clone(proj) };
+        event.message = editing ? `You updated the project ${name}.` : `New project: ${name}. Its files go in ${proj.folder}.`;
+        event.tone = 'ok';
+        break;
+      }
+      case 'project.deleted': {
+        const proj = projects.get(data.id);
+        if (!proj) throw new StoreError(404, 'That project no longer exists.');
+        const uses = [...pipelines.values()].filter((x) => x.projectId === proj.id);
+        if (uses.length) throw new StoreError(409, `Delete or move its weekly plan${uses.length === 1 ? '' : 's'} first: ${uses.map((x) => x.name).join(', ')}.`);
+        projects.delete(proj.id);
+        event.data = { id: proj.id };
+        event.message = `You deleted the project ${proj.name}. Its files stay in ${proj.folder}.`;
+        break;
+      }
+
+      // Weekly plans: a project, when to run, and steps that each give one agent a job.
+      // Each step gets the previous step's summary and files. The runner is server/pipelines.js.
+      case 'pipeline.saved': {
+        const p = data.pipeline || {};
+        const editing = p.id && pipelines.get(p.id);
+        if (p.id && !editing) throw new StoreError(404, 'That plan no longer exists.');
+        if (editing?.running) throw new StoreError(409, 'That plan is running. Stop it first, or wait until it finishes.');
+        const name = String(p.name || '').trim().replace(/\s+/g, ' ');
+        if (name.length < 2 || name.length > 60) throw new StoreError(400, 'Give the plan a name, like "Weekly streamer highlights".');
+        if (!projects.has(p.projectId)) throw new StoreError(400, 'Pick a project for this plan.');
+        const sc = p.schedule || {};
+        const day = sc.day === 'daily' || sc.day === 'manual' || DAYS.includes(sc.day) ? sc.day : null;
+        if (!day) throw new StoreError(400, 'Pick when the plan runs.');
+        const time = /^([01]\d|2[0-3]):[0-5]\d$/.test(sc.time || '') ? sc.time : '09:00';
+        const steps = (Array.isArray(p.steps) ? p.steps : []).map((x, i) => {
+          const who = resolveAgent(x.agentId, { required: false });
+          if (!who) throw new StoreError(400, `Step ${i + 1}: pick an agent.`);
+          if (SPECIES[who.species].reviewer) throw new StoreError(400, `Step ${i + 1}: ${who.nick} only reviews. Pick another agent.`);
+          const title = String(x.title || '').trim().slice(0, 120);
+          if (title.length < 3) throw new StoreError(400, `Step ${i + 1}: give it a short title.`);
+          const text = String(x.text || '').trim().slice(0, 3000);
+          if (text.length < 10) throw new StoreError(400, `Step ${i + 1}: say what ${who.nick} should do.`);
+          return { agentId: who.id, title, text };
+        });
+        if (!steps.length || steps.length > 8) throw new StoreError(400, 'A plan needs 1 to 8 steps.');
+        const pl = {
+          id: editing ? editing.id : `w${nextPipelineId++}`, name, projectId: p.projectId, schedule: { day, time }, steps,
+          review: Boolean(p.review), enabled: p.enabled !== false,
+          savedAt: event.ts, lastRun: editing ? editing.lastRun : null, running: null,
+        };
+        pipelines.set(pl.id, pl);
+        event.data = { pipeline: clone(pl) };
+        event.message = `${editing ? 'Updated' : 'New'} plan: ${name}, ${pl.enabled ? whenText(pl.schedule) : 'paused'}.`;
+        event.tone = 'ok';
+        break;
+      }
+      case 'pipeline.deleted': {
+        const pl = pipelines.get(data.id);
+        if (!pl) throw new StoreError(404, 'That plan no longer exists.');
+        if (pl.running) throw new StoreError(409, 'That plan is running. Stop it first.');
+        pipelines.delete(pl.id);
+        event.data = { id: pl.id };
+        event.message = `You deleted the plan ${pl.name}.`;
+        break;
+      }
+      case 'pipeline.started': {
+        const pl = pipelines.get(data.id);
+        if (!pl) throw new StoreError(404, 'That plan no longer exists.');
+        if (pl.running) throw new StoreError(409, `${pl.name} is already running.`);
+        pl.running = { runId: String(data.runId), folder: String(data.folder), step: -1, agentId: null, title: null, startedAt: event.ts, by: data.by || 'you', results: [] };
+        event.data = { id: pl.id, runId: pl.running.runId, folder: pl.running.folder, by: pl.running.by };
+        event.message = `${pl.name} started${data.by === 'schedule' ? ' on schedule' : ''}. ${pl.steps.length} step${pl.steps.length === 1 ? '' : 's'}; files go in ${pl.running.folder}.`;
+        break;
+      }
+      case 'pipeline.stepped': {
+        const pl = pipelines.get(data.id);
+        if (!pl?.running) throw new StoreError(409, 'That plan is not running.');
+        if (data.result) pl.running.results.push({ nick: String(data.result.nick || ''), title: String(data.result.title || ''), note: String(data.result.note || '').slice(0, 400), files: (data.result.files || []).slice(0, 12).map(String) });
+        Object.assign(pl.running, { step: Number(data.step), agentId: a.id, title: String(data.title) });
+        event.data = { id: pl.id, step: pl.running.step, title: pl.running.title };
+        event.message = `${pl.name}, step ${pl.running.step + 1} of ${pl.steps.length}: ${a.nick} is on "${pl.running.title}".`;
+        break;
+      }
+      case 'pipeline.finished': {
+        const pl = pipelines.get(data.id);
+        if (!pl?.running) throw new StoreError(409, 'That plan is not running.');
+        const status = ['done', 'failed', 'stopped'].includes(data.status) ? data.status : 'done';
+        const folder = pl.running.folder;
+        pl.lastRun = { runId: pl.running.runId, at: event.ts, startedAt: pl.running.startedAt, status, folder, reason: data.reason ? String(data.reason).slice(0, 300) : null };
+        pl.running = null;
+        event.data = { id: pl.id, status, folder, reason: pl.lastRun.reason };
+        event.message = status === 'done' ? `${pl.name} is done. Open ${folder} for this week's pack.`
+          : status === 'stopped' ? `${pl.name} was stopped.${pl.lastRun.reason ? ` ${pl.lastRun.reason}` : ''}`
+          : `${pl.name} stopped early: ${pl.lastRun.reason || 'something went wrong'}`;
+        event.tone = status === 'done' ? 'ok' : status === 'failed' ? 'bad' : 'info';
+        break;
+      }
+
       case 'role.deleted': {
         if (data.type) {
           resetBuiltin(data.type);
@@ -370,6 +491,7 @@ export function createStore() {
       case 'task.finished': {
         const t = a.task;
         a.task = null; a.phase = 'idle'; a.status = 'SLP';
+        event.data.title = t ? t.title : null;
         if (data.outcome === 'declined') {
           event.message = `${a.nick} stood down and left a note instead.`;
         } else {
@@ -546,6 +668,9 @@ export function createStore() {
       chats: Object.fromEntries([...chats].map(([id, list]) => [id, list.map(clone)])),
       log: log.map(clone),
       roles: rolesState({ withDefaults: false }),
+      projects: [...projects.values()].map(clone),
+      pipelines: [...pipelines.values()].map(clone),
+      counters2: { nextPipelineId },
     };
   }
 
@@ -556,6 +681,15 @@ export function createStore() {
     if (!saved || saved.version !== 1 || !Array.isArray(saved.agents)) throw new Error('Not an Agentdex save file');
     agents.clear(); approvals.clear(); chats.clear(); log.length = 0;
     loadRoles(saved.roles); // before agents, so agents of a custom role come back
+    projects.clear(); pipelines.clear();
+    for (const p of saved.projects || []) if (p?.id) projects.set(p.id, clone(p));
+    for (const pl of saved.pipelines || []) {
+      if (!pl?.id) continue;
+      const x = clone(pl);
+      if (x.running) { x.lastRun = { runId: x.running.runId, at: x.running.startedAt, startedAt: x.running.startedAt, status: 'stopped', folder: x.running.folder, reason: 'Agentdex closed while it ran. Press RUN NOW to start it again.' }; x.running = null; }
+      pipelines.set(x.id, x);
+    }
+    nextPipelineId = Number(saved.counters2?.nextPipelineId) || pipelines.size + 1;
     const interrupted = [];
     for (const raw of saved.agents) {
       if (!raw || !SPECIES[raw.species] || !Number.isInteger(raw.id)) continue;
@@ -586,5 +720,5 @@ export function createStore() {
     for (const fn of subscribers) { try { fn({ event: clone(event), agents: [], approvals: [...approvals.values()].map(clone) }); } catch { /* ignore */ } }
   }
 
-  return { apply, snapshot, subscribe, resolveAgent, party, agents, approvals, chats, serialize, restore, note };
+  return { apply, snapshot, subscribe, resolveAgent, party, agents, approvals, chats, projects, pipelines, serialize, restore, note };
 }

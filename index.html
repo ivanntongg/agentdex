@@ -233,8 +233,8 @@ header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;just
 
 /* side menu */
 .menu{padding:12px;display:grid;gap:12px;min-width:0}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;background:var(--well);border:2px solid var(--well-line);border-radius:999px}
-.tab{font-weight:700;font-size:13px;letter-spacing:.04em;padding:7px 4px;border-radius:999px;color:var(--muted);text-align:center}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:4px;background:var(--well);border:2px solid var(--well-line);border-radius:999px}
+.tab{font-weight:700;font-size:12.5px;letter-spacing:.03em;padding:7px 2px;border-radius:999px;color:var(--muted);text-align:center}
 .tab:hover{color:var(--ink)}
 .tab[aria-selected="true"]{background:var(--tab-on);color:var(--tab-on-ink)}
 .pane{display:grid;gap:8px;min-width:0}
@@ -327,6 +327,29 @@ header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;just
 .chk input{accent-color:var(--sel)}
 .boxnote{font-size:14px;color:var(--muted);padding:2px}
 
+.psec{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
+.psec b{font-size:14px;color:var(--head)}
+.psec .btn{font-size:12px;padding:5px 10px}
+.plan{display:grid;gap:6px;padding:10px 12px;background:var(--raise);border:2px solid var(--raise-line);border-radius:14px;box-shadow:0 3px 0 var(--raise-shadow)}
+.plan .acts .btn{font-size:12px;padding:5px 10px}
+.psteps{margin:0;padding:0;list-style:none;display:grid;gap:4px;counter-reset:ps}
+.psteps li{counter-increment:ps;display:grid;grid-template-columns:18px 22px minmax(0,1fr);gap:6px;align-items:center;font-size:13.5px;color:var(--muted)}
+.psteps li::before{content:counter(ps);font-weight:700;font-size:11px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--well);border:1px solid var(--well-line)}
+.psteps li.on{color:var(--ink);font-weight:600}.psteps li.on::before{background:var(--accent);border-color:var(--accent-line);color:var(--accent-ink)}
+.psteps li.done::before{background:var(--good-soft);border-color:var(--good-line);color:var(--good)}
+.psteps img{width:20px;height:20px}
+.psteps b{color:var(--ink)}
+.pstat{font-size:13px;color:var(--muted);overflow-wrap:anywhere}.pstat.ok{color:var(--good)}.pstat.bad{color:var(--bad)}.pstat.run{color:var(--need);font-weight:600}
+.pstep{display:grid;gap:6px;padding:8px;background:var(--paper-2);border:2px solid var(--paper-line);border-radius:12px}
+.pstep-h{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.pstep .num{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--frame-a);color:#fff;font-weight:700;font-size:12px}
+.pmove{display:flex;gap:4px}.pmove .btn{padding:3px 8px;font-size:12px}
+.role-ed select{font:inherit;font-size:14.5px;color:var(--paper-ink);background:#fff;border:2px solid var(--paper-line);border-radius:var(--r-md);padding:6px 10px;min-width:0}
+.role-ed input[type=time]{font:inherit;color:var(--paper-ink);background:#fff;border:2px solid var(--paper-line);border-radius:var(--r-md);padding:6px 10px}
+.pwhen{display:flex;gap:8px;flex-wrap:wrap}
+.projpick{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.projpick select{font:inherit;font-size:13px;color:var(--ink);background:var(--field);border:2px solid var(--field-line);border-radius:999px;padding:3px 10px;max-width:180px}
+.pchip{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--sel-soft);color:var(--ink);border:1px solid var(--raise-line)}
 .dx.newrole{border-style:dashed;box-shadow:none;background:transparent;color:var(--muted)}
 .dx.newrole:hover{background:var(--raise-hover);color:var(--ink)}
 .dx .plus{width:48px;height:48px;display:grid;place-items:center;font-family:var(--font-pixel);font-size:26px;color:var(--sel)}
@@ -504,7 +527,7 @@ header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;just
       </div>
       <div class="screen-cap"><span>Walk: arrow keys, WASD or tap the map. Z near an agent to pet or poke. Z = YES, X = NO.</span><button class="pausebtn" id="pause">PAUSE TIME</button></div>
       <div class="cmdbar">
-        <div class="convo-h"><span>Team chat</span><small>Everything you and your agents say</small></div>
+        <div class="convo-h"><span>Team chat</span><label class="projpick" title="Jobs you give now belong to this project: its brief goes with them and files go in its folder">Project <select id="projSel"><option value="">None</option></select></label></div>
         <div class="convo" id="convo" aria-live="polite"></div>
         <label for="cmdText" class="sr">Message your team</label>
         <div class="who" id="whoRow" aria-label="Talk to an agent"></div>
@@ -526,6 +549,7 @@ header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;just
           <button class="tab" role="tab" id="t-dex" aria-selected="false">DEX</button>
           <button class="tab" role="tab" id="t-box" aria-selected="false">BOX</button>
           <button class="tab" role="tab" id="t-mart" aria-selected="false">MART</button>
+          <button class="tab" role="tab" id="t-plans" aria-selected="false">PLANS</button>
         </div>
         <div class="pane" id="pane"></div>
       </aside>
@@ -894,6 +918,7 @@ function arrive(a){
 /* ---------- simulation ---------- */
 function tick(){
   if(paused||LIVE)return;
+  demoPlanTick();
   clock++;if(clock>=24*60){clock=0;day++}
   for(const a of party){
     if(a.path.length)continue;
@@ -950,6 +975,7 @@ function workDone(a){
 }
 function finish(a,ok){
   const t=a.task;a.task=null;a.phase='idle';a.status='SLP';
+  if(t&&t.plan)setTimeout(()=>demoPlanStepDone(t.plan,a,ok,t),0);
   if(ok){log(`${a.nick} finished "${t.t}". +${60} XP`,'ok');alertFor('done',`${a.nick} finished "${t.t}".`);gainXP(a,60)}
 }
 function gainXP(a,n){
@@ -1236,7 +1262,7 @@ function slotHTML(a,clickable=true){
 const STATUS_TXT={OK:'Healthy and on task',SLP:'Idle. Ready for a task',PAR:'Paralyzed. Waiting for your approval',CNF:'Confused. Looping on one step, will change approach',PSN:'Poisoned. Spending tokens 2.6x faster',FNT:'Fainted. Ran out of context, heading for a reset'};
 function typeChips(ts){return ts.map(t=>`<span class="type" style="background:${TYPES[t]}">${t}</span>`).join('')}
 function renderPane(){
-  ['party','dex','box','mart'].forEach(t=>$('#t-'+t).setAttribute('aria-selected',String(t===tab)));
+  ['party','dex','box','mart','plans'].forEach(t=>$('#t-'+t).setAttribute('aria-selected',String(t===tab)));
   const p=$('#pane');
   if(tab==='party'){
     if(view==='sum'&&byId(selId)){
@@ -1273,6 +1299,8 @@ function renderPane(){
     if(roleEdit)bindRoleEditor();
   }else if(tab==='mart'){
     p.innerHTML=martHTML();bindMart();
+  }else if(tab==='plans'){
+    p.innerHTML=plansHTML();bindPlans();
   }else{
     let h=`<div class="pane-h"><span>Box 1 · ${box.length} stored</span><span>Not running · $0</span></div>`;
     h+=box.length?box.map(a=>`<div class="boxgrid">${slotHTML(a).replace('class="slot','class="slot boxed')}<div class="acts"><button class="btn primary" data-wd="${a.id}" ${party.length>=6?'disabled':''}>MOVE TO PARTY</button></div></div>`).join(''):'<p class="boxnote">The box is empty. Send an agent here from its summary to stop it running.</p>';
@@ -1284,6 +1312,217 @@ function renderPane(){
       log(`${a.nick} left the box and joined your party.`);fx.push({type:'spawn',id:a.id,t:0});tab='party';view='list';renderPane()});
   }
 }
+/* ---------- PLANS: projects and weekly plans ---------- */
+// A project keeps a channel's brief and folder. A weekly plan runs a chain of jobs on a schedule;
+// each step gets the previous steps' summaries and files. The server runs plans (server/pipelines.js);
+// the demo runs them in the page.
+const plans={projects:[],pipelines:[],edit:null};
+let activeProject='';try{activeProject=localStorage.getItem('agentdex-project')||''}catch{}
+const DAY_OPTS=[['mon','Every Monday'],['tue','Every Tuesday'],['wed','Every Wednesday'],['thu','Every Thursday'],['fri','Every Friday'],['sat','Every Saturday'],['sun','Every Sunday'],['daily','Every day'],['manual','Only when I press RUN']];
+const DAY_IDX={sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
+const PROJECT_TEMPLATES=[
+  {key:'streamers',name:'Streamer highlights',brief:'A YouTube channel with the funniest and most talked-about moments from big streamers each week (IShowSpeed, Kai Cenat, xQc and whoever is trending), with my own commentary between clips. Audience: teens and young adults who missed the streams. Style: fast, funny, never mean. Rules: only use streamers who allow clipping or who gave permission, keep each clip short, always credit and link the streamer, and add my own commentary so the video is mine.'},
+  {key:'gta6',name:'GTA 6 channel',brief:'A YouTube channel about GTA 6: news, map guides, theories and first looks. Audience: GTA fans. Style: clear, excited and accurate. Rules: separate confirmed facts from rumours, and link every source.'},
+];
+const PLAN_TEMPLATES=[
+  {name:'Weekly streamer highlights',project:'streamers',schedule:{day:'mon',time:'09:00'},steps:[
+    {kind:'RESEARCH',title:"Find this week's best streamer moments",text:"Find the 8 funniest or most talked-about moments from big streamers in the past 7 days, like IShowSpeed, Kai Cenat, xQc and whoever is trending now. For each: the streamer, what happened in one line, a link to the clip or VOD with the timestamp, how big it got (views, where it spread), and whether the streamer allows clipping (find their clipping or fair-use policy and link it). Rank them, best first. Save {folder}/moments.md."},
+    {kind:'WRITE',title:'Write the script and titles',text:"From moments.md, pick the 5 best moments that are safe to use. Write a 6 to 8 minute script: a hook in the first 10 seconds, my own commentary before and after each clip, a credit to each streamer, and an ending that asks viewers to subscribe. Then write 10 title ideas under 60 characters and a description that links every streamer. Save {folder}/script.md and {folder}/titles.md."},
+    {kind:'VIDEO',title:'Make the edit pack',text:"From script.md, make the shot list: for each clip, the source link, start and end time, on-screen text and sound effect ideas. Add YouTube chapters, and captions for my commentary as an .srt file. Save {folder}/shotlist.md and {folder}/captions.srt."},
+    {kind:'DESIGN',title:'Thumbnail ideas',text:"Give 3 thumbnail ideas for this week's video: which moment, the facial expression to use, 3 to 4 words of big text, colours and layout. Save {folder}/thumbnails.md."}]},
+  {name:'Weekly GTA 6 video',project:'gta6',schedule:{day:'thu',time:'18:00'},steps:[
+    {kind:'RESEARCH',title:'This week in GTA 6',text:"Collect this week's GTA 6 news, trailers, leaks and fan theories. For each: what it is, the source link, and whether it is confirmed or a rumour. Note what fans are most excited or angry about. Save {folder}/news.md."},
+    {kind:'WRITE',title:'Write the video script',text:"From news.md, write a 6 to 8 minute video script with a strong hook, the top stories in order of interest, and a clear line between facts and rumours. Add 10 title ideas and a description with every source. Save {folder}/script.md and {folder}/titles.md."},
+    {kind:'DESIGN',title:'Thumbnail ideas',text:"Give 3 thumbnail ideas: the scene, 3 to 4 words of big text, colours and layout. Save {folder}/thumbnails.md."}]},
+];
+function agentForKind(kind){
+  const workers=party.filter(a=>!SPEC[a.sp].reviewer);
+  if(kind==='VIDEO'){const v=workers.find(a=>SPEC[a.sp].custom&&/video|edit/i.test(SPEC[a.sp].title||''));if(v)return v;kind='WRITE'}
+  return workers.find(a=>SPEC[a.sp].types[0]===kind)||workers.find(a=>SPEC[a.sp].types.includes(kind))||workers.find(a=>SPEC[a.sp].types.includes('WRITE'))||workers[0]||null;
+}
+const projName=id=>(plans.projects.find(p=>p.id===id)||{}).name||'';
+function whenLabel(sc){if(sc.day==='manual')return'Only when you press RUN';const d=(DAY_OPTS.find(x=>x[0]===sc.day)||[])[1]||'';return`${d} at ${sc.time}`}
+function nextRun(sc){
+  if(!sc||sc.day==='manual')return null;
+  const [h,m]=sc.time.split(':').map(Number),now=new Date(),d=new Date(now);d.setHours(h,m,0,0);
+  if(sc.day==='daily'){if(d<=now)d.setDate(d.getDate()+1);return d}
+  let add=(DAY_IDX[sc.day]-d.getDay()+7)%7;if(add===0&&d<=now)add=7;d.setDate(d.getDate()+add);return d;
+}
+const fmtWhen=d=>d.toLocaleString([],{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+function renderProjSel(){
+  const sel=$('#projSel');if(!sel)return;
+  if(activeProject&&!plans.projects.some(p=>p.id===activeProject))activeProject='';
+  sel.innerHTML='<option value="">None</option>'+plans.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===activeProject?'selected':''}>${esc(p.name)}</option>`).join('');
+  sel.closest('.projpick').hidden=!plans.projects.length;
+}
+$('#projSel').onchange=e=>{activeProject=e.target.value;try{localStorage.setItem('agentdex-project',activeProject)}catch{}};
+function upsert(list,x){const i=list.findIndex(y=>y.id===x.id);if(i>=0)list[i]=x;else list.push(x)}
+function planEvent(ev){
+  const d=ev.data||{},pl=plans.pipelines.find(x=>x.id===d.id);
+  switch(ev.type){
+    case 'project.saved':upsert(plans.projects,d.project);break;
+    case 'project.deleted':plans.projects=plans.projects.filter(x=>x.id!==d.id);break;
+    case 'pipeline.saved':upsert(plans.pipelines,d.pipeline);break;
+    case 'pipeline.deleted':plans.pipelines=plans.pipelines.filter(x=>x.id!==d.id);break;
+    case 'pipeline.started':if(pl)pl.running={runId:d.runId,folder:d.folder,step:-1,agentId:null,title:null,startedAt:ev.ts,by:d.by};break;
+    case 'pipeline.stepped':if(pl&&pl.running)Object.assign(pl.running,{step:d.step,agentId:ev.agentId,title:d.title});break;
+    case 'pipeline.finished':if(pl){pl.lastRun={at:ev.ts,startedAt:pl.running?pl.running.startedAt:ev.ts,status:d.status,folder:d.folder,reason:d.reason};pl.running=null}break;
+  }
+  renderProjSel();
+}
+function plansHTML(){
+  if(plans.edit)return plans.edit.kind==='project'?projectEditorHTML():planEditorHTML();
+  const proj=plans.projects.length?plans.projects.map(p=>`<div class="sk"><div class="sk-h"><b>${esc(p.name)}</b><small>${esc(p.folder)}</small></div><p>${esc(p.brief)}</p><div class="acts"><button class="btn" type="button" data-editproj="${esc(p.id)}">EDIT</button></div></div>`).join('')
+    :`<p class="boxnote">A project keeps one channel's brief and files together. Start from one:</p><div class="tmpls">${PROJECT_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-projtmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`;
+  const list=plans.pipelines.length?plans.pipelines.map(planCardHTML).join('')
+    :`<p class="boxnote">A weekly plan gives a chain of jobs to your agents on a schedule. Each step hands its work to the next. Start from one:</p><div class="tmpls">${PLAN_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-plantmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`;
+  return`<div class="pane-h"><span>Plans</span><span>Projects and weekly jobs</span></div>
+    <div class="psec"><b>Projects</b><button class="btn" type="button" id="newProj">+ NEW PROJECT</button></div>${proj}
+    <div class="psec"><b>Weekly plans</b><button class="btn" type="button" id="newPlan">+ NEW PLAN</button></div>${list}
+    <p class="mart-note">Plans run while Agentdex is open. If your computer was off at the time, the plan runs as soon as you open Agentdex again. You still record and edit the video; the plan does the research and writing.</p>`;
+}
+function planCardHTML(pl){
+  const r=pl.running,lr=pl.lastRun,nx=pl.enabled?nextRun(pl.schedule):null;
+  const steps=pl.steps.map((st,i)=>{const a=byId(st.agentId)||box.find(x=>x.id===st.agentId);const on=r&&r.step===i;const done=r&&r.step>i;
+    return`<li class="${on?'on':done?'done':''}">${a?`<img class="spr" alt="" src="${sprURL(a.sp)}">`:'<span></span>'}<span><b>${a?esc(a.nick):'?'}</b> ${esc(st.title)}</span></li>`}).join('');
+  const status=r?`<div class="pstat run">Running: step ${Math.max(1,r.step+1)} of ${pl.steps.length}. Files go in ${esc(r.folder)}</div>`
+    :lr?`<div class="pstat ${lr.status==='done'?'ok':lr.status==='failed'?'bad':''}">Last run ${fmtWhen(new Date(lr.at))}: ${lr.status==='done'?`done, open ${esc(lr.folder)}`:esc(lr.reason||lr.status)}</div>`:'';
+  return`<div class="plan"><div class="sk-h"><b>${esc(pl.name)}</b>${pill(r?'ok':pl.enabled?'wait':'no',r?'RUNNING':pl.enabled?(pl.schedule.day==='manual'?'BY HAND':'ON'):'PAUSED')}</div>
+    <div class="sk-meta">${esc(projName(pl.projectId))} · ${esc(whenLabel(pl.schedule))}${nx?` · next ${fmtWhen(nx)}`:''}</div>
+    <ol class="psteps">${steps}</ol>${status}
+    <div class="acts">${r?`<button class="btn" type="button" data-stop="${pl.id}">STOP</button>`:`<button class="btn primary" type="button" data-run="${pl.id}">RUN NOW</button>`}<button class="btn" type="button" data-editplan="${pl.id}" ${r?'disabled':''}>EDIT</button>${pl.schedule.day==='manual'?'':`<button class="btn" type="button" data-pause="${pl.id}" ${r?'disabled':''}>${pl.enabled?'PAUSE':'RESUME'}</button>`}</div></div>`;
+}
+function projectEditorHTML(){
+  const e=plans.edit,d=e.draft;
+  return`<form class="card role-ed" id="projForm" novalidate>
+    <div><div class="sum-sp">${e.id?'Edit project':'New project'}</div><div class="sum-name">${esc(d.name||'Your project')}</div></div>
+    ${e.id?'':`<div class="tmpls"><span class="rl">Start from</span>${PROJECT_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-projtmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`}
+    <label class="rl" for="pjName">Name</label><input id="pjName" maxlength="40" value="${esc(d.name)}" placeholder="e.g. Streamer highlights" autocomplete="off">
+    <label class="rl" for="pjBrief">What is it about?</label>
+    <textarea id="pjBrief" rows="6" maxlength="3000" placeholder="What the channel is, who it is for, the style, and any rules your agents must follow.">${esc(d.brief)}</textarea>
+    <small class="rhint">Every job in this project gets this brief, and its files go in their own folder.</small>
+    ${e.error?`<div class="result no">${esc(e.error)}</div>`:''}
+    <div class="acts"><button class="btn primary" type="submit">SAVE PROJECT</button><button class="btn" type="button" id="pjCancel">CANCEL</button>${e.id?'<button class="btn" type="button" id="pjDelete">DELETE</button>':''}</div>
+  </form>`;
+}
+function planEditorHTML(){
+  const e=plans.edit,d=e.draft,workers=party.filter(a=>!SPEC[a.sp].reviewer);
+  const projOpts=plans.projects.map(p=>`<option value="${esc(p.id)}" ${d.projectId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')+(d.newProject?`<option value="new" ${d.projectId==='new'?'selected':''}>New: ${esc(d.newProject.name)}</option>`:'');
+  const steps=d.steps.map((st,i)=>`<div class="pstep"><div class="pstep-h"><span class="num">${i+1}</span>
+      <select data-sa="${i}" aria-label="Agent for step ${i+1}">${workers.map(a=>`<option value="${a.id}" ${a.id===st.agentId?'selected':''}>${esc(a.nick)}</option>`).join('')}</select>
+      <span class="pmove"><button type="button" class="btn" data-up="${i}" ${i?'':'disabled'} aria-label="Move up">↑</button><button type="button" class="btn" data-down="${i}" ${i<d.steps.length-1?'':'disabled'} aria-label="Move down">↓</button><button type="button" class="btn" data-rm="${i}" ${d.steps.length>1?'':'disabled'} aria-label="Remove step">✕</button></span></div>
+      <input data-st="${i}" maxlength="120" value="${esc(st.title)}" placeholder="Short title, like: Write the script">
+      <textarea data-sx="${i}" rows="4" maxlength="3000" placeholder="What this agent should do and which files to save.">${esc(st.text)}</textarea></div>`).join('');
+  return`<form class="card role-ed" id="planForm" novalidate>
+    <div><div class="sum-sp">${e.id?'Edit weekly plan':'New weekly plan'}</div><div class="sum-name">${esc(d.name||'Your plan')}</div></div>
+    ${e.id?'':`<div class="tmpls"><span class="rl">Start from</span>${PLAN_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-plantmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`}
+    <label class="rl" for="plName">Name</label><input id="plName" maxlength="60" value="${esc(d.name)}" placeholder="e.g. Weekly streamer highlights" autocomplete="off">
+    <label class="rl" for="plProj">Project</label>${projOpts?`<select id="plProj">${projOpts}</select>`:'<p class="rhint">Make a project first, or start from a ready-made plan above.</p>'}
+    <span class="rl">When</span>
+    <div class="pwhen"><select id="plDay">${DAY_OPTS.map(([v,l])=>`<option value="${v}" ${d.schedule.day===v?'selected':''}>${l}</option>`).join('')}</select><input id="plTime" type="time" value="${esc(d.schedule.time)}" ${d.schedule.day==='manual'?'hidden':''} aria-label="Time"></div>
+    <span class="rl">Steps</span>
+    <small class="rhint">Each step gets what the earlier steps wrote. Write {folder} for this run's folder.</small>
+    ${workers.length?steps:'<p class="rhint">Spawn an agent first.</p>'}
+    <div class="acts"><button class="btn" type="button" id="plAdd" ${d.steps.length>=8||!workers.length?'disabled':''}>+ ADD STEP</button></div>
+    <label class="chk"><input type="checkbox" id="plReview" ${d.review?'checked':''}> Ask the reviewer to check each step</label>
+    ${e.error?`<div class="result no">${esc(e.error)}</div>`:''}
+    <div class="acts"><button class="btn primary" type="submit">SAVE PLAN</button><button class="btn" type="button" id="plCancel">CANCEL</button>${e.id?'<button class="btn" type="button" id="plDelete">DELETE</button>':''}</div>
+  </form>`;
+}
+function planFromTemplate(t){
+  const pt=PROJECT_TEMPLATES.find(x=>x.key===t.project);const have=plans.projects.find(p=>p.name===pt.name);
+  return{name:t.name,projectId:have?have.id:'new',newProject:have?null:{name:pt.name,brief:pt.brief},schedule:{...t.schedule},review:false,
+    steps:t.steps.map(st=>{const a=agentForKind(st.kind);return{agentId:a?a.id:null,title:st.title,text:st.text}}).filter(st=>st.agentId!=null)};
+}
+const blankPlan=()=>{const a=agentForKind('RESEARCH');return{name:'',projectId:plans.projects[0]?plans.projects[0].id:'',newProject:null,schedule:{day:'mon',time:'09:00'},review:false,steps:[{agentId:a?a.id:null,title:'',text:''}]}};
+async function savePlanBits(kind,body){
+  if(LIVE){const r=await setupCall('POST',kind==='project'?'api/projects':'api/plans',body);if(!r.ok)throw new Error(r.data.error||'Could not save.');return r.data.event}
+  return demoSave(kind,body);
+}
+function demoSave(kind,body){
+  if(kind==='project'){const p=body.project;const name=String(p.name||'').trim();if(name.length<2)throw new Error('Give the project a name.');if(String(p.brief||'').trim().length<20)throw new Error('Describe the project in a sentence or two.');
+    const id=p.id||'p-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');const x={id,name,brief:p.brief.trim(),folder:'drafts/'+id.slice(2)};upsert(plans.projects,x);log(`New project: ${name}.`,'ok');return{data:{project:x}}}
+  const p=body.pipeline;if(!p.name||p.name.trim().length<2)throw new Error('Give the plan a name.');if(!p.steps.length||p.steps.some(st=>st.title.trim().length<3||st.text.trim().length<10))throw new Error('Every step needs a short title and what to do.');
+  const old=plans.pipelines.find(x=>x.id===p.id);const x={...p,id:p.id||'w'+(plans.pipelines.length+1),enabled:p.enabled!==false,running:null,lastRun:old?old.lastRun:null};upsert(plans.pipelines,x);log(`Plan saved: ${x.name}, ${whenLabel(x.schedule).toLowerCase()}.`,'ok');return{data:{pipeline:x}};
+}
+function bindPlans(){
+  const pane=$('#pane'),e=plans.edit;
+  pane.querySelectorAll('[data-projtmpl]').forEach(b=>b.onclick=()=>{const t=PROJECT_TEMPLATES[+b.dataset.projtmpl];plans.edit={kind:'project',id:e&&e.id,draft:{name:t.name,brief:t.brief}};renderPane()});
+  pane.querySelectorAll('[data-plantmpl]').forEach(b=>b.onclick=()=>{plans.edit={kind:'plan',draft:planFromTemplate(PLAN_TEMPLATES[+b.dataset.plantmpl])};renderPane()});
+  const np=$('#newProj');if(np)np.onclick=()=>{plans.edit={kind:'project',draft:{name:'',brief:''}};renderPane()};
+  const nl=$('#newPlan');if(nl)nl.onclick=()=>{plans.edit={kind:'plan',draft:blankPlan()};renderPane()};
+  pane.querySelectorAll('[data-editproj]').forEach(b=>b.onclick=()=>{const p=plans.projects.find(x=>x.id===b.dataset.editproj);plans.edit={kind:'project',id:p.id,draft:{name:p.name,brief:p.brief}};renderPane()});
+  pane.querySelectorAll('[data-editplan]').forEach(b=>b.onclick=()=>{const p=plans.pipelines.find(x=>x.id===b.dataset.editplan);plans.edit={kind:'plan',id:p.id,draft:{name:p.name,projectId:p.projectId,schedule:{...p.schedule},review:p.review,enabled:p.enabled,steps:p.steps.map(st=>({...st}))}};renderPane()});
+  pane.querySelectorAll('[data-run]').forEach(b=>b.onclick=async()=>{b.disabled=true;
+    if(LIVE){const r=await setupCall('POST','api/plans/run',{id:b.dataset.run});if(!r.ok){convoSystem(r.data.error||'Could not start it.',true);b.disabled=false}return}
+    demoRunPlan(b.dataset.run)});
+  pane.querySelectorAll('[data-stop]').forEach(b=>b.onclick=async()=>{b.disabled=true;
+    if(LIVE){await setupCall('POST','api/plans/stop',{id:b.dataset.stop});return}
+    const pl=plans.pipelines.find(x=>x.id===b.dataset.stop);demoFinishPlan(pl,'stopped','Stopped. The current step finishes, but nothing else starts.')});
+  pane.querySelectorAll('[data-pause]').forEach(b=>b.onclick=async()=>{const p=plans.pipelines.find(x=>x.id===b.dataset.pause);const body={pipeline:{...p,enabled:!p.enabled}};
+    try{await savePlanBits('plan',body)}catch(err){convoSystem(err.message,true)}renderPane()});
+  if(!e)return;
+  if(e.kind==='project'){
+    const f=$('#projForm'),d=e.draft;const keep=()=>{d.name=$('#pjName').value;d.brief=$('#pjBrief').value};
+    $('#pjCancel').onclick=()=>{plans.edit=null;renderPane()};
+    const del=$('#pjDelete');if(del)del.onclick=async()=>{if(!confirm(`Delete the project ${d.name}? Its files stay in the workspace.`))return;
+      if(LIVE){const r=await setupCall('POST','api/projects/delete',{id:e.id});if(!r.ok){e.error=r.data.error;return renderPane()}}
+      else{if(plans.pipelines.some(x=>x.projectId===e.id)){e.error='Delete or move its weekly plans first.';return renderPane()}plans.projects=plans.projects.filter(x=>x.id!==e.id)}
+      plans.edit=null;renderProjSel();renderPane()};
+    f.onsubmit=async ev=>{ev.preventDefault();keep();
+      try{await savePlanBits('project',{project:{id:e.id,name:d.name.trim(),brief:d.brief.trim()}});plans.edit=null;renderProjSel();renderPane()}catch(err){e.error=err.message;renderPane()}};
+    return;
+  }
+  const f=$('#planForm'),d=e.draft;
+  const keep=()=>{d.name=$('#plName').value;const pj=$('#plProj');if(pj)d.projectId=pj.value;d.schedule={day:$('#plDay').value,time:$('#plTime').value||'09:00'};d.review=$('#plReview').checked;
+    d.steps.forEach((st,i)=>{const a=f.querySelector(`[data-sa="${i}"]`);if(a)st.agentId=+a.value;st.title=f.querySelector(`[data-st="${i}"]`).value;st.text=f.querySelector(`[data-sx="${i}"]`).value})};
+  $('#plDay').onchange=()=>{keep();renderPane()};
+  $('#plAdd').onclick=()=>{keep();const a=agentForKind('WRITE');d.steps.push({agentId:a?a.id:null,title:'',text:''});renderPane()};
+  f.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{keep();const i=+b.dataset.up;[d.steps[i-1],d.steps[i]]=[d.steps[i],d.steps[i-1]];renderPane()});
+  f.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>{keep();const i=+b.dataset.down;[d.steps[i+1],d.steps[i]]=[d.steps[i],d.steps[i+1]];renderPane()});
+  f.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{keep();d.steps.splice(+b.dataset.rm,1);renderPane()});
+  $('#plCancel').onclick=()=>{plans.edit=null;renderPane()};
+  const del=$('#plDelete');if(del)del.onclick=async()=>{if(!confirm(`Delete the plan ${d.name}?`))return;
+    if(LIVE){const r=await setupCall('POST','api/plans/delete',{id:e.id});if(!r.ok){e.error=r.data.error;return renderPane()}}else plans.pipelines=plans.pipelines.filter(x=>x.id!==e.id);
+    plans.edit=null;renderPane()};
+  f.onsubmit=async ev=>{ev.preventDefault();keep();e.error=null;
+    try{
+      if(d.projectId==='new'&&d.newProject){const r=await savePlanBits('project',{project:d.newProject});d.projectId=r.data.project.id;d.newProject=null;renderProjSel()}
+      await savePlanBits('plan',{pipeline:{id:e.id,name:d.name.trim(),projectId:d.projectId,schedule:d.schedule,review:d.review,enabled:d.enabled!==false,steps:d.steps.map(st=>({agentId:st.agentId,title:st.title.trim(),text:st.text.trim()}))}});
+      plans.edit=null;renderPane();
+    }catch(err){e.error=err.message;renderPane()}};
+}
+// The demo runs plans in the page, with pretend agents.
+function demoRunPlan(id){
+  const pl=plans.pipelines.find(x=>x.id===id);if(!pl||pl.running)return;
+  const proj=plans.projects.find(p=>p.id===pl.projectId);const date=new Date().toISOString().slice(0,10);
+  pl.running={runId:date,folder:`${proj?proj.folder:'drafts'}/${date}`,step:0,agentId:null,title:null,startedAt:new Date().toISOString(),pending:true};
+  log(`${pl.name} started. ${pl.steps.length} steps.`,'ok');renderPane();demoPlanTick();
+}
+function demoPlanTick(){
+  for(const pl of plans.pipelines){const r=pl.running;if(!r||!r.pending)continue;
+    const st=pl.steps[r.step],a=byId(st.agentId);
+    if(!a){demoFinishPlan(pl,'failed','The agent for this step is not in your party.');continue}
+    if(a.phase!=='idle'||a.path.length||a.status==='FNT')continue; // waits until the agent is free
+    r.pending=false;r.agentId=a.id;r.title=st.title;
+    log(`${pl.name}, step ${r.step+1} of ${pl.steps.length}: ${a.nick} is on "${st.title}".`);
+    startTask(a,{t:st.title,plan:pl.id});if(tab==='plans'&&!plans.edit)renderPane();
+  }
+}
+function demoPlanStepDone(id,a,ok){
+  const pl=plans.pipelines.find(x=>x.id===id);if(!pl||!pl.running)return;
+  if(!ok)return demoFinishPlan(pl,'failed',`${a.nick} stood down at step ${pl.running.step+1} after you said NO.`);
+  if(pl.running.step+1>=pl.steps.length)return demoFinishPlan(pl,'done');
+  pl.running.step++;pl.running.pending=true;demoPlanTick();if(tab==='plans'&&!plans.edit)renderPane();
+}
+function demoFinishPlan(pl,status,reason=null){
+  if(!pl||!pl.running)return;const folder=pl.running.folder;
+  pl.lastRun={at:new Date().toISOString(),status,folder,reason};pl.running=null;
+  const msg=status==='done'?`${pl.name} is done. Open ${folder} for this week's pack.`:`${pl.name} ${status==='stopped'?'was stopped.':'stopped early: '+reason}`;
+  log(msg,status==='done'?'ok':'bad');convoSystem(msg,status==='failed');alertFor(status==='done'?'done':'bad',msg);
+  if(tab==='plans'&&!plans.edit)renderPane();
+}
+
 /* ---------- MART: community skills ---------- */
 // Skills are shared instruction packs (a SKILL.md). Agents may look for one before a task; you can search
 // here too. Either way CHECKS reads it and nothing is installed without your YES.
@@ -1498,7 +1737,7 @@ function bindSum(){
     const gf=$('#give');
     if(gf)gf.onsubmit=async e=>{e.preventDefault();const title=$('#giveTitle').value.trim();if(!title)return;
       const btn=gf.querySelector('button');btn.disabled=true;
-      const r=await api(`api/agents/${a.id}/tasks`,{title,review:$('#giveReview').checked,files:agentFiles});if(r){agentFiles=[];renderPane()}
+      const r=await api(`api/agents/${a.id}/tasks`,{title,review:$('#giveReview').checked,files:agentFiles,project:activeProject||undefined});if(r){agentFiles=[];renderPane()}
       btn.disabled=false;if(r)$('#giveTitle').value=''};
     $('#reset').onclick=()=>api(`api/agents/${a.id}/actions`,{action:'reset'});
     $('#tobox').onclick=()=>{api(`api/agents/${a.id}/actions`,{action:'box'});selId=null;view='list';renderPane()};
@@ -1526,7 +1765,7 @@ function spawn(k){
   log(`You spawned ${SPEC[k].name} at the CENTER! It joined your party at Lv 5.`,'ok');
   selId=a.id;tab='party';view='list';renderPane();
 }
-['party','dex','box','mart'].forEach(t=>$('#t-'+t).onclick=()=>{tab=t;if(t==='party')view='list';if(t==='mart')loadMart();renderPane()});
+['party','dex','box','mart','plans'].forEach(t=>$('#t-'+t).onclick=()=>{tab=t;if(t==='party')view='list';if(t==='mart')loadMart();renderPane()});
 
 function renderLog(){
   $('#log').innerHTML=logs.map(l=>`<div class="ev ${l.cls}"><time>${l.t}</time><span>${esc(l.msg)}</span></div>`).join('');
@@ -1540,7 +1779,7 @@ function refresh(){
   $('#cNeedN').textContent=needs;$('#cNeeds').classList.toggle('zero',!needs);
   const title=needs?`(${needs}) Agentdex`:'Agentdex';if(document.title!==title)document.title=title;
   $('#clock').textContent=`Day ${day} · ${hhmm()}`;
-  if(tab!=='dex'&&tab!=='mart')renderPane();
+  if(tab!=='dex'&&tab!=='mart'&&!(tab==='plans'&&plans.edit))renderPane();
 }
 
 /* ---------- demo mode: everything simulated in the browser ---------- */
@@ -1557,7 +1796,7 @@ log('ROLLO needs you: it wants to use DEPLOY on api-prod.','need');
 renderPane();refresh();
 setTimeout(showDialog,600);
 setInterval(tick,1300);
-renderConvo();
+renderConvo();renderProjSel();
 }
 /* ---------- live mode: the Agentdex server is the source of truth ---------- */
 let TOKEN=null;
@@ -1595,6 +1834,7 @@ function syncApprovals(list){
 function addLog(ev){logs.unshift({t:evTime(ev.ts),msg:ev.message,cls:ev.tone==='info'?'':ev.tone});if(logs.length>60)logs.pop()}
 function hydrate(s){
   loadRoleState(s.roles); // before agents, so custom creatures have their art
+  plans.projects=s.projects||[];plans.pipelines=s.pipelines||[];renderProjSel();
   const ids=new Set(s.agents.map(a=>a.id));
   for(const list of [party,box])for(let i=list.length-1;i>=0;i--)if(!ids.has(list[i].id))list.splice(i,1);
   s.agents.forEach(syncAgent);
@@ -1614,6 +1854,7 @@ function onChange(p){
   if(ev.type==='approval.resolved'&&ev.data.kind==='evolve'&&ev.data.to&&!fx.some(f=>f.type==='evo'&&f.id===ev.agentId))fx.push({type:'evo',id:ev.agentId,t:0});
   if(ev.message){addLog(ev);renderLog()}
   if(ev.type==='skills.updated')loadMart();
+  if(/^(project|pipeline)\./.test(ev.type)){planEvent(ev);if(ev.type==='pipeline.finished')alertFor(ev.data.status==='done'?'done':'bad',ev.message||'');if(tab==='plans'&&!plans.edit)renderPane()}
   if(ev.type==='role.saved'){if(ev.data.role)registerRole(ev.data.role);else if(ev.data.type)roles.edits[ev.data.type]={job:ev.data.job,web:ev.data.web};if(tab==='dex'&&!roleEdit)renderPane()}
   if(ev.type==='role.deleted'){if(ev.data.id)unregisterRole(ev.data.id);else if(ev.data.type)delete roles.edits[ev.data.type];if(tab==='dex'&&!roleEdit)renderPane()}
   const who=byId(ev.agentId);
@@ -1846,7 +2087,8 @@ const convo=[];const convoSeen=new Set();const answered=new Map();let sysId=0;le
 function convoItem(ev){
   const d=ev.data||{};
   switch(ev.type){
-    case 'task.assigned':return{kind:'you',to:ev.agentId,text:d.title+(d.details&&/files the user added/.test(d.details)?'\n'+d.details.split('\n').pop():''),label:'task'};
+    case 'task.assigned':return{kind:'you',to:ev.agentId,text:d.title+(d.details&&/files the user added/.test(d.details)?'\n'+d.details.split('\n').pop():''),label:'task',project:d.projectName||null};
+    case 'pipeline.started':case 'pipeline.finished':return ev.message?{kind:'sys',text:ev.message,bad:ev.tone==='bad'}:null;
     case 'chat.sent':return d.entry?{kind:'you',to:ev.agentId,text:d.entry.text,label:'talk'}:null;
     case 'chat.replied':return d.entry?{kind:'agent',from:ev.agentId,text:d.entry.text,task:d.entry.suggestedTask}:null;
     case 'task.finished':return{kind:'agent',from:ev.agentId,text:ev.message,tone:'done'};
@@ -1873,7 +2115,7 @@ function renderConvo(){
   el.innerHTML=convo.slice(-80).map((c,i)=>{
     const n=convo.length-Math.min(80,convo.length)+i;
     if(c.kind==='sys')return`<div class="cv sys ${c.bad?'bad':''}">${esc(c.text)}</div>`;
-    if(c.kind==='you')return`<div class="cv you"><div class="cv-who"><time>${cvTime(c.ts)}</time>${c.label==='ask'?'You asked the Guide':`You ${c.label==='talk'?'to':'gave'} ${c.to?cvWho(c.to):'the team'}${c.label==='task'?' a task':''}`}</div><div class="cv-body">${esc(c.text)}</div></div>`;
+    if(c.kind==='you')return`<div class="cv you"><div class="cv-who"><time>${cvTime(c.ts)}</time>${c.label==='ask'?'You asked the Guide':`You ${c.label==='talk'?'to':'gave'} ${c.to?cvWho(c.to):'the team'}${c.label==='task'?' a task':''}${c.project?` <span class="pchip">${esc(c.project)}</span>`:''}`}</div><div class="cv-body">${esc(c.text)}</div></div>`;
     if(c.kind==='guide'){
       const ideas=c.suggestions.map((g,k)=>{const a=byId(g.agentId);return`<div class="gidea">${a?`<img class="spr" alt="" src="${sprURL(a.sp)}">`:'<span></span>'}<span><b>${esc(g.nick)}</b> ${esc(g.task)}</span>${c.given[k]?'<small>Given</small>':`<button class="btn primary" type="button" data-give="${n}:${k}" ${a?'':'disabled'}>GIVE TO ${esc(g.nick)}</button>`}</div>`}).join('');
       const role=c.newRole?`<div class="gidea"><span class="gnew">+</span><span>New role idea: <b>${esc(c.newRole.name)}</b></span><button class="btn" type="button" data-mkrole="${n}">CREATE THIS ROLE</button></div>`:'';
@@ -1887,7 +2129,7 @@ function renderConvo(){
   }).join('');
   if(guideThinking)el.insertAdjacentHTML('beforeend','<div class="cv sys"><span class="gicon">'+BULB+'</span> The Guide is thinking...</div>');
   el.querySelectorAll('[data-give]').forEach(b=>b.onclick=async()=>{const [ci,k]=b.dataset.give.split(':').map(Number);const c=convo[ci],g=c&&c.suggestions[k];if(!g)return;b.disabled=true;
-    if(LIVE){const r=await api(`api/agents/${g.agentId}/tasks`,{title:g.task,review:party.some(x=>SPEC[x.sp].reviewer&&x.status!=='FNT')});if(!r){b.disabled=false;return}}
+    if(LIVE){const r=await api(`api/agents/${g.agentId}/tasks`,{title:g.task,review:party.some(x=>SPEC[x.sp].reviewer&&x.status!=='FNT'),project:activeProject||undefined});if(!r){b.disabled=false;return}}
     else{const a=byId(g.agentId);if(a&&a.phase==='idle'&&!a.path.length)startTask(a,{t:g.task});else{convoSystem(`${g.nick} is busy. In this demo, try again when it is free.`);b.disabled=false;return}}
     c.given[k]=true;renderConvo()});
   el.querySelectorAll('[data-mkrole]').forEach(b=>b.onclick=()=>{const c=convo[+b.dataset.mkrole];if(!c||!c.newRole)return;
@@ -2028,7 +2270,7 @@ $('#cmdForm').onsubmit=async e=>{
   const btn=$('#cmdForm button');btn.disabled=true;
   let reply,bad=false;
   if(LIVE){
-    try{const r=await fetch('api/command',{method:'POST',headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:JSON.stringify({text,files:cmdFiles})});
+    try{const r=await fetch('api/command',{method:'POST',headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:JSON.stringify({text,files:cmdFiles,project:activeProject||undefined})});
       const j=await r.json().catch(()=>({}));reply=r.ok?j.reply:(j.error||'That did not work.');bad=!r.ok;chatReply=Boolean(r.ok&&j.chat)}
     catch{reply='Could not reach Agentdex. Is its window still open?';bad=true}
   }else reply=demoCommand(text);

@@ -39,11 +39,12 @@ export function helpText(app = 'WhatsApp') {
     `• yes / no: answer the open request (or tap the buttons${app === 'Telegram' ? ' under it' : ''})`,
     '• reset scout: clear an agent that fainted or got stuck',
     '• rename scout to max: give an agent a new name',
+    '• run weekly streamer highlights: start one of your weekly plans now',
   ].join('\n');
 }
 
 // Events that are worth a message on your phone.
-export const NOTIFY = new Set(['approval.requested', 'task.finished', 'agent.fainted']);
+export const NOTIFY = new Set(['approval.requested', 'task.finished', 'agent.fainted', 'pipeline.started', 'pipeline.finished']);
 
 // The Guide's answer as a phone message: its reply, then each idea as a message you can send back.
 export function guideText(event) {

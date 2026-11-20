@@ -21,6 +21,7 @@ export const HELP = [
   '• quill write 5 video titles: start with a name to choose the agent',
   '• @scout how is it going?: talk to an agent without giving it a task',
   '• ? what should my team do today: ask the Guide for ideas',
+  '• run weekly streamer highlights: start one of your weekly plans now',
   '• status: what everyone is doing',
   '• yes / no: answer the open request',
   '• reset scout: clear an agent that fainted or got stuck',
@@ -86,7 +87,8 @@ export function createCommands({ store, actions }) {
     return [`Party (${lines.length})`, ...lines, open ? `${open} request(s) need your YES or NO.` : 'Nothing needs you.'].join('\n');
   }
 
-  async function run(input, { review, via, files } = {}) {
+  async function run(input, { review, via, files, project } = {}) {
+    const forProject = (d) => (actions.withProject ? actions.withProject(d, project) : d);
     const text = String(input || '').trim();
     if (!text) return { reply: 'Type what you want done, for example: compare 3 note-taking apps.' };
     const lower = text.toLowerCase();
@@ -128,6 +130,7 @@ export function createCommands({ store, actions }) {
       try { const ev = await actions.rename(a, nick); return { reply: ev.message || `${a.nick} keeps its name.`, agentId: a.id }; }
       catch (err) { return { reply: err.message }; }
     }
+    if (first.toLowerCase() === 'run' && rest.length && actions.runPlan) return actions.runPlan(rest.join(' '));
     if (first.toLowerCase() === 'reset' && rest.length) {
       const a = byName(rest[0]);
       if (!a) return { reply: `No agent called ${rest[0]} in your party. Send "status" to see names.` };
@@ -142,7 +145,7 @@ export function createCommands({ store, actions }) {
       const title = rest.join(' ').trim();
       if (!title) return { reply: `What should ${named.nick} do? For example: ${named.nick.toLowerCase()} write 5 title ideas for my video.` };
       if (SPECIES[named.species].reviewer) return { reply: `${named.nick} only reviews other agents' work. Leave the name out and Agentdex picks someone.` };
-      await actions.assign(named, clip(title, 200), withReview, actions.filesDetails?.(undefined, files));
+      await actions.assign(named, clip(title, 200), withReview, forProject(actions.filesDetails?.(undefined, files)), project);
       return { reply: `${named.nick} is on it${withReview ? ', and the reviewer will check it' : ''}.`, agentId: named.id };
     }
 
@@ -150,7 +153,7 @@ export function createCommands({ store, actions }) {
     const skill = custom ? custom.types[0] : guessSkill(text);
     const a = pickAgent(party(), skill);
     if (!a) return { reply: 'No agent can take this right now. Spawn one from the Dex, or reset a fainted one.' };
-    await actions.assign(a, clip(text, 200), withReview, actions.filesDetails?.(undefined, files));
+    await actions.assign(a, clip(text, 200), withReview, forProject(actions.filesDetails?.(undefined, files)), project);
     const why = custom ? ` (${custom.title.toLowerCase()} job)` : skill ? ` (${LABEL[skill]} job)` : '';
     const busy = a.phase !== 'idle' ? ' It will start after its current task.' : '';
     return { reply: `Sent to ${a.nick}${why}.${busy}${withReview ? ' The reviewer will check it.' : ''}`, agentId: a.id };
