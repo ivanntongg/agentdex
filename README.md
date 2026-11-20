@@ -173,6 +173,17 @@ Open an agent's summary and use **Talk to SCOUT**, or type `@scout` followed by 
 - A speech bubble shows on the map while it thinks; the conversation also appears in the field log.
 - Each message uses a little of your plan or API credit, like a short chat on claude.ai.
 
+## Your own roles
+
+Every creature comes with a job: BYTLE codes, FENNOOK researches, QUILLOW writes, CHROMOTH designs, GEARBO runs operations and SENTRIL reviews. You can change those jobs and add your own.
+
+- **New role:** open the **DEX** and press **NEW ROLE**. Give it a name ("Video editor"), say in your own words what it does and what it hands back, pick a creature and a colour, its home building, and whether it may search the web. Or start from a ready-made one: Video editor, Social media, Tutor, Bookkeeper. Then **SPAWN** it like any other agent.
+- **Jobs go to it by name:** an agent of a custom role is called after its first word (`VIDEO`), and a job that mentions the role, like `make captions for my video`, goes to it automatically.
+- **Rewrite a built-in role:** pick a creature in the DEX and press **EDIT ROLE**. The new job applies to every agent of that kind from its next task. **RESET TO DEFAULT** puts it back. For the reviewer, what you write is added as your own review rules.
+- **Give it know-how** with skills from the MART.
+
+Roles are saved with your town. Agents can't run programs, so describe work that ends in text or files: a video editor writes scripts, shot lists, captions and edit instructions, but does not cut the video itself.
+
 ## Skills: agents learn from the community
 
 A **skill** is a shared set of written instructions, like a style guide or a method: "how to write YouTube titles that get clicks", "how to check sources". Thousands are published on GitHub and listed on [skills.sh](https://skills.sh). Agentdex lets your agents find and use them, safely.
@@ -366,6 +377,7 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 | `server/store.js` | World state. Validates and applies every event |
 | `server/app.js` | HTTP API, live event stream, setup routes |
 | `server/config.js` | Settings saved from SETUP |
+| `server/roles.js` | Built-in roles (and your rewrites) and custom roles you create |
 | `server/commands.js` | The command bar and WhatsApp commands: routes a sentence to the right agent |
 | `server/simulator.js` | Pretend agents that use only the public event API |
 | `runtime/runtime.js` | Real agents: Claude tool-use loop, approvals, review, HP reporting |

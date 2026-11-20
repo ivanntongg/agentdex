@@ -37,6 +37,21 @@ export function guessSkill(text) {
   return best;
 }
 
+// A custom role whose name appears in the text ("make captions for my video" -> Video editor).
+const FILLER = new Set(['the', 'and', 'for', 'manager', 'assistant', 'helper', 'agent', 'expert', 'specialist', 'pro']);
+export function guessCustomRole(text, party) {
+  const words = new Set(String(text).toLowerCase().match(/[a-z0-9]+/g) || []);
+  let best = null;
+  let bestScore = 0;
+  for (const a of party) {
+    const s = SPECIES[a.species];
+    if (!s?.custom) continue;
+    const score = (s.title.toLowerCase().match(/[a-z0-9]+/g) || []).filter((w) => w.length >= 3 && !FILLER.has(w) && words.has(w)).length;
+    if (score > bestScore) { best = s; bestScore = score; }
+  }
+  return best;
+}
+
 // Picks the agent for a job: right skill first, then free before busy, then healthier.
 export function pickAgent(party, skill) {
   const workers = party.filter((a) => !SPECIES[a.species].reviewer && a.status !== 'FNT');
@@ -122,11 +137,12 @@ export function createCommands({ store, actions }) {
       return { reply: `${named.nick} is on it${withReview ? ', and the reviewer will check it' : ''}.`, agentId: named.id };
     }
 
-    const skill = guessSkill(text);
+    const custom = guessCustomRole(text, party());
+    const skill = custom ? custom.types[0] : guessSkill(text);
     const a = pickAgent(party(), skill);
     if (!a) return { reply: 'No agent can take this right now. Spawn one from the Dex, or reset a fainted one.' };
     await actions.assign(a, clip(text, 200), withReview, actions.filesDetails?.(undefined, files));
-    const why = skill ? ` (${LABEL[skill]} job)` : '';
+    const why = custom ? ` (${custom.title.toLowerCase()} job)` : skill ? ` (${LABEL[skill]} job)` : '';
     const busy = a.phase !== 'idle' ? ' It will start after its current task.' : '';
     return { reply: `Sent to ${a.nick}${why}.${busy}${withReview ? ' The reviewer will check it.' : ''}`, agentId: a.id };
   }

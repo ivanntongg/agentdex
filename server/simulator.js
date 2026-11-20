@@ -52,7 +52,7 @@ export function createSimulator({ tickMs = 1300, random = Math.random } = {}) {
   }
 
   function startTask(a, task) {
-    const t = task || pick(POOL[SPECIES[a.species].types[0]]);
+    const t = task || pick(POOL[SPECIES[a.species].types[0]] || POOL.WRITE);
     travel(a, SPECIES[a.species].home, () => {
       emit('task.started', a.id, t);
       sim(a).workLeft = 5 + Math.floor(random() * 5);

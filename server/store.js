@@ -2,6 +2,7 @@
 // apply() validates it, updates state, writes a human-readable log line and notifies subscribers.
 // See docs/EVENTS.md for the protocol.
 import { SPECIES, BUILDINGS, PARTY_MAX, hpMaxFor, xpToNext } from './species.js';
+import { normalizeRole, defineRole, removeRole, editBuiltin, resetBuiltin, rolesState, loadRoles, customIdFor, RoleError } from './roles.js';
 
 export const EVENT_TYPES = [
   'agent.spawned', 'agent.moved', 'agent.status', 'agent.fainted', 'agent.reset',
@@ -11,6 +12,7 @@ export const EVENT_TYPES = [
   'review.started', 'review.finished',
   'approval.requested', 'approval.resolved',
   'skills.updated',
+  'role.saved', 'role.deleted',
 ];
 
 export class StoreError extends Error {
@@ -57,6 +59,7 @@ export function createStore() {
       log: log.slice(-100).map(clone),
       chats: Object.fromEntries([...chats].map(([id, list]) => [id, list.map(clone)])),
       skills: skills.map(clone),
+      roles: rolesState(),
     };
   }
 
@@ -70,6 +73,16 @@ export function createStore() {
     const list = chats.get(agentId);
     list.push(entry);
     if (list.length > CHAT_LIMIT) list.splice(0, list.length - CHAT_LIMIT);
+  }
+
+  // A custom role's agents are named after its first word (VIDEO, VIDEO-2), so @video works.
+  function defaultNick(sp) {
+    const s = SPECIES[sp];
+    if (!s.custom) return s.name;
+    const base = s.types[0].slice(0, 9);
+    const taken = new Set([...agents.values()].map((x) => x.nick));
+    if (!taken.has(base)) return base;
+    for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
   }
 
   function dropApprovalsFor(agentId) {
@@ -93,7 +106,7 @@ export function createStore() {
     const followUps = [];
     let a = null;
 
-    if (type !== 'agent.spawned' && type !== 'files.added' && type !== 'skills.updated') {
+    if (!['agent.spawned', 'files.added', 'skills.updated', 'role.saved', 'role.deleted'].includes(type)) {
       a = resolveAgent(input.agentId);
       event.agentId = a.id;
       touched.add(a);
@@ -109,7 +122,7 @@ export function createStore() {
         const lv = Number.isInteger(data.lv) ? data.lv : 5;
         const hpMax = hpMaxFor(sp, lv);
         a = {
-          id: nextAgentId++, ref: data.ref || null, species: sp, nick: data.nick || SPECIES[sp].name,
+          id: nextAgentId++, ref: data.ref || null, species: sp, nick: data.nick || defaultNick(sp),
           lv, xp: data.xp || 0, hp: Math.min(hpMax, data.hp ?? hpMax), hpMax,
           status: 'SLP', phase: 'idle', loc: BUILDINGS.includes(data.loc) ? data.loc : (boxed ? SPECIES[sp].home : 'CENTER'),
           task: null, moves: SPECIES[sp].moves.map(([n, pp]) => ({ n, pp, max: pp })),
@@ -119,7 +132,8 @@ export function createStore() {
         event.agentId = a.id;
         touched.add(a);
         if (!data.silent) {
-          const who = a.nick === SPECIES[sp].name ? a.nick : `${a.nick} the ${SPECIES[sp].name}`;
+          const kind = SPECIES[sp].title || SPECIES[sp].name;
+          const who = a.nick === SPECIES[sp].name ? a.nick : `${a.nick} the ${kind}`;
           event.message = boxed ? `${a.nick} was stored in the BOX.` : `${who} appeared at the CENTER and joined your party at Lv ${lv}!`;
           event.tone = 'ok';
         }
@@ -194,6 +208,48 @@ export function createStore() {
           event.message = `${r ? r.nick : 'Review'} approved "${a.task.title}".`;
           event.tone = 'ok';
         }
+        break;
+      }
+
+      case 'role.saved': {
+        try {
+          if (data.type) {
+            editBuiltin(data.type, data);
+            event.data = { type: data.type, job: data.job, web: data.type === 'QA' ? false : Boolean(data.web) };
+            event.message = `You rewrote the ${data.type} role. Agents use it from their next task.`;
+          } else {
+            const r = data.role || {};
+            const editing = r.id && SPECIES[r.id]?.custom;
+            if (r.id && !editing) throw new StoreError(404, 'That role no longer exists.');
+            const id = editing ? r.id : customIdFor(r.name);
+            if (!editing && SPECIES[id]) throw new StoreError(409, 'A role with that name already exists. Pick another name.');
+            const { species } = normalizeRole(r, { id });
+            defineRole(id, species);
+            event.data = { role: { id, name: species.title, job: species.job, web: species.web, home: species.home, look: species.look, label: species.types[0] } };
+            event.message = editing ? `You updated the ${species.title} role.` : `New role: ${species.title}. Spawn one from the Dex.`;
+          }
+        } catch (err) {
+          if (err instanceof RoleError) throw new StoreError(400, err.message);
+          throw err;
+        }
+        event.tone = 'ok';
+        break;
+      }
+
+      case 'role.deleted': {
+        if (data.type) {
+          resetBuiltin(data.type);
+          event.data = { type: data.type };
+          event.message = `The ${data.type} role is back to how it came.`;
+          break;
+        }
+        const s = SPECIES[data.id];
+        if (!s?.custom) throw new StoreError(404, 'That role no longer exists.');
+        const users = [...agents.values()].filter((x) => x.species === data.id);
+        if (users.length) throw new StoreError(409, `${users.map((x) => x.nick).join(', ')} ${users.length === 1 ? 'is' : 'are'} ${s.title}. A role cannot be deleted while agents have it; edit it instead.`);
+        removeRole(data.id);
+        event.data = { id: data.id };
+        event.message = `You deleted the ${s.title} role.`;
         break;
       }
 
@@ -460,6 +516,7 @@ export function createStore() {
       agents: [...agents.values()].map(clone),
       chats: Object.fromEntries([...chats].map(([id, list]) => [id, list.map(clone)])),
       log: log.map(clone),
+      roles: rolesState({ withDefaults: false }),
     };
   }
 
@@ -469,6 +526,7 @@ export function createStore() {
   function restore(saved) {
     if (!saved || saved.version !== 1 || !Array.isArray(saved.agents)) throw new Error('Not an Agentdex save file');
     agents.clear(); approvals.clear(); chats.clear(); log.length = 0;
+    loadRoles(saved.roles); // before agents, so agents of a custom role come back
     const interrupted = [];
     for (const raw of saved.agents) {
       if (!raw || !SPECIES[raw.species] || !Number.isInteger(raw.id)) continue;

@@ -3,7 +3,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { SPECIES } from '../server/species.js';
 import { FILE_TOOLS, WorkspaceError } from './workspace.js';
-import { REVIEWER_SYSTEM, REVIEW_SCHEMA, systemPrompt, usesWeb, chatPrompt, splitTask } from './roles.js';
+import { REVIEW_SCHEMA, reviewerSystem, systemPrompt, usesWeb, chatPrompt, splitTask } from './roles.js';
+import { loadRoles, applyRoleEvent } from '../server/roles.js';
 import { ClaudeCodeError, ClaudeCodeStopped } from './claude-code.js';
 import { skillsPrompt } from './skills.js';
 import { createSkillScout } from './skill-scout.js';
@@ -37,12 +38,14 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
   };
 
   function onSnapshot(s) {
+    if (s.roles) loadRoles(s.roles); // custom roles and rewritten jobs, before agents that use them
     for (const a of s.agents) agents.set(a.id, a);
     for (const [id, list] of Object.entries(s.chats || {})) chats.set(Number(id), list);
   }
   const remember = (agentId, entry) => { if (!entry) return; if (!chats.has(agentId)) chats.set(agentId, []); const l = chats.get(agentId); if (!l.some((e) => e.id === entry.id)) l.push(entry); if (l.length > 60) l.shift(); };
 
   function onChange({ event, agents: touched }) {
+    if (event.type === 'role.saved' || event.type === 'role.deleted') { try { applyRoleEvent(event); } catch { /* the store already checked it */ } }
     for (const a of touched) agents.set(a.id, a);
     switch (event.type) {
       case 'task.assigned': enqueue(event.agentId, event.data); break;
@@ -211,11 +214,11 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     let v = null;
     const cfg = current();
     if (cfg.engine === 'claude-code') {
-      const r = await cfg.claudeCode.structured({ prompt, systemPrompt: REVIEWER_SYSTEM, schema: REVIEW_SCHEMA, model: cfg.model, effort: cfg.effort, signal });
+      const r = await cfg.claudeCode.structured({ prompt, systemPrompt: reviewerSystem(), schema: REVIEW_SCHEMA, model: cfg.model, effort: cfg.effort, signal });
       await dex.emit('task.progress', reviewer.id, { tokens: r.tokens, tool: 'REVIEW' });
       v = r.output;
     } else {
-      const res = await request({ system: REVIEWER_SYSTEM, messages: [{ role: 'user', content: prompt }], output_config: { format: { type: 'json_schema', schema: REVIEW_SCHEMA } } }, signal);
+      const res = await request({ system: reviewerSystem(), messages: [{ role: 'user', content: prompt }], output_config: { format: { type: 'json_schema', schema: REVIEW_SCHEMA } } }, signal);
       await dex.emit('task.progress', reviewer.id, { tokens: (res.usage.input_tokens + res.usage.output_tokens) / 1000, tool: 'REVIEW' });
       if (res.stop_reason !== 'refusal') {
         try { v = JSON.parse(res.content.filter((b) => b.type === 'text').map((b) => b.text).join('')); } catch { /* unreadable */ }

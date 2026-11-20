@@ -327,6 +327,28 @@ header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;just
 .chk input{accent-color:var(--sel)}
 .boxnote{font-size:14px;color:var(--muted);padding:2px}
 
+.dx.newrole{border-style:dashed;box-shadow:none;background:transparent;color:var(--muted)}
+.dx.newrole:hover{background:var(--raise-hover);color:var(--ink)}
+.dx .plus{width:48px;height:48px;display:grid;place-items:center;font-family:var(--font-pixel);font-size:26px;color:var(--sel)}
+.role-now{display:grid;gap:2px;font-size:13.5px;line-height:1.4;padding:8px 10px;background:var(--paper-2);border:2px solid var(--paper-line);border-radius:10px}
+.role-now b{font-size:12.5px;color:var(--paper-muted)}
+.role-ed{display:grid;gap:8px}
+.role-ed .rl{font-weight:700;font-size:13px;color:var(--paper-ink)}
+.role-ed input:not([type]),.role-ed textarea{font:inherit;font-size:15px;color:var(--paper-ink);background:#fff;border:2px solid var(--paper-line);border-radius:var(--r-md);padding:8px 10px;width:100%;resize:vertical}
+.role-ed input:not([type]):focus-visible,.role-ed textarea:focus-visible{border-color:var(--frame-a)!important}
+.role-ed .rhint{font-size:12.5px;color:var(--paper-muted);line-height:1.4}
+.role-ed .chk{color:var(--paper-ink)}
+.tmpls{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tmpls .btn{font-size:12px;padding:5px 10px}
+.looks{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.lk{padding:4px;border-radius:10px;border:2px solid var(--paper-line);background:#fff;display:grid;place-items:center}
+.lk img{width:32px;height:32px}
+.lk.on{border-color:var(--frame-a);box-shadow:0 0 0 2px var(--frame-b)}
+.hues{display:flex;gap:6px;flex-wrap:wrap}
+.hu{width:28px;height:28px;border-radius:50%;border:2px solid var(--paper-line)}
+.hu.on{border-color:var(--paper-ink);box-shadow:0 0 0 2px var(--frame-b)}
+.homes{display:flex;gap:14px}
+
 /* MART: community skills */
 .mart-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .mart-row input{font:inherit;font-size:15px;color:var(--ink);background:var(--field);border:2px solid var(--field-line);border-radius:var(--r-md);padding:8px 12px;min-width:0}
@@ -670,6 +692,62 @@ quillow:{no:7,name:'QUILLOW',types:['WRITE','RESEARCH'],home:'LAB',hp:140,brain:
 const DEX=['bytle','bytlord','fennook','chromoth','gearbo','sentril','quillow',null,null];
 const seen=new Set(['bytle','fennook','chromoth','gearbo','sentril','quillow']);
 
+/* ---------- roles: your own kinds of agent, and rewritten jobs for the built-in ones ---------- */
+// Custom roles reuse a creature's pixel art in a new colour. The server keeps the real list
+// (live mode); the demo keeps it in the page.
+const ROLE_LOOKS=['bytle','fennook','chromoth','gearbo','quillow','sentril'];
+const ROLE_HUES=[0,35,80,140,190,240,290,330];
+const roles={custom:[],edits:{},defaults:{
+  CODE:{job:'You are a careful software engineer. Read the relevant files before changing anything, keep changes small, and say what you could not verify.',web:false},
+  RESEARCH:{job:'You are a research analyst. Find sources, compare them, and write findings with links. Separate what sources say from your own judgement.',web:true},
+  DESIGN:{job:'You are a product designer. Produce concrete, buildable design specs: layout, states, copy, and the reasoning behind each choice.',web:false},
+  OPS:{job:'You are an operations engineer. Write runbooks and checks that someone tired at 3am can follow. Flag anything risky instead of doing it.',web:false},
+  WRITE:{job:'You are an editor and writer. Write plainly and briefly for the stated reader. Cut anything that does not earn its place.',web:true},
+  QA:{job:'You are a reviewer. You check other agents\' work against the task they were given.',web:false}}};
+const ROLE_TEMPLATES=[
+  {name:'Video editor',look:{base:'chromoth',hue:190},home:'WORKSHOP',web:true,job:'You plan and prepare videos. From a topic, notes or a transcript in the workspace, you write the script, a shot list with timings, on-screen text, captions as .srt files, chapters, title ideas and the description. You cannot cut video yourself, so end with clear edit instructions a person can follow in their editing app.'},
+  {name:'Social media',look:{base:'quillow',hue:290},home:'LAB',web:true,job:'You run social media for the user. You turn their notes into posts for each platform, in their voice, with a hook in the first line, and suggest when to post. Keep a running content calendar in drafts/calendar.md.'},
+  {name:'Tutor',look:{base:'fennook',hue:35},home:'LAB',web:true,job:'You teach the user a topic step by step. Explain simply, give one example for each idea, then end with three short questions to check they understood. Save each lesson as a file they can reread.'},
+  {name:'Bookkeeper',look:{base:'gearbo',hue:140},home:'WORKSHOP',web:false,job:'You keep the user\'s money tidy. From receipts, bank exports or notes in the workspace, you sort spending into categories, total each month, flag anything unusual, and keep a simple ledger as a CSV file.'},
+];
+function hueShift(hex,deg){
+  const n=parseInt(hex.slice(1),16);let r=(n>>16)/255,g=((n>>8)&255)/255,b=(n&255)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;let h=0,sat=0;
+  if(mx!==mn){const d=mx-mn;sat=l>.5?d/(2-mx-mn):d/(mx+mn);h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h/=6}
+  h=(h+deg/360)%1;const f=(p,q,t)=>{t=(t+1)%1;return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p};
+  if(!sat)r=g=b=l;else{const q=l<.5?l*(1+sat):l+sat-l*sat,pp=2*l-q;r=f(pp,q,h+1/3);g=f(pp,q,h);b=f(pp,q,h-1/3)}
+  return'#'+[r,g,b].map(v=>Math.round(v*255).toString(16).padStart(2,'0')).join('');
+}
+// A recoloured creature for a look, cached by base and hue.
+function lookKey(look){const k=`look-${look.base}-${look.hue}`;if(!SPR[k]){SPR[k]=SPR[look.base];PAL[k]=Object.fromEntries(Object.entries(PAL[look.base]).map(([c,v])=>[c,c==='w'||!look.hue?v:hueShift(v,look.hue)]))}return k}
+const roleLabel=name=>(String(name).split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g,'')||'CUSTOM').slice(0,9);
+function registerRole(r){
+  const title=r.title||r.name,k=lookKey(r.look),label=r.label||roleLabel(title);
+  SPR[r.id]=SPR[k];PAL[r.id]=PAL[k];
+  for(const m of ['','gray','sil','white']){delete sprCache[r.id+m];delete urlCache[r.id+m]}
+  TYPES[label]=TYPES[label]||`hsl(${r.look.hue} 42% 46%)`;
+  const old=SPEC[r.id];
+  SPEC[r.id]={no:old?old.no:100+roles.custom.length+1,name:title.toUpperCase(),title,types:[label],home:r.home,hp:180,brain:'Your own',cost:'Depends on the job',
+    moves:r.web?[['READ',30],['SEARCH',20],['DRAFT',20],['EDIT',10]]:[['READ',30],['DRAFT',20],['EDIT',15],['CHECK',10]],memo:r.job,custom:true,job:r.job,web:Boolean(r.web),look:{...r.look}};
+  const i=roles.custom.findIndex(x=>x.id===r.id);const rec={id:r.id,title,job:r.job,web:Boolean(r.web),home:r.home,look:{...r.look},label};
+  if(i>=0)roles.custom[i]=rec;else roles.custom.push(rec);
+  if(!DEX.includes(r.id))DEX.splice(DEX.indexOf(null)<0?DEX.length:DEX.indexOf(null),0,r.id);
+  seen.add(r.id);
+}
+function unregisterRole(id){
+  roles.custom=roles.custom.filter(x=>x.id!==id);delete SPEC[id];
+  const i=DEX.indexOf(id);if(i>=0)DEX.splice(i,1);seen.delete(id);if(dexSel===id)dexSel='bytle';
+}
+function loadRoleState(st){
+  if(!st)return;
+  for(const r of roles.custom.slice())if(!(st.custom||[]).some(x=>x.id===r.id))unregisterRole(r.id);
+  (st.custom||[]).forEach(r=>registerRole({...r,title:r.title||r.name}));
+  roles.edits=st.edits||{};if(st.defaults)roles.defaults=st.defaults;
+}
+const roleJob=type=>(roles.edits[type]&&roles.edits[type].job)||roles.defaults[type]?.job||'';
+const roleWeb=type=>roles.edits[type]&&typeof roles.edits[type].web==='boolean'?roles.edits[type].web:Boolean(roles.defaults[type]?.web);
+let roleEdit=null; // {mode:'new'|'custom'|'builtin', id?, type?, draft, error}
+
 /* ---------- tasks ---------- */
 const POOL={
 CODE:[{t:'Fix flaky checkout test',review:1,ap:{m:'MERGE',on:'PR #212 into main'}},{t:'Refactor auth middleware',review:1},{t:'Bump 14 dependencies',ap:{m:'MERGE',on:'PR #219 (deps)'}},{t:'Add retry to webhook sender',review:1}],
@@ -692,6 +770,7 @@ GYM:{x:144,y:88,w:64,h:48,roof:'#8d63d6',icon:'star',door:176,st:LO,sub:'review'
 let uid=1;
 function mkAgent(sp,nick,lv,extra={}){
   const s=SPEC[sp];
+  if(!nick&&s.custom){const taken=new Set([...party,...box].map(x=>x.nick)),b=s.types[0];nick=b;for(let n=2;taken.has(nick);n++)nick=`${b}-${n}`}
   return Object.assign({id:uid++,sp,nick:nick||s.name,lv,xp:0,hpMax:s.hp+lv*4,hp:s.hp+lv*4,status:'SLP',phase:'idle',
     task:null,path:[],loc:s.home,x:0,y:0,moves:s.moves.map(([n,p])=>({n,pp:p,max:p})),slot:0,evoAsked:false},extra);
 }
@@ -821,7 +900,7 @@ function tick(){
   refresh();
 }
 function startTask(a,given){
-  const s=SPEC[a.sp];const t=given?{...given}:{...pick(POOL[s.types[0]])};
+  const s=SPEC[a.sp];const t=given?{...given}:{...pick(POOL[s.types[0]]||POOL.WRITE)};
   a.task=t;a.status='OK';
   log(`${a.nick} took a task: "${t.t}".`);
   goTo(a,s.home,'work');
@@ -1163,10 +1242,15 @@ function renderPane(){
       const own=[...party,...box].some(a=>a.sp===k);
       h+=`<button class="dx ${dexSel===k?'sel':''}" data-k="${k}">${own?'<span class="own" title="Owned"></span>':''}<img class="spr" alt="" src="${sprURL(k)}"><span class="no">${no}</span><span class="dn">${SPEC[k].name}</span></button>`;
     });
-    h+='</div>'+dexDetail();
+    h+=`<button class="dx newrole ${roleEdit&&roleEdit.mode==='new'?'sel':''}" id="newRole" type="button"><span class="plus" aria-hidden="true">+</span><span class="no">Your own</span><span class="dn">NEW ROLE</span></button>`;
+    h+='</div>'+(roleEdit?roleEditorHTML():dexDetail());
     p.innerHTML=h;
-    p.querySelectorAll('.dx').forEach(b=>b.onclick=()=>{dexSel=b.dataset.k;renderPane()});
+    p.querySelectorAll('.dx[data-k]').forEach(b=>b.onclick=()=>{dexSel=b.dataset.k;roleEdit=null;renderPane()});
+    $('#newRole').onclick=()=>{roleEdit={mode:'new',draft:{name:'',job:'',web:true,home:'LAB',look:{base:'bytle',hue:190}}};renderPane()};
     const sb=$('#spawn');if(sb)sb.onclick=()=>spawn(dexSel);
+    const er=$('#editRole');if(er)er.onclick=()=>{const sp=SPEC[dexSel];
+      roleEdit=sp.custom?{mode:'custom',id:dexSel,draft:{name:sp.title,job:sp.job,web:sp.web,home:sp.home,look:{...sp.look}}}:{mode:'builtin',type:sp.types[0],draft:{job:roleJob(sp.types[0]),web:roleWeb(sp.types[0])}};renderPane()};
+    if(roleEdit)bindRoleEditor();
   }else if(tab==='mart'){
     p.innerHTML=martHTML();bindMart();
   }else{
@@ -1232,16 +1316,104 @@ function bindMart(){
 }
 function skillLine(k){return k.review?` ${k.review.by||'Review'}: ${k.review.summary||k.review.verdict}`:' Not reviewed: read it first (VIEW SKILL in the team chat).'}
 
+function roleEditorHTML(){
+  const e=roleEdit,d=e.draft;
+  const err=e.error?`<div class="result no">${esc(e.error)}</div>`:'';
+  if(e.mode==='builtin'){
+    const users=Object.entries(SPEC).filter(([k,x])=>!x.custom&&x.types[0]===e.type).map(([,x])=>x.name).join(' and ');
+    return`<form class="card role-ed" id="roleForm" novalidate>
+      <div><div class="sum-sp">Built-in role · used by ${esc(users)}</div><div class="sum-name">The ${esc(e.type)} role</div></div>
+      <label class="rl" for="rJob">What does it do?</label>
+      <textarea id="rJob" rows="6" maxlength="2000">${esc(d.job)}</textarea>
+      <small class="rhint">${e.type==='QA'?'CHECKS always judges work against the task it was given. What you write here is added as your own review rules.':'Say how it should work and what it hands back. It applies from the next task.'}</small>
+      ${e.type==='QA'?'':`<label class="chk"><input type="checkbox" id="rWeb" ${d.web?'checked':''}> Can search the web</label>`}
+      ${err}
+      <div class="acts"><button class="btn primary" type="submit">SAVE ROLE</button>${roles.edits[e.type]?'<button class="btn" type="button" id="rReset">RESET TO DEFAULT</button>':''}<button class="btn" type="button" id="rCancel">CANCEL</button></div>
+    </form>`;
+  }
+  const preview=sprURL(lookKey(d.look));
+  return`<form class="card role-ed" id="roleForm" novalidate>
+    <div class="sum-top"><div class="portrait"><img class="spr" alt="" src="${preview}" id="rPrev"></div>
+      <div><div class="sum-sp">${e.mode==='new'?'New role':'Edit role'}</div><div class="sum-name">${esc(d.name||'Your own agent')}</div></div></div>
+    ${e.mode==='new'?`<div class="tmpls"><span class="rl">Start from</span>${ROLE_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-tmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`:''}
+    <label class="rl" for="rName">Name</label>
+    <input id="rName" maxlength="24" value="${esc(d.name)}" placeholder="e.g. Video editor" autocomplete="off">
+    <label class="rl" for="rJob">What does it do?</label>
+    <textarea id="rJob" rows="6" maxlength="2000" placeholder="What it works on, for whom, and what it hands back. Example: From my notes, write YouTube scripts with a hook in the first 10 seconds and save them in drafts.">${esc(d.job)}</textarea>
+    <small class="rhint">Agents read and write files in your workspace${d.web?' and can search the web':''}. They can't run programs, so describe work that ends in text or files.</small>
+    <span class="rl">Looks like</span>
+    <div class="looks">${ROLE_LOOKS.map(b=>`<button type="button" class="lk ${d.look.base===b?'on':''}" data-base="${b}" aria-label="${SPEC[b].name}"><img class="spr" alt="" src="${sprURL(lookKey({base:b,hue:d.look.hue}))}"></button>`).join('')}</div>
+    <div class="hues">${ROLE_HUES.map(h=>`<button type="button" class="hu ${d.look.hue===h?'on':''}" data-hue="${h}" aria-label="Colour ${h}" style="background:${hueShift(PAL[d.look.base][1],h)}"></button>`).join('')}</div>
+    <span class="rl">Home</span>
+    <div class="homes">${['LAB','WORKSHOP'].map(h=>`<label class="chk"><input type="radio" name="rHome" value="${h}" ${d.home===h?'checked':''}> ${h}</label>`).join('')}</div>
+    <label class="chk"><input type="checkbox" id="rWeb" ${d.web?'checked':''}> Can search the web</label>
+    ${err}
+    <div class="acts"><button class="btn primary" type="submit">${e.mode==='new'?'CREATE ROLE':'SAVE ROLE'}</button><button class="btn" type="button" id="rCancel">CANCEL</button>${e.mode==='custom'?'<button class="btn" type="button" id="rDelete">DELETE ROLE</button>':''}</div>
+    <p class="mart-note">Give it know-how with skills from the MART. Every agent can use installed skills.</p>
+  </form>`;
+}
+function bindRoleEditor(){
+  const f=$('#roleForm');if(!f)return;const e=roleEdit,d=e.draft;
+  const keep=()=>{const n=$('#rName');if(n)d.name=n.value;d.job=$('#rJob').value;const w=$('#rWeb');if(w)d.web=w.checked;const h=f.querySelector('input[name=rHome]:checked');if(h)d.home=h.value};
+  f.querySelectorAll('[data-tmpl]').forEach(b=>b.onclick=()=>{const t=ROLE_TEMPLATES[+b.dataset.tmpl];Object.assign(d,{name:t.name,job:t.job,web:t.web,home:t.home,look:{...t.look}});e.error=null;renderPane()});
+  f.querySelectorAll('[data-base]').forEach(b=>b.onclick=()=>{keep();d.look.base=b.dataset.base;renderPane()});
+  f.querySelectorAll('[data-hue]').forEach(b=>b.onclick=()=>{keep();d.look.hue=+b.dataset.hue;renderPane()});
+  const nm=$('#rName');if(nm)nm.oninput=()=>{d.name=nm.value;const t=f.querySelector('.sum-name');if(t)t.textContent=nm.value||'Your own agent'};
+  $('#rCancel').onclick=()=>{roleEdit=null;renderPane()};
+  const rs=$('#rReset');if(rs)rs.onclick=async()=>{
+    if(LIVE){const r=await setupCall('POST','api/roles/delete',{type:e.type});if(!r.ok){e.error=r.data.error;return renderPane()}}
+    else{delete roles.edits[e.type];log(`The ${e.type} role is back to how it came.`,'ok')}
+    roleEdit=null;renderPane()};
+  const del=$('#rDelete');if(del)del.onclick=async()=>{
+    if(!confirm(`Delete the ${d.name} role? This cannot be undone.`))return;
+    if(LIVE){const r=await setupCall('POST','api/roles/delete',{id:e.id});if(!r.ok){e.error=r.data.error;return renderPane()}}
+    else{const users=[...party,...box].filter(a=>a.sp===e.id);if(users.length){e.error=`${users.map(a=>a.nick).join(', ')} ${users.length===1?'is':'are'} ${d.name}. A role cannot be deleted while agents have it; edit it instead.`;return renderPane()}
+      unregisterRole(e.id);log(`You deleted the ${d.name} role.`)}
+    roleEdit=null;dexSel='bytle';renderPane()};
+  f.onsubmit=async ev=>{ev.preventDefault();keep();e.error=null;
+    const btn=f.querySelector('button[type=submit]');btn.disabled=true;
+    if(e.mode==='builtin'){
+      const body={type:e.type,job:d.job.trim(),web:e.type==='QA'?false:d.web};
+      if(LIVE){const r=await setupCall('POST','api/roles',body);if(!r.ok){e.error=r.data.error||'Could not save.';return renderPane()}}
+      else{if(body.job.length<20){e.error='Describe the job in a sentence or two.';return renderPane()}roles.edits[e.type]={job:body.job,web:body.web};log(`You rewrote the ${e.type} role. Agents use it from their next task.`,'ok')}
+      roleEdit=null;return renderPane();
+    }
+    const role={name:d.name.trim(),job:d.job.trim(),web:d.web,home:d.home,look:{...d.look},...(e.mode==='custom'?{id:e.id}:{})};
+    if(LIVE){const r=await setupCall('POST','api/roles',{role});if(!r.ok){e.error=r.data.error||'Could not save.';return renderPane()}
+      const saved=r.data.event&&r.data.event.data.role;if(saved){registerRole(saved);dexSel=saved.id}}
+    else{
+      if(!/^[A-Za-z0-9][A-Za-z0-9 '&-]{1,23}$/.test(role.name)){e.error='Give the role a name of 2 to 24 letters, like "Video editor".';return renderPane()}
+      if(role.job.length<20){e.error='Describe the job in a sentence or two: what it does and what it hands back.';return renderPane()}
+      const id=e.id||'c-'+role.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,24);
+      if(!e.id&&SPEC[id]){e.error='A role with that name already exists. Pick another name.';return renderPane()}
+      registerRole({...role,id,title:role.name});dexSel=id;
+      log(e.mode==='new'?`New role: ${role.name}. Spawn one from the Dex.`:`You updated the ${role.name} role.`,'ok');
+    }
+    roleEdit=null;renderPane()};
+}
+
 function dexDetail(){
   if(dexSel.startsWith('u'))return`<div class="card"><div class="sum-name">?????</div><p class="memo" style="margin:6px 0 0">Not discovered yet. Connect a new tool or data source to find agents that can use it.</p></div>`;
   const s=SPEC[dexSel];const full=party.length>=6;
+  if(s.custom){
+    const users=[...party,...box].filter(a=>a.sp===dexSel).length;
+    return`<div class="card sum">
+    <div class="sum-top"><div class="portrait"><img class="spr" alt="" src="${sprURL(dexSel)}"></div>
+      <div><div class="sum-sp">Your own role</div><div class="sum-name">${esc(s.title)}</div><div class="types">${typeChips(s.types)}</div></div></div>
+    <dl class="kv"><dt>Home</dt><dd>${s.home}</dd><dt>Web</dt><dd>${s.web?'Can search the web':'Works from your files only'}</dd><dt>Moves</dt><dd>${s.moves.map(m=>m[0]).join(' · ')}</dd><dt>Agents</dt><dd>${users||'None yet'}</dd></dl>
+    <p class="memo" style="margin:0">${esc(s.job)}</p>
+    <div class="acts"><button class="btn primary" id="spawn" ${full?'disabled':''}>SPAWN ${esc(s.name)}</button><button class="btn" type="button" id="editRole">EDIT ROLE</button></div>
+    ${full?'<p class="cap" style="margin:0">Party is full (6/6). Send an agent to the box first.</p>':''}
+  </div>`}
+  const rtype=s.types[0],edited=Boolean(roles.edits[rtype]);
   const evo=s.evo?`Evolves into ${SPEC[s.evo.to].name} at Lv ${s.evo.lv}. Needs your approval.`:(dexSel==='bytlord'?'Evolves from BYTLE.':'Does not evolve.');
   return`<div class="card sum">
     <div class="sum-top"><div class="portrait"><img class="spr" alt="" src="${sprURL(dexSel)}"></div>
       <div><div class="sum-sp">No.${String(s.no).padStart(3,'0')}</div><div class="sum-name">${s.name}</div><div class="types">${typeChips(s.types)}</div></div></div>
     <dl class="kv"><dt>Home</dt><dd>${s.home}</dd><dt>Brain</dt><dd>${s.brain}</dd><dt>Cost</dt><dd>${s.cost}</dd><dt>Moves</dt><dd>${s.moves.map(m=>m[0]).join(' · ')}</dd><dt>Evolves</dt><dd>${evo}</dd></dl>
     <p class="memo" style="margin:0">${s.memo}</p>
-    <div class="acts">${dexSel==='bytlord'?'<button class="btn" disabled>EVOLVE A BYTLE TO GET ONE</button>':`<button class="btn primary" id="spawn" ${full?'disabled':''}>SPAWN ${s.name}</button>`}</div>
+    <div class="role-now"><b>Its job${edited?' (your version)':''}</b><span>${esc(roleJob(rtype))}</span></div>
+    <div class="acts">${dexSel==='bytlord'?'<button class="btn" disabled>EVOLVE A BYTLE TO GET ONE</button>':`<button class="btn primary" id="spawn" ${full?'disabled':''}>SPAWN ${s.name}</button>`}<button class="btn" type="button" id="editRole">EDIT ROLE</button></div>
     ${full?'<p class="cap" style="margin:0">Party is full (6/6). Send an agent to the box first.</p>':''}
   </div>`;
 }
@@ -1251,7 +1423,7 @@ function sumHTML(a){
   <div class="card sum">
     <div class="sum-top"><div class="portrait"><img class="spr" alt="" src="${sprURL(a.sp,a.status==='FNT'?'gray':'')}"></div>
       <div style="min-width:0"><div class="sum-sp">No.${String(s.no).padStart(3,'0')} · ${s.name}</div><div class="sum-name">${esc(a.nick)}</div><div class="types">${typeChips(s.types)}</div>
-      <div class="sum-sp" style="margin-top:6px">Lv ${a.lv} · ${s.brain.toLowerCase()} brain</div></div></div>
+      <div class="sum-sp" style="margin-top:6px">Lv ${a.lv} · ${s.custom?esc(s.title)+' role':s.brain.toLowerCase()+' brain'}</div></div></div>
     <dl class="kv">
       <dt>Status</dt><dd><span class="st st-${a.status}" style="margin:0 6px 0 0">${a.status}</span>${STATUS_TXT[a.status]}</dd>
       <dt>HP</dt><dd><div class="bar2"><i class="${hpClass(a)}" style="width:${(a.hp/a.hpMax*100).toFixed(1)}%"></i></div><div class="cap">${a.hp}k of ${a.hpMax}k tokens of context left</div></dd>
@@ -1260,7 +1432,7 @@ function sumHTML(a){
       <dt>Bond</dt><dd class="bond">${hearts(a)}</dd>
     </dl>
     <div class="moves">${a.moves.map(m=>`<div class="mv">${m.n}<span>PP ${m.pp}/${m.max}</span></div>`).join('')}</div>
-    <p class="memo" style="margin:0">${s.memo}</p>
+    <p class="memo" style="margin:0">${s.custom?esc(s.memo):s.memo}</p>
   </div>
   ${(a.memory&&a.memory.length)?`<details class="mem" id="memBox" ${memOpen?'open':''}><summary>Remembers ${a.memory.length} past task${a.memory.length===1?'':'s'}</summary><ul>${a.memory.slice(-6).reverse().map(m=>`<li><b>${esc(m.title)}</b>${m.note?` <span>${esc(m.note)}</span>`:''}${m.files&&m.files.length?`<small>Files: ${m.files.map(esc).join(', ')}</small>`:''}</li>`).join('')}</ul></details>`:''}
   <div class="talk">
@@ -1401,6 +1573,7 @@ function syncApprovals(list){
 }
 function addLog(ev){logs.unshift({t:evTime(ev.ts),msg:ev.message,cls:ev.tone==='info'?'':ev.tone});if(logs.length>60)logs.pop()}
 function hydrate(s){
+  loadRoleState(s.roles); // before agents, so custom creatures have their art
   const ids=new Set(s.agents.map(a=>a.id));
   for(const list of [party,box])for(let i=list.length-1;i>=0;i--)if(!ids.has(list[i].id))list.splice(i,1);
   s.agents.forEach(syncAgent);
@@ -1410,6 +1583,7 @@ function hydrate(s){
   if(selId&&!byId(selId))selId=null;
   syncApprovals(s.approvals);
   mart.skills=s.skills||mart.skills;loadMart();
+  loadRoleState(s.roles);
   setMode('live');renderPane();refresh();
 }
 function onChange(p){
@@ -1419,6 +1593,8 @@ function onChange(p){
   if(ev.type==='approval.resolved'&&ev.data.kind==='evolve'&&ev.data.to&&!fx.some(f=>f.type==='evo'&&f.id===ev.agentId))fx.push({type:'evo',id:ev.agentId,t:0});
   if(ev.message){addLog(ev);renderLog()}
   if(ev.type==='skills.updated')loadMart();
+  if(ev.type==='role.saved'){if(ev.data.role)registerRole(ev.data.role);else if(ev.data.type)roles.edits[ev.data.type]={job:ev.data.job,web:ev.data.web};if(tab==='dex'&&!roleEdit)renderPane()}
+  if(ev.type==='role.deleted'){if(ev.data.id)unregisterRole(ev.data.id);else if(ev.data.type)delete roles.edits[ev.data.type];if(tab==='dex'&&!roleEdit)renderPane()}
   const who=byId(ev.agentId);
   if(ev.type==='approval.requested')alertFor('need',ev.message||'An agent needs you.');
   else if(ev.type==='task.finished')alertFor('done',ev.message||'An agent finished.');

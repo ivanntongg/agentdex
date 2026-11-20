@@ -2,6 +2,13 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.13.0 · Your own roles
+
+- **NEW ROLE in the Dex:** describe a new kind of agent in your own words, pick a creature and colour, a home and web access, or start from Video editor, Social media, Tutor or Bookkeeper. Spawn it like any other agent.
+- **Jobs find it:** custom-role agents are named after the role (VIDEO, VIDEO-2), and a job that mentions the role goes to them.
+- **EDIT ROLE on every creature:** rewrite a built-in role's job, switch its web search, or reset it. The reviewer's text is added as your own review rules.
+- Roles are saved with the town and work in both connection modes and in the demo.
+
 ## 0.12.0 · Alerts, and an easier WhatsApp setup
 
 - **Bell in the top bar:** a chiptune chime when an agent needs you, finishes or faints, pop-ups when the Agentdex tab is hidden, and a count in the tab title like "(1) Agentdex". TRY IT plays one.
