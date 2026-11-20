@@ -16,6 +16,7 @@ How to answer:
 - Answer the question first. If they ask how something works, explain it simply.
 - When it helps, suggest up to 3 concrete jobs. Each names one agent from the party (exact name) whose role fits, and is one clear sentence that agent could start on straight away, specific to what the user seems to care about. Prefer free agents. Never give jobs to the reviewer.
 - If the user wants something no agent's role covers, suggest a new role: a short name and its job in 2 sentences. Otherwise leave newRole empty.
+- Weekly plans run a chain of jobs on a schedule (the PLANS tab). If the user wants something every week, tell them to make a plan.
 - Do not invent agents, skills or past work that are not listed.`;
 
 export const GUIDE_SCHEMA = {
@@ -40,7 +41,7 @@ export const GUIDE_SCHEMA = {
 const clip = (s, n) => (String(s).length > n ? String(s).slice(0, n - 1) + '…' : String(s));
 
 // What the Guide is told about the town.
-export function townBrief({ agents, approvals = 0, skills = [], recent = [], history = [] }) {
+export function townBrief({ agents, approvals = 0, skills = [], recent = [], history = [], projects = [], plans = [] }) {
   const party = agents.filter((a) => !a.boxed);
   const lines = party.map((a) => {
     const sp = SPECIES[a.species];
@@ -55,6 +56,8 @@ export function townBrief({ agents, approvals = 0, skills = [], recent = [], his
     `Party:\n${lines.join('\n') || '(nobody)'}`,
     boxed.length ? `In the box (switched off): ${boxed.join(', ')}` : '',
     `Installed skills: ${skills.length ? skills.map((s) => `${s.name} (${clip(s.description || '', 80)})`).join('; ') : 'none'}`,
+    projects.length ? `Projects:\n${projects.map((p) => `- ${p.name}: ${clip(p.brief, 160)}`).join('\n')}` : 'Projects: none yet (the user can make one in the PLANS tab).',
+    plans.length ? `Weekly plans:\n${plans.map((p) => `- ${p.name} (${p.schedule.day === 'manual' ? 'run by hand' : `${p.schedule.day} ${p.schedule.time}`}${p.enabled ? '' : ', paused'}): ${p.steps.length} steps${p.running ? ', running now' : p.lastRun ? `, last run ${p.lastRun.status}` : ''}`).join('\n')}` : '',
     approvals ? `${approvals} YES / NO question(s) are waiting for the user.` : '',
     recent.length ? `Recent events:\n${recent.map((m) => `- ${clip(m, 140)}`).join('\n')}` : '',
     history.length ? `Earlier in this conversation with the Guide:\n${history.map((h) => `${h.from === 'you' ? 'User' : 'Guide'}: ${clip(h.text, 300)}`).join('\n')}` : '',
@@ -76,12 +79,15 @@ export function createGuide({ dex, ask, agents, skills = null, approvals = () =>
   async function answer(question, via = null) {
     try {
       const list = [...agents()];
+      const st = dex.state ? await dex.state().catch(() => null) : null;
       const brief = townBrief({
         agents: list,
         approvals: approvals(),
         skills: skills ? await skills.list().catch(() => []) : [],
         recent: recent.slice(-12),
         history: history.slice(0, -1), // the question itself is sent below
+        projects: st?.projects || [],
+        plans: st?.pipelines || [],
       });
       const out = await ask({ system: GUIDE_SYSTEM, schema: GUIDE_SCHEMA, agentId: null, effort: 'medium', prompt: `${brief}\n\nThe user asks the Guide: ${question}` });
       if (!out || !String(out.reply || '').trim()) throw new Error('Claude did not answer. Check SETUP, then ask again.');

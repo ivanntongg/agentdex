@@ -173,6 +173,17 @@ Open an agent's summary and use **Talk to SCOUT**, or type `@scout` followed by 
 - A speech bubble shows on the map while it thinks; the conversation also appears in the field log.
 - Each message uses a little of your plan or API credit, like a short chat on claude.ai.
 
+## Projects and weekly plans
+
+Open the **PLANS** tab.
+
+- **A project** is one channel or goal: a name and a short brief (what it is, who it is for, the style and any rules). Every job in the project gets the brief, and its files go in their own folder (`workspace/drafts/<project>`). Pick the project above the team chat, and jobs you give from then on belong to it.
+- **A weekly plan** runs a chain of jobs on a schedule, like every Monday at 09:00. Each step gives one agent a job and hands its summary and files to the next step. Every run gets a dated folder, and the town tells you (with a chime, and on WhatsApp) when the week's pack is ready.
+- **Start from a ready-made plan:** *Weekly streamer highlights* (find the week's funniest moments with links and each streamer's clipping policy, write the script and titles with your own commentary, make the shot list and captions, then thumbnail ideas) or *Weekly GTA 6 video*.
+- **RUN NOW** any time, **STOP**, **PAUSE**, or send `run weekly streamer highlights` from the command box or WhatsApp.
+
+Plans run while Agentdex is open. If the computer was off at the planned time, the plan runs once as soon as Agentdex starts again. If an agent faints mid-step, the step starts again once it is reset; a second failure stops the run and says why. Agents can't download or edit video, so a plan prepares everything and you record, edit and upload.
+
 ## Ask the Guide
 
 Not sure what to ask your agents? Start a message with **?** in the team chat, or press the **Guide** button above the box:
@@ -285,6 +296,7 @@ Leave your computer running Agentdex at home and message your agents from your p
 | `compare 3 note apps` | The best-suited free agent gets it |
 | `scout compare 3 note apps` | SCOUT gets it (start with any agent's name) |
 | `@scout what did you find?` | Talk to SCOUT; the reply comes back to your phone |
+| `run weekly streamer highlights` | Starts a weekly plan now |
 | `? what should my team do today` | The Guide's ideas, each as a message you can send back to start it |
 | `status` | What everyone is doing, plus questions waiting for you |
 | Tap **YES** / **NO** | Answers an agent's question (typing `yes` or `no` works too) |
@@ -391,6 +403,7 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 | `server/store.js` | World state. Validates and applies every event |
 | `server/app.js` | HTTP API, live event stream, setup routes |
 | `server/config.js` | Settings saved from SETUP |
+| `server/pipelines.js` | Runs weekly plans: schedules, step handoffs, retries |
 | `runtime/guide.js` | The Guide: reads the town and suggests jobs and new roles |
 | `server/roles.js` | Built-in roles (and your rewrites) and custom roles you create |
 | `server/commands.js` | The command bar and WhatsApp commands: routes a sentence to the right agent |

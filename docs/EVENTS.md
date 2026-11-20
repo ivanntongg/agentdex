@@ -22,6 +22,10 @@ The simulator only uses the public event API, so anything it does, your runtime 
 | POST | `/api/files?name=report.pdf` | the file's bytes | Saves into `workspace/inbox` (real mode, up to 25 MB). Returns `{ path }`. Pass paths as `files: [...]` to `/api/command`, `/api/agents/:id/chat` or `/tasks` |
 | POST | `/api/command` | `{"text":"compare 3 note apps"}` | One sentence from the command bar: routes a task to the best agent, or runs status / yes / no / reset / rename. Returns `{ reply }` |
 | POST | `/api/agents` | `{"species":"fennook","nick":"SCOUT"}` | Spawn into the party |
+| POST | `/api/projects` | `{"project":{"id?","name","brief"}}` | Creates or edits a project (folder `drafts/<name>`) |
+| POST | `/api/projects/delete` | `{"id"}` | Deletes a project with no plans; its files stay |
+| POST | `/api/plans` | `{"pipeline":{"id?","name","projectId","schedule":{"day","time"},"steps":[{"agentId","title","text"}],"review","enabled"}}` | Creates or edits a weekly plan. `day` is `mon`..`sun`, `daily` or `manual` |
+| POST | `/api/plans/run`, `/api/plans/stop`, `/api/plans/delete` | `{"id"}` | Runs, stops or deletes a plan |
 | POST | `/api/roles` | `{"role":{"name","job","web","home","look":{"base","hue"}}}` or `{"type":"CODE","job","web"}` | Creates or edits a custom role (add `id` to edit), or rewrites a built-in role |
 | POST | `/api/roles/delete` | `{"id":"c-video-editor"}` or `{"type":"CODE"}` | Deletes an unused custom role, or resets a built-in role |
 | GET | `/api/skills` | | Installed skills, and whether agents may look for skills on their own (real mode) |
@@ -47,7 +51,7 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 
 | Type | data | Effect |
 |---|---|---|
-| `task.assigned` | `title`, `details?`, `review?` | The player gave this agent work (`POST /api/agents/:id/tasks`). Your runtime should start it |
+| `task.assigned` | `title`, `details?`, `review?`, `project?` | The player gave this agent work (`POST /api/agents/:id/tasks`). Your runtime should start it |
 | `agent.spawned` | `species`, `nick?`, `ref?`, `lv?`, `boxed?` | New agent. Fails with 409 when the party has 6 |
 | `agent.moved` | `to` (LAB, MART, WORKSHOP, CENTER, GYM), `reason?` | The agent walks there. Logged only with a `reason` |
 | `task.started` | `title`, `review?`, `approval?: {tool, target}` | Status OK, phase work |
@@ -67,6 +71,11 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 | `chat.failed` | `reason?`, `via?` | The agent could not answer |
 | `files.added` | `files` | The player added files to the inbox. No `agentId` |
 | `agent.renamed` | `nick` | New name: one word, 2 to 12 letters, digits, `-` or `_`; unique |
+| `project.saved` / `project.deleted` | `project` / `id` | No `agentId` |
+| `pipeline.saved` / `pipeline.deleted` | `pipeline` / `id` | No `agentId` |
+| `pipeline.started` | `id`, `runId`, `folder`, `by` | A run began (`by` is `you` or `schedule`) |
+| `pipeline.stepped` | `id`, `step`, `title`, `result?` | The step's agent got its job; `result` is the previous step's summary and files |
+| `pipeline.finished` | `id`, `status: done\|failed\|stopped`, `folder`, `reason?` | The run ended |
 | `guide.asked` | `text`, `via?` | The player asked the Guide (`? question` in the command bar). No `agentId` |
 | `guide.answered` | `text`, `suggestions: [{ agentId, task }]`, `newRole?: { name, job }`, `via?` | The Guide's answer. Ideas for agents that are not in the town are dropped |
 | `guide.failed` | `reason`, `via?` | The Guide could not answer |

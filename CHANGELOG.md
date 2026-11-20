@@ -2,6 +2,14 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.15.0 · Projects and weekly plans
+
+- **Projects:** a brief and a folder per channel or goal. Pick one above the team chat and every job gets the brief and saves into its folder.
+- **Weekly plans** in the new PLANS tab: a schedule and a chain of steps, each handing its work to the next, with a dated folder per run. Ready-made plans for weekly streamer highlights and a weekly GTA 6 video. RUN NOW, STOP, PAUSE, and `run <plan>` from the command box or WhatsApp.
+- Plans catch up once if the computer was off, retry a step once after a faint or reset, and announce the finished pack with a chime and on WhatsApp.
+- The Guide knows your projects and plans.
+- Fixed: in practice mode, a job given to a busy agent was dropped; it now waits its turn.
+
 ## 0.14.0 · The Guide, and a friendlier first screen
 
 - **Ask the Guide:** start a message with ? (or press the Guide button) to ask what your team could do. It reads your town and answers in plain words with up to three ready-made jobs, each with a GIVE TO button, and suggests a new role when nobody fits. Works in practice mode, the demo and on WhatsApp.

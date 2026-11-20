@@ -16,6 +16,7 @@ import { readFile } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
 import { StoreError } from './store.js';
 import { createCommands } from './commands.js';
+import { createPipelines } from './pipelines.js';
 import { mkdir, writeFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -80,8 +81,14 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     const list = (Array.isArray(files) ? files : []).map(String).filter((f) => /^inbox\//.test(f)).slice(0, 10);
     return list.length ? `${details ? `${details}\n\n` : ''}Use these files the user added: ${list.join(', ')}` : details;
   }
-  function assign(a, title, review, details) {
-    const event = store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details: details ? String(details).slice(0, 4000) : undefined, review: Boolean(review) } });
+  // A project's brief and folder, added to jobs given while that project is picked.
+  function withProject(details, projectId) {
+    const pj = projectId ? store.projects.get(String(projectId)) : null;
+    if (!pj) return details;
+    return `Project: ${pj.name}\n${pj.brief}\nSave your files in ${pj.folder}/ (no permission needed there).${details ? `\n\n${details}` : ''}`;
+  }
+  function assign(a, title, review, details, project = null) {
+    const event = store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details: details ? String(details).slice(0, 6000) : undefined, review: Boolean(review), project } });
     adapter?.onAssigned?.(a, event.data);
     return event;
   }
@@ -104,7 +111,13 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     adapter?.onGuide?.(event.data);
     return event;
   }
-  const commands = createCommands({ store, actions: { resolve, assign, reset, chat, ask, withFiles, filesDetails, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
+  const plans = createPipelines({ store, assign, log: (m) => console.error(m) });
+  function runPlan(name) {
+    const pl = plans.findByName(name);
+    if (!pl) return { reply: `No plan called "${name}". Your plans: ${[...store.pipelines.values()].map((p) => p.name).join(', ') || 'none yet (make one in the PLANS tab)'}.` };
+    try { plans.start(pl.id); return { reply: `${pl.name} started. Each step hands its work to the next.` }; } catch (err) { return { reply: err.message }; }
+  }
+  const commands = createCommands({ store, actions: { resolve, assign, reset, chat, ask, runPlan, withFiles, filesDetails, withProject, rename: (a, nick) => store.apply({ type: 'agent.renamed', agentId: a.id, data: { nick } }) } });
 
   const routes = [
     ['GET', /^\/api\/state$/, (req, res) => send(res, 200, { ...store.snapshot(), adapter: adapter ? adapter.name : null })],
@@ -148,8 +161,8 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     }],
 
     ['POST', /^\/api\/command$/, async (req, res) => {
-      const { text, review, via, files } = await readJSON(req);
-      send(res, 200, await commands.run(text, { review, via, files }));
+      const { text, review, via, files, project } = await readJSON(req);
+      send(res, 200, await commands.run(text, { review, via, files, project }));
     }],
 
     ['POST', /^\/api\/agents$/, async (req, res) => {
@@ -198,9 +211,9 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     }],
 
     ['POST', /^\/api\/agents\/([^/]+)\/tasks$/, async (req, res, [, id]) => {
-      const { title, details, review, files } = await readJSON(req);
+      const { title, details, review, files, project } = await readJSON(req);
       const a = store.resolveAgent(decodeURIComponent(id));
-      send(res, 200, { event: assign(a, title, review, filesDetails(details, files)) });
+      send(res, 200, { event: assign(a, title, review, withProject(filesDetails(details, files), project), project) });
     }],
 
     ['POST', /^\/api\/ingest$/, async (req, res) => {
@@ -209,6 +222,27 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
       if (list.length > 100) throw new StoreError(413, 'Send at most 100 events per request');
       const events = list.map((e) => store.apply(e));
       send(res, 200, { events });
+    }],
+
+    // Projects and weekly plans.
+    ['POST', /^\/api\/projects$/, async (req, res) => {
+      const { project } = await readJSON(req);
+      send(res, 200, { event: store.apply({ type: 'project.saved', data: { project } }) });
+    }],
+    ['POST', /^\/api\/projects\/delete$/, async (req, res) => {
+      const { id } = await readJSON(req);
+      send(res, 200, { event: store.apply({ type: 'project.deleted', data: { id: String(id || '') } }) });
+    }],
+    ['POST', /^\/api\/plans$/, async (req, res) => {
+      const { pipeline } = await readJSON(req);
+      send(res, 200, { event: store.apply({ type: 'pipeline.saved', data: { pipeline } }) });
+    }],
+    ['POST', /^\/api\/plans\/(delete|run|stop)$/, async (req, res, [, what]) => {
+      const { id } = await readJSON(req);
+      if (what === 'delete') return send(res, 200, { event: store.apply({ type: 'pipeline.deleted', data: { id: String(id || '') } }) });
+      try { if (what === 'run') plans.start(String(id || '')); else plans.stop(String(id || '')); }
+      catch (err) { throw new StoreError(409, err.message); }
+      send(res, 200, { ok: true });
     }],
 
     // Roles: { role: { id?, name, job, web, home, look } } for a custom role, or { type, job, web } to rewrite a built-in one.
@@ -275,6 +309,6 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     }
   });
 
-  server.on('close', () => { clearInterval(heartbeat); for (const r of clients) r.end(); });
+  server.on('close', () => { clearInterval(heartbeat); plans.close(); for (const r of clients) r.end(); });
   return server;
 }
