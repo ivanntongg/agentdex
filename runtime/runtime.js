@@ -9,6 +9,7 @@ import { ClaudeCodeError, ClaudeCodeStopped } from './claude-code.js';
 import { skillsPrompt } from './skills.js';
 import { createSkillScout } from './skill-scout.js';
 import { createGuide } from './guide.js';
+import { createEditor } from './editor.js';
 
 const WEB_SEARCH = { type: 'web_search_20260209', name: 'web_search', max_uses: 5 };
 const MOVE_FOR_TOOL = { list_files: 'READ', read_file: 'READ', write_file: 'EDIT' };
@@ -19,7 +20,8 @@ class Stopped extends Error {}
 // read before every request so changes on the SETUP screen apply straight away.
 // skills (optional): the community skills library (skills.js). With it, agents can look for a skill
 // before a task when settings().skillScout is on, and installed skills are listed in their prompts.
-export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-5-5', effort = 'medium', settings = null, skills = null, maxTurns = 30, log = console.log }) {
+// video (optional): runtime/video.js, for plan steps that cut and edit clips.
+export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-5-5', effort = 'medium', settings = null, skills = null, video = null, maxTurns = 30, log = console.log }) {
   const current = settings || (() => ({ anthropic, model, effort }));
   const agents = new Map();      // id -> latest agent snapshot from the server
   const queues = new Map();      // id -> [task]
@@ -177,6 +179,19 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     },
   });
 
+  const editor = video ? createEditor({ video, workspace, ask, waitForApproval: waitForApprovalData, dex, log }) : null;
+
+  // A plan's editing step: Agentdex cuts the clips itself; no tool-use loop.
+  async function runEdit(agent, task, signal) {
+    await dex.emit('task.started', agent.id, { title: task.title, review: false });
+    log(`[${agent.nick}] cutting clips: ${task.title}`);
+    const r = editor
+      ? await editor.run(agent, task, signal)
+      : { failed: true, summary: 'Cutting clips works when Agentdex runs with real agents.', files: [] };
+    await dex.emit('task.finished', agent.id, r.declined ? { outcome: 'declined' } : { xp: r.failed ? 10 : 60, note: r.summary, files: r.files, failed: Boolean(r.failed) });
+    log(`[${agent.nick}] ${r.summary}`);
+  }
+
   // Before work starts: maybe shop for a skill, walk home, and build the prompts with installed skills.
   async function prepare(agentId, task, species, signal) {
     const learned = scout ? await scout.forTask(agents.get(agentId), task, signal) : null;
@@ -253,6 +268,7 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     if (!agent || agent.boxed) return;
     const species = SPECIES[agent.species];
     const cfg = current();
+    if (task.edit) return runEdit(agent, task, signal);
     if (cfg.engine === 'claude-code') return runWithClaudeCode(agent, task, species, cfg, signal);
     if (!cfg.anthropic) {
       await dex.emit('agent.interacted', agentId, { action: 'poke', tone: 'bad', message: `${agent.nick} can't start "${task.title}" yet: add your Claude API key on the SETUP screen, then give the task again.` });

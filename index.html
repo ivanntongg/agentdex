@@ -1329,7 +1329,8 @@ const PLAN_TEMPLATES=[
   {name:'Daily GTA 6 clipping',project:'clipping',schedule:{day:'daily',time:'08:00'},steps:[
     {kind:'RESEARCH',title:"Today's open clipping campaigns",text:"Find open GTA 6 and big-streamer clipping campaigns on Whop Content Rewards and Clipping.net. For each: the streamer or brand, pay per 1,000 views, how much of the budget is already paid out and how much is left, the full rules (required hashtags or tags, clip length, platforms, account age, anything that gets clips rejected), and the link to its stream sources or resources tab. Prefer mid-tier campaigns paying $1 to $3 per 1,000 views that have already paid out; skip ones with almost no budget left. Rank the best 5. Save {folder}/campaigns.md."},
     {kind:'RESEARCH',title:"Yesterday's best GTA 6 moments",text:"For the streamers in campaigns.md, plus any big streamer who allows clipping and streamed GTA 6 in the last 24 hours, find the 12 best moments: chaos, huge reactions, funny fails, plot twists. Use Twitch top clips (last 24 hours), Reddit (r/LivestreamFail and the streamers' subreddits), X, and stream comments with timestamps. For each: streamer, what happens in one line, a link to the VOD or clip, start and end time, why it will hit, and which campaign it fits. Only streamers who allow clipping. Save {folder}/moments.md."},
-    {kind:'WRITE',title:'Hooks, titles and captions',text:"For each moment in moments.md, write the clip plan using the formula: captivating hook (first 1 to 2 seconds, on-screen text), supporting hook, tension, payoff, with the exact second to start and end, and the dead air to cut. Then a title under 60 characters, a caption with the campaign's required hashtags or tags from campaigns.md, and which platforms to post on. Order them by how likely they are to go viral. Save {folder}/clips.md as a checklist I can work through in CapCut."}]},
+    {kind:'WRITE',title:'Hooks, titles and captions',text:"For each moment in moments.md, write the clip plan using the formula: captivating hook (first 1 to 2 seconds, on-screen text), supporting hook, tension, payoff, with the exact second to start and end, and the dead air to cut. Then a title under 60 characters, a caption with the campaign's required hashtags or tags from campaigns.md, and which platforms to post on. Order them by how likely they are to go viral. Save {folder}/clips.md as a checklist I can work through in CapCut."},
+    {kind:'VIDEO',edit:true,title:'Cut and edit the clips',text:'Cut the best clips from moments.md and clips.md: 20 to 60 seconds each, starting right at the peak. Use the split layout with the facecam on top when the streamer has a facecam, otherwise fit. Use the hooks, titles and captions from clips.md.'}]},
   {name:'Weekly streamer highlights',project:'streamers',schedule:{day:'mon',time:'09:00'},steps:[
     {kind:'RESEARCH',title:"Find this week's best streamer moments",text:"Find the 8 funniest or most talked-about moments from big streamers in the past 7 days, like IShowSpeed, Kai Cenat, xQc and whoever is trending now. For each: the streamer, what happened in one line, a link to the clip or VOD with the timestamp, how big it got (views, where it spread), and whether the streamer allows clipping (find their clipping or fair-use policy and link it). Rank them, best first. Save {folder}/moments.md."},
     {kind:'WRITE',title:'Write the script and titles',text:"From moments.md, pick the 5 best moments that are safe to use. Write a 6 to 8 minute script: a hook in the first 10 seconds, my own commentary before and after each clip, a credit to each streamer, and an ending that asks viewers to subscribe. Then write 10 title ideas under 60 characters and a description that links every streamer. Save {folder}/script.md and {folder}/titles.md."},
@@ -1389,7 +1390,7 @@ function plansHTML(){
 function planCardHTML(pl){
   const r=pl.running,lr=pl.lastRun,nx=pl.enabled?nextRun(pl.schedule):null;
   const steps=pl.steps.map((st,i)=>{const a=byId(st.agentId)||box.find(x=>x.id===st.agentId);const on=r&&r.step===i;const done=r&&r.step>i;
-    return`<li class="${on?'on':done?'done':''}">${a?`<img class="spr" alt="" src="${sprURL(a.sp)}">`:'<span></span>'}<span><b>${a?esc(a.nick):'?'}</b> ${esc(st.title)}</span></li>`}).join('');
+    return`<li class="${on?'on':done?'done':''}">${a?`<img class="spr" alt="" src="${sprURL(a.sp)}">`:'<span></span>'}<span><b>${a?esc(a.nick):'?'}</b> ${esc(st.title)}${st.edit?' <span class="pchip">cuts clips</span>':''}</span></li>`}).join('');
   const status=r?`<div class="pstat run">Running: step ${Math.max(1,r.step+1)} of ${pl.steps.length}. Files go in ${esc(r.folder)}</div>`
     :lr?`<div class="pstat ${lr.status==='done'?'ok':lr.status==='failed'?'bad':''}">Last run ${fmtWhen(new Date(lr.at))}: ${lr.status==='done'?`done, open ${esc(lr.folder)}`:esc(lr.reason||lr.status)}</div>`:'';
   return`<div class="plan"><div class="sk-h"><b>${esc(pl.name)}</b>${pill(r?'ok':pl.enabled?'wait':'no',r?'RUNNING':pl.enabled?(pl.schedule.day==='manual'?'BY HAND':'ON'):'PAUSED')}</div>
@@ -1417,7 +1418,8 @@ function planEditorHTML(){
       <select data-sa="${i}" aria-label="Agent for step ${i+1}">${workers.map(a=>`<option value="${a.id}" ${a.id===st.agentId?'selected':''}>${esc(a.nick)}</option>`).join('')}</select>
       <span class="pmove"><button type="button" class="btn" data-up="${i}" ${i?'':'disabled'} aria-label="Move up">↑</button><button type="button" class="btn" data-down="${i}" ${i<d.steps.length-1?'':'disabled'} aria-label="Move down">↓</button><button type="button" class="btn" data-rm="${i}" ${d.steps.length>1?'':'disabled'} aria-label="Remove step">✕</button></span></div>
       <input data-st="${i}" maxlength="120" value="${esc(st.title)}" placeholder="Short title, like: Write the script">
-      <textarea data-sx="${i}" rows="4" maxlength="3000" placeholder="What this agent should do and which files to save.">${esc(st.text)}</textarea></div>`).join('');
+      <textarea data-sx="${i}" rows="4" maxlength="3000" placeholder="${st.edit?'Which clips to cut, how long, and which layout (split with the facecam on top, or fit).':'What this agent should do and which files to save.'}">${esc(st.text)}</textarea>
+      <label class="chk"><input type="checkbox" data-se="${i}" ${st.edit?'checked':''}> This step cuts and edits the clips (needs the video tools in SETUP)</label></div>`).join('');
   return`<form class="card role-ed" id="planForm" novalidate>
     <div><div class="sum-sp">${e.id?'Edit weekly plan':'New weekly plan'}</div><div class="sum-name">${esc(d.name||'Your plan')}</div></div>
     ${e.id?'':`<div class="tmpls"><span class="rl">Start from</span>${PLAN_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-plantmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`}
@@ -1437,7 +1439,7 @@ function planEditorHTML(){
 function planFromTemplate(t){
   const pt=PROJECT_TEMPLATES.find(x=>x.key===t.project);const have=plans.projects.find(p=>p.name===pt.name);
   return{name:t.name,projectId:have?have.id:'new',newProject:have?null:{name:pt.name,brief:pt.brief},schedule:{...t.schedule},review:false,
-    steps:t.steps.map(st=>{const a=agentForKind(st.kind);return{agentId:a?a.id:null,title:st.title,text:st.text}}).filter(st=>st.agentId!=null)};
+    steps:t.steps.map(st=>{const a=agentForKind(st.kind);return{agentId:a?a.id:null,title:st.title,text:st.text,edit:Boolean(st.edit)}}).filter(st=>st.agentId!=null)};
 }
 const blankPlan=()=>{const a=agentForKind('RESEARCH');return{name:'',projectId:plans.projects[0]?plans.projects[0].id:'',newProject:null,schedule:{day:'mon',time:'09:00'},review:false,steps:[{agentId:a?a.id:null,title:'',text:''}]}};
 async function savePlanBits(kind,body){
@@ -1480,7 +1482,7 @@ function bindPlans(){
   }
   const f=$('#planForm'),d=e.draft;
   const keep=()=>{d.name=$('#plName').value;const pj=$('#plProj');if(pj)d.projectId=pj.value;d.schedule={day:$('#plDay').value,time:$('#plTime').value||'09:00'};d.review=$('#plReview').checked;
-    d.steps.forEach((st,i)=>{const a=f.querySelector(`[data-sa="${i}"]`);if(a)st.agentId=+a.value;st.title=f.querySelector(`[data-st="${i}"]`).value;st.text=f.querySelector(`[data-sx="${i}"]`).value})};
+    d.steps.forEach((st,i)=>{const a=f.querySelector(`[data-sa="${i}"]`);if(a)st.agentId=+a.value;st.title=f.querySelector(`[data-st="${i}"]`).value;st.text=f.querySelector(`[data-sx="${i}"]`).value;st.edit=f.querySelector(`[data-se="${i}"]`).checked})};
   $('#plDay').onchange=()=>{keep();renderPane()};
   $('#plAdd').onclick=()=>{keep();const a=agentForKind('WRITE');d.steps.push({agentId:a?a.id:null,title:'',text:''});renderPane()};
   f.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{keep();const i=+b.dataset.up;[d.steps[i-1],d.steps[i]]=[d.steps[i],d.steps[i-1]];renderPane()});
@@ -1493,7 +1495,7 @@ function bindPlans(){
   f.onsubmit=async ev=>{ev.preventDefault();keep();e.error=null;
     try{
       if(d.projectId==='new'&&d.newProject){const r=await savePlanBits('project',{project:d.newProject});d.projectId=r.data.project.id;d.newProject=null;renderProjSel()}
-      await savePlanBits('plan',{pipeline:{id:e.id,name:d.name.trim(),projectId:d.projectId,schedule:d.schedule,review:d.review,enabled:d.enabled!==false,steps:d.steps.map(st=>({agentId:st.agentId,title:st.title.trim(),text:st.text.trim()}))}});
+      await savePlanBits('plan',{pipeline:{id:e.id,name:d.name.trim(),projectId:d.projectId,schedule:d.schedule,review:d.review,enabled:d.enabled!==false,steps:d.steps.map(st=>({agentId:st.agentId,title:st.title.trim(),text:st.text.trim(),edit:Boolean(st.edit)}))}});
       plans.edit=null;renderPane();
     }catch(err){e.error=err.message;renderPane()}};
 }
@@ -1950,7 +1952,7 @@ function renderSetup(note){
   const waPill=!w.complete?pill('wait','OFF'):w.error||wh.codesError||wt.error?pill('no','NEEDS A FIX'):wh.lastMessageAt?pill('ok','CONNECTED'):wh.verifiedAt?pill('ok','LINKED TO META'):pill('wait','NOT FINISHED');
   const effort=[['low','Low','Quick and cheapest'],['medium','Medium','Balanced. Best for most jobs'],['high','High','Most careful, costs more']];
   const models=[['claude-opus-5-5','Opus 5.5 · smartest (recommended)'],['claude-sonnet-5-5','Sonnet 5.5 · fast and capable, cheaper'],['claude-haiku-5-5','Haiku 5.5 · quickest and cheapest']];
-  const h=w.health||{},tn=w.tunnel||{};
+  const h=w.health||{},tn=w.tunnel||{},vt=s.video||{};
   const hookUrl=tn.url?tn.url+w.path:st.ngrokDomain?`https://${st.ngrokDomain}${w.path}`:'';
   const chk=(ok,txt)=>`<li class="${ok?'ok':'wait'}">${txt}</li>`;
   body.innerHTML=`
@@ -2034,7 +2036,21 @@ function renderSetup(note){
         ${h.lastError?`<div class="result no">${esc(h.lastError)}</div>`:''}</div></li>
     </ol>
     <p class="setup-note">From your phone, send <b>help</b> to see commands. Example: <i>scout compare 3 note-taking apps</i>. WhatsApp only lets the bot message you within 24 hours of your last message, so about an hour before that, Agentdex asks you to reply with anything to keep alerts coming.</p>
-  </form>`;
+  </form>
+
+  <div class="scard">
+    <h3><span class="num">4</span>Video tools <small>(for cutting clips)</small> ${vt.ffmpeg&&vt.ytdlp?pill('ok','READY'):vt.ffmpeg?pill('wait','HALF READY'):pill('wait','NOT INSTALLED')}</h3>
+    <p>Plans can cut your clips for you: Agentdex downloads only the seconds it needs and makes a ready 9:16 version with the hook and captions, plus the raw moment for CapCut. It needs two free tools on this computer.</p>
+    <ul class="checks">
+      ${chk(vt.ffmpeg,vt.ffmpeg?'ffmpeg is installed (cuts and edits)':'ffmpeg is not installed yet (cuts and edits)')}
+      ${chk(vt.ytdlp,vt.ytdlp?'yt-dlp is installed (downloads the moments)':'yt-dlp is not installed yet (downloads the moments)')}
+    </ul>
+    ${vt.ffmpeg&&vt.ytdlp?'':`<p>Install them once, then press CHECK AGAIN.</p>
+    <span class="flabel">Windows (PowerShell)</span>${copyBtn('winget install Gyan.FFmpeg')}${copyBtn('winget install yt-dlp.yt-dlp')}
+    <span class="flabel">Mac (Terminal)</span>${copyBtn('brew install ffmpeg yt-dlp')}`}
+    <div class="acts"><button class="btn" type="button" id="vtCheck">CHECK AGAIN</button></div>
+    <p class="setup-note">Agentdex only downloads from YouTube, Twitch and Kick, only the moments in your plan, and asks you YES or NO before each batch. Footage a campaign gives you can go in the workspace inbox instead.</p>
+  </div>`;
   bindSetup();
 }
 function bindSetup(){
@@ -2065,6 +2081,7 @@ function bindSetup(){
     const r=await setupCall('POST','api/setup',patch);
     await checkSetup(false);renderSetup(r.ok?null:{wa:r.data.error||'Could not save.'});
   };
+  const vc=$('#vtCheck');if(vc)vc.onclick=async()=>{vc.disabled=true;vc.textContent='CHECKING...';await checkSetup(false);renderSetup()};
   const wt=$('#waTest');
   if(wt)wt.onclick=async()=>{wt.disabled=true;wt.textContent='SENDING...';
     const r=await setupCall('POST','api/setup/test-whatsapp');

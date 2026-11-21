@@ -182,6 +182,16 @@ Open the **PLANS** tab.
 - **Start from a ready-made plan:** *Daily GTA 6 clipping* (every morning: today's open clipping campaigns on Whop and Clipping.net with their pay and rules, yesterday's best GTA 6 moments with timestamps, and a hook, title and caption for each clip), *Weekly streamer highlights* (find the week's funniest moments with links and each streamer's clipping policy, write the script and titles with your own commentary, make the shot list and captions, then thumbnail ideas) or *Weekly GTA 6 video*.
 - **RUN NOW** any time, **STOP**, **PAUSE**, or send `run weekly streamer highlights` from the command box or WhatsApp.
 
+### Plans can cut your clips
+
+Tick **This step cuts and edits the clips** on a plan step (the *Daily GTA 6 clipping* plan has one). After one YES from you, Agentdex downloads only the moments your agents found and makes, for each clip:
+
+- `NN-title-ready.mp4`: 9:16, with the hook in the first seconds and captions (the streamer's facecam on top and the gameplay below, or the whole frame over a blurred background);
+- `NN-title-raw.mp4`: the untouched moment, to edit your own way in CapCut;
+- `posts.md`: every clip's title and caption with the campaign's tags.
+
+It uses two free tools on your computer, **ffmpeg** and **yt-dlp**; SETUP, part 4 shows whether they are installed and the one-line install for Windows (`winget install Gyan.FFmpeg`, `winget install yt-dlp.yt-dlp`) and Mac (`brew install ffmpeg yt-dlp`). Agents never run programs themselves: Agentdex runs these two with fixed settings, only downloads from YouTube, Twitch and Kick (or uses footage you put in the workspace inbox), and you post the clips yourself. Download only footage you are allowed to use, such as a clipping campaign's.
+
 Plans run while Agentdex is open. If the computer was off at the planned time, the plan runs once as soon as Agentdex starts again. If an agent faints mid-step, the step starts again once it is reset; a second failure stops the run and says why. Agents can't download or edit video, so a plan prepares everything and you record, edit and upload.
 
 ## Ask the Guide
@@ -403,6 +413,8 @@ Any agent can live in the town: post events to `POST /api/ingest` and listen to 
 | `server/store.js` | World state. Validates and applies every event |
 | `server/app.js` | HTTP API, live event stream, setup routes |
 | `server/config.js` | Settings saved from SETUP |
+| `runtime/video.js` | Fixed video tools: download only a moment (yt-dlp), render 9:16 with hook and captions (ffmpeg) |
+| `runtime/editor.js` | A plan's editing step: cut list, one YES / NO, clips and posts.md |
 | `server/pipelines.js` | Runs weekly plans: schedules, step handoffs, retries |
 | `runtime/guide.js` | The Guide: reads the town and suggests jobs and new roles |
 | `server/roles.js` | Built-in roles (and your rewrites) and custom roles you create |

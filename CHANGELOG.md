@@ -2,6 +2,14 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.16.0 · Agents cut and edit your clips
+
+- **Editing steps in plans:** after one YES, Agentdex downloads only the moments your agents found and makes each clip twice: a ready 9:16 version with the hook and captions, and the raw moment for CapCut, plus posts.md with titles and captions.
+- **Layouts:** facecam on top with gameplay below, the whole frame over a blurred background, or a centre crop.
+- **Daily GTA 6 clipping** now ends with a cut-and-edit step.
+- **SETUP, Video tools:** shows whether ffmpeg and yt-dlp are installed, with one-line installs for Windows and Mac.
+- Safe by design: Agentdex runs the two tools with fixed settings, downloads only from YouTube, Twitch and Kick or the workspace, asks once per batch, and never posts for you. A failed editing step stops the plan with the reason.
+
 ## 0.15.1 · Daily GTA 6 clipping plan
 
 - New ready-made plan and project: **Daily GTA 6 clipping**. Every morning SCOUT lists open clipping campaigns (pay per 1,000 views, budget left, rules), finds yesterday's best GTA 6 moments from streamers who allow clipping, and QUILL writes each clip's hook, title and caption as a checklist for CapCut.
