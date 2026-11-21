@@ -38,6 +38,35 @@ export const CUTLIST_SCHEMA = {
 
 const slug = (s) => String(s || 'clip').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'clip';
 
+// What to paste into the Claude desktop app (with Computer use on) to polish the raw clips in CapCut.
+// The folder is this computer's real path, because Claude desktop works on the same computer.
+export function capcutPrompt(dir, made) {
+  const list = made.map((m) => `- ${m.name}-raw.mp4: hook "${m.hook}"${m.srt ? `, captions ${m.name}.srt` : ''}`).join('\n');
+  return `# Polish these clips in CapCut with Claude
+
+Open the Claude desktop app, make sure Computer use is on, and paste everything below the line.
+Claude asks you to allow CapCut first. Stay nearby: it works one clip at a time and shows you each result.
+
+---
+
+Use computer use to edit these clips in CapCut. The folder is:
+${dir}
+
+${list}
+
+For each clip, one at a time:
+1. In CapCut, start a new project and import the -raw.mp4 file.
+2. Set the canvas to 9:16. Use Auto reframe, or place the streamer's facecam on top and the gameplay below.
+3. Captions: import the .srt file if there is one (Captions, Import); otherwise use Auto captions. Make them big, bold and centred.
+4. Add the hook text in big letters for the first 2 seconds.
+5. Cut any silent or boring gaps.
+6. Export at 1080p, 30 fps, into the same folder, named like the clip but ending in -capcut.mp4.
+
+Do the first clip, then stop and show me before doing the rest.
+Do not post anything, open links, or log in to any account.
+`;
+}
+
 // video: createVideo(); workspace: createWorkspace(); ask/waitForApproval as in the runtime.
 export function createEditor({ video, workspace, ask, waitForApproval, dex, log = console.log }) {
   async function readIf(rel) {
@@ -84,14 +113,16 @@ export function createEditor({ video, workspace, ask, waitForApproval, dex, log 
     const files = [];
     const posts = [];
     const failed = [];
+    const made = [];
     for (let i = 0; i < clips.length; i++) {
       if (signal?.aborted) break;
       const c = clips[i];
       const name = `${String(i + 1).padStart(2, '0')}-${slug(c.title)}`;
       try {
         const r = await video.makeClip({ source: c.source, start: c.start, end: c.end, hook: c.hook, layout: c.layout, corner: c.corner, dir, name, signal });
-        files.push(`${dirRel}/${name}-ready.mp4`, `${dirRel}/${name}-raw.mp4`);
-        posts.push(`## ${i + 1}. ${c.title}\nFiles: ${name}-ready.mp4 (post as is) and ${name}-raw.mp4 (edit in CapCut)\nSource: ${c.source} from ${c.start} to ${c.end}${r.captions ? '' : '\nNo captions came with this video: turn on Auto captions in CapCut.'}\n\nTitle: ${c.title}\n\nCaption:\n${c.caption}\n`);
+        files.push(`${dirRel}/${name}-ready.mp4`, `${dirRel}/${name}-raw.mp4`, ...(r.srt ? [`${dirRel}/${name}.srt`] : []));
+        posts.push(`## ${i + 1}. ${c.title}\nFiles: ${name}-ready.mp4 (post as is) and ${name}-raw.mp4 (edit in CapCut)${r.srt ? `, captions in ${name}.srt (CapCut: Captions, Import)` : ''}\nSource: ${c.source} from ${c.start} to ${c.end}${r.captions ? '' : '\nNo captions came with this video: turn on Auto captions in CapCut.'}\n\nHook: ${c.hook}\nTitle: ${c.title}\n\nCaption:\n${c.caption}\n`);
+        made.push({ name, hook: c.hook, srt: Boolean(r.srt) });
         await dex.emit('task.progress', agent.id, { tokens: 0.5, tool: 'EDIT' }).catch(() => {});
       } catch (err) {
         if (signal?.aborted) break;
@@ -102,14 +133,15 @@ export function createEditor({ video, workspace, ask, waitForApproval, dex, log 
     if (posts.length) {
       await writeFile((await workspace.resolve(`${dirRel}/posts.md`)).abs, `# Clips ready to post\n\nEach clip has a -ready file (9:16, hook and captions) and a -raw file for CapCut.\n\n${posts.join('\n')}`, 'utf8');
       files.push(`${dirRel}/posts.md`);
+      await writeFile((await workspace.resolve(`${dirRel}/capcut-prompt.md`)).abs, capcutPrompt(dir, made), 'utf8');
+      files.push(`${dirRel}/capcut-prompt.md`);
     }
-    const made = posts.length;
     const problems = [...failed, ...skipped];
     return {
-      failed: made === 0,
+      failed: made.length === 0,
       files,
-      summary: made
-        ? `Made ${made} of ${clips.length + skipped.length} clips in ${dirRel}: each has a -ready file to post and a -raw file for CapCut, and posts.md has the titles and captions.${problems.length ? ` Skipped ${problems.length}: ${problems.slice(0, 3).join('; ')}.` : ''}`
+      summary: made.length
+        ? `Made ${made.length} of ${clips.length + skipped.length} clips in ${dirRel}: each has a -ready file to post and a -raw file for CapCut, and posts.md has the titles and captions.${problems.length ? ` Skipped ${problems.length}: ${problems.slice(0, 3).join('; ')}.` : ''}`
         : `No clip could be made. ${problems.slice(0, 3).join('; ')}`,
     };
   }

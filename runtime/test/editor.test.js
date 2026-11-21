@@ -20,7 +20,7 @@ async function setup({ tools = { ffmpeg: '/x/ffmpeg', ytdlp: '/x/yt-dlp' }, cut 
   const asked = [];
   const video = {
     tools: () => tools,
-    makeClip: async (o) => { made.push(o); if (o.name.endsWith('-boom')) throw new Error('download failed'); await writeFile(path.join(o.dir, `${o.name}-ready.mp4`), 'x'); return { file: '', raw: '', captions: o.source.includes('youtube') }; },
+    makeClip: async (o) => { made.push(o); if (o.name.endsWith('-boom')) throw new Error('download failed'); await writeFile(path.join(o.dir, `${o.name}-ready.mp4`), 'x'); return { file: '', raw: '', srt: o.source.includes('youtube') ? 'x.srt' : null, captions: o.source.includes('youtube') }; },
   };
   const editor = createEditor({
     video, workspace, log: () => {},
@@ -45,7 +45,11 @@ test('moments become finished clips after one YES: raw for CapCut, ready to post
   assert.deepEqual(t.approvals[0], { tool: 'CUT', target: `1 clip into ${FOLDER}/clips (downloads from youtube.com)` }, 'one question for the batch; bad clips never reach it');
   assert.equal(t.made.length, 1);
   assert.deepEqual([t.made[0].name, t.made[0].layout, t.made[0].hook], ['01-speed-vs-the-plane', 'split', 'He did NOT expect this']);
-  assert.deepEqual(r.files, [`${FOLDER}/clips/01-speed-vs-the-plane-ready.mp4`, `${FOLDER}/clips/01-speed-vs-the-plane-raw.mp4`, `${FOLDER}/clips/posts.md`]);
+  assert.deepEqual(r.files, [`${FOLDER}/clips/01-speed-vs-the-plane-ready.mp4`, `${FOLDER}/clips/01-speed-vs-the-plane-raw.mp4`, `${FOLDER}/clips/01-speed-vs-the-plane.srt`, `${FOLDER}/clips/posts.md`, `${FOLDER}/clips/capcut-prompt.md`]);
+  const prompt = await readFile(path.join(t.workspace.root, FOLDER, 'clips', 'capcut-prompt.md'), 'utf8');
+  assert.ok(prompt.includes(path.join(t.workspace.root, FOLDER, 'clips')), 'the real folder on this computer, for Claude desktop');
+  assert.match(prompt, /- 01-speed-vs-the-plane-raw\.mp4: hook "He did NOT expect this", captions 01-speed-vs-the-plane\.srt/);
+  assert.match(prompt, /Do not post anything, open links, or log in to any account\./);
   assert.match(r.summary, /^Made 1 of 3 clips in .*clips: each has a -ready file to post and a -raw file for CapCut.*Skipped 2: .*only downloads from YouTube, Twitch and Kick.*must be 3 seconds/);
   const posts = await readFile(path.join(t.workspace.root, FOLDER, 'clips', 'posts.md'), 'utf8');
   assert.match(posts, /## 1\. Speed vs the plane\nFiles: 01-speed-vs-the-plane-ready\.mp4 \(post as is\) and 01-speed-vs-the-plane-raw\.mp4 \(edit in CapCut\)/);

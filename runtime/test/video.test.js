@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { findTool, parseTime, checkSource, downloadArgs, filterGraph, renderArgs, parseVtt, assFile, createVideo, VideoError } from '../video.js';
+import { findTool, parseTime, checkSource, downloadArgs, filterGraph, renderArgs, parseVtt, assFile, toSrt, createVideo, VideoError } from '../video.js';
 
 test('times in every shape people write them', () => {
   assert.equal(parseTime('1:02:03'), 3723);
@@ -52,6 +52,8 @@ test('YouTube auto-captions are cleaned, and the hook and captions fit the frame
   assert.match(ass, /PlayResX: 1080\nPlayResY: 1920/);
   assert.match(ass, /Dialogue: 1,0:00:00\.00,0:00:03\.00,Hook,,0,0,0,,HE DID NOT EXPECT THIS/, 'braces are stripped so captions cannot inject styling');
   assert.match(ass, /,Cap,,0,0,0,,HE DID NOT\n/);
+  assert.equal(toSrt([{ start: -1, end: 1.5, text: 'he did not' }, { start: 2, end: 3.25, text: 'expect that' }, { start: 20, end: 21, text: 'later' }], 10),
+    '1\n00:00:00,000 --> 00:00:01,500\nhe did not\n\n2\n00:00:02,000 --> 00:00:03,250\nexpect that\n', 'an .srt CapCut can import, trimmed to the clip');
 });
 
 test('finds tools where the Windows and Mac installers put them', () => {
