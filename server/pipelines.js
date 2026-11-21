@@ -72,7 +72,7 @@ export function createPipelines({ store, assign, now = () => new Date(), tickMs 
     const a = agentFor(step);
     if (!a) return finish(pl, 'failed', `Nobody can do step ${i + 1}: the agent is in the box or fainted. Move it to the party or edit the plan.`);
     store.apply({ type: 'pipeline.stepped', agentId: a.id, data: { id: pl.id, step: i, title: step.title, result } });
-    assign(a, step.title, pl.review && reviewerFree(), details(pl, i));
+    assign(a, step.title, step.edit ? false : pl.review && reviewerFree(), details(pl, i), null, step.edit ? { edit: { folder: pl.running.folder } } : null);
   }
 
   function finish(pl, status, reason = null) {
@@ -104,6 +104,7 @@ export function createPipelines({ store, assign, now = () => new Date(), tickMs 
       if (ev.type === 'task.finished' && ev.data?.title === pl.running.title) {
         const a = store.resolveAgent(ev.agentId, { required: false });
         if (ev.data.outcome === 'declined') { finish(pl, 'failed', `${a?.nick || 'The agent'} stood down at step ${pl.running.step + 1} after you said NO.`); continue; }
+        if (ev.data.failed) { finish(pl, 'failed', `Step ${pl.running.step + 1}: ${ev.data.note || 'it did not work'}`); continue; }
         const result = { nick: a?.nick || '', title: pl.running.title, note: ev.data.note || '', files: ev.data.files || [] };
         const next = pl.running.step + 1;
         if (next >= pl.steps.length) { pl.running.results.push(result); finish(pl, 'done'); } else runStep(pl, next, result);
@@ -121,7 +122,8 @@ export function createPipelines({ store, assign, now = () => new Date(), tickMs 
         } else {
           r.retried = true; r.waiting = false;
           store.note(`${pl.name}: ${nick} is back, so step ${r.step + 1} starts again.`);
-          assign(a, pl.steps[r.step].title, pl.review && reviewerFree(), details(pl, r.step));
+          const st = pl.steps[r.step];
+          assign(a, st.title, st.edit ? false : pl.review && reviewerFree(), details(pl, r.step), null, st.edit ? { edit: { folder: r.folder } } : null);
         }
       }
     }

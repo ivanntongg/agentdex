@@ -87,8 +87,8 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
     if (!pj) return details;
     return `Project: ${pj.name}\n${pj.brief}\nSave your files in ${pj.folder}/ (no permission needed there).${details ? `\n\n${details}` : ''}`;
   }
-  function assign(a, title, review, details, project = null) {
-    const event = store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details: details ? String(details).slice(0, 6000) : undefined, review: Boolean(review), project } });
+  function assign(a, title, review, details, project = null, extra = null) {
+    const event = store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details: details ? String(details).slice(0, 6000) : undefined, review: Boolean(review), project, ...(extra || {}) } });
     adapter?.onAssigned?.(a, event.data);
     return event;
   }

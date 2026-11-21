@@ -165,6 +165,7 @@ export function createStore() {
         if (!data.title) throw new StoreError(400, 'task.assigned needs data.title');
         if (a.boxed) throw new StoreError(409, `${a.nick} is in the box. Move it to the party first.`);
         event.data.title = String(data.title).slice(0, 200);
+        event.data.edit = data.edit?.folder ? { folder: String(data.edit.folder).slice(0, 200) } : undefined; // a plan's editing step
         if (data.project) { const pj = projects.get(String(data.project)); event.data.project = pj ? pj.id : null; event.data.projectName = pj ? pj.name : null; }
         event.message = `You gave ${a.nick} a task: "${event.data.title}"${event.data.projectName ? ` (${event.data.projectName})` : ''}.`;
         break;
@@ -330,7 +331,7 @@ export function createStore() {
           if (title.length < 3) throw new StoreError(400, `Step ${i + 1}: give it a short title.`);
           const text = String(x.text || '').trim().slice(0, 3000);
           if (text.length < 10) throw new StoreError(400, `Step ${i + 1}: say what ${who.nick} should do.`);
-          return { agentId: who.id, title, text };
+          return { agentId: who.id, title, text, edit: Boolean(x.edit) };
         });
         if (!steps.length || steps.length > 8) throw new StoreError(400, 'A plan needs 1 to 8 steps.');
         const pl = {

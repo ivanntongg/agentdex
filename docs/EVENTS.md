@@ -51,7 +51,7 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 
 | Type | data | Effect |
 |---|---|---|
-| `task.assigned` | `title`, `details?`, `review?`, `project?` | The player gave this agent work (`POST /api/agents/:id/tasks`). Your runtime should start it |
+| `task.assigned` | `title`, `details?`, `review?`, `project?`, `edit?: { folder }` (a plan's editing step) | The player gave this agent work (`POST /api/agents/:id/tasks`). Your runtime should start it |
 | `agent.spawned` | `species`, `nick?`, `ref?`, `lv?`, `boxed?` | New agent. Fails with 409 when the party has 6 |
 | `agent.moved` | `to` (LAB, MART, WORKSHOP, CENTER, GYM), `reason?` | The agent walks there. Logged only with a `reason` |
 | `task.started` | `title`, `review?`, `approval?: {tool, target}` | Status OK, phase work |

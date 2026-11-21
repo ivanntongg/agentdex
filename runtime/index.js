@@ -22,6 +22,7 @@ import { StoreError } from '../server/store.js';
 import { createWhatsAppBridge } from '../bridges/whatsapp.js';
 import { findNgrok, startTunnel } from '../bridges/tunnel.js';
 import { createSkills, parseRef, SkillError } from './skills.js';
+import { createVideo } from './video.js';
 import { SPECIES } from '../server/species.js';
 
 const STARTERS = [
@@ -47,6 +48,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   const config = createConfig({ path: env.AGENTDEX_CONFIG || 'agentdex.config.json', env });
   const workspace = await createWorkspace(env.AGENTDEX_WORKSPACE || 'workspace');
   const skillLib = createSkills({ dir: env.AGENTDEX_SKILLS_DIR || 'skills' });
+  const video = createVideo({ workspaceRoot: workspace.root });
   let runtime = null;
 
   // One Claude client, rebuilt when the key changes.
@@ -116,6 +118,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
         workspace: workspace.root,
         claude: { brain: config.brain(), hasKey: Boolean(config.get('anthropicKey')), lastCheck: lastClaudeCheck },
         plan: config.brain() === 'claude-code' ? planUsage : null,
+        video: video.tools(),
         whatsapp: {
           complete: Boolean(wa), running: Boolean(bridge), error: bridgeError,
           port: wa?.port || Number(env.WHATSAPP_PORT || 8788), path: '/webhooks/whatsapp',
@@ -211,7 +214,7 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
 
   dex = createAgentdexClient({ url, token });
   claudeCode = createClaudeCode({ bin: env.AGENTDEX_CLAUDE_BIN || 'claude', workspace, url, token, onPlanUsage: (u) => { planUsage = u; } });
-  runtime = createRuntime({ dex, workspace, skills: skillLib, settings: () => ({ engine: config.brain(), claudeCode, anthropic: claude(), model: config.model(), effort: config.effort(), skillScout: config.skillScout() }) });
+  runtime = createRuntime({ dex, workspace, skills: skillLib, video, settings: () => ({ engine: config.brain(), claudeCode, anthropic: claude(), model: config.model(), effort: config.effort(), skillScout: config.skillScout() }) });
 
   const state = await dex.state().catch((err) => { throw new Error(`Cannot reach Agentdex at ${url}: ${err.message}`); });
   if (state.adapter === 'simulator') console.warn('Warning: the server is running its simulator. Start it with AGENTDEX_SIM=0 so the fake agents stay out of the way.');

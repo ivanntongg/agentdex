@@ -14,7 +14,7 @@ function town() {
   const checks = store.apply({ type: 'agent.spawned', data: { species: 'sentril', nick: 'CHECKS' } }).agentId;
   store.apply({ type: 'project.saved', data: { project: { name: 'Streamer highlights', brief: BRIEF } } });
   const assigned = [];
-  const assign = (a, title, review, details) => { assigned.push({ nick: a.nick, title, review, details }); return store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details } }); };
+  const assign = (a, title, review, details, project, extra) => { assigned.push({ nick: a.nick, title, review, details, extra }); return store.apply({ type: 'task.assigned', agentId: a.id, data: { title, details, ...(extra || {}) } }); };
   const plans = createPipelines({ store, assign, tickMs: 0, now: () => new Date('2026-11-23T10:00:00') });
   const plan = (extra = {}) => store.apply({ type: 'pipeline.saved', data: { pipeline: {
     name: 'Weekly streamer highlights', projectId: 'p-streamer-highlights', schedule: { day: 'mon', time: '09:00' },
@@ -150,4 +150,25 @@ test('practice agents queue jobs given while they are busy, so practice plans fi
   sim.onAssigned(store.resolveAgent(a), { title: 'Your job' });
   for (let i = 0; i < 40 && !store.snapshot().log.some((e) => e.type === 'task.started' && e.data.title === 'Your job'); i++) sim.tick();
   assert.ok(store.snapshot().log.some((e) => e.type === 'task.started' && e.data.title === 'Your job'), 'the queued job started after the first one');
+});
+
+test('an editing step gets the run folder; if it fails, the plan stops with its reason', async () => {
+  const t = town();
+  const pl = t.plan({ steps: [
+    { agentId: t.scout, title: 'Find moments', text: 'Save {folder}/moments.md.' },
+    { agentId: t.quill, title: 'Cut and edit the clips', text: 'Vertical clips, split layout.', edit: true },
+  ] });
+  assert.equal(t.store.pipelines.get(pl.id).steps[1].edit, true);
+  t.plans.start(pl.id);
+  assert.equal(t.assigned[0].extra, null);
+  t.finish(t.scout, { note: 'Found 12.', files: [] });
+  await tick();
+  assert.deepEqual(t.assigned[1].extra, { edit: { folder: 'drafts/streamer-highlights/2026-11-23' } });
+  assert.equal(t.assigned[1].review, false, 'editing is never sent to the reviewer');
+  const ev = t.store.snapshot().log.filter((e) => e.type === 'task.assigned').at(-1);
+  assert.deepEqual(ev.data.edit, { folder: 'drafts/streamer-highlights/2026-11-23' });
+  t.finish(t.quill, { note: 'Cutting clips needs ffmpeg on this computer.', failed: true });
+  await tick();
+  assert.match(t.store.pipelines.get(pl.id).lastRun.reason, /^Step 2: Cutting clips needs ffmpeg/);
+  t.plans.close();
 });
