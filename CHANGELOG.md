@@ -2,6 +2,11 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.16.1 · CapCut-ready clips
+
+- Each clip also gets an `.srt` captions file that CapCut can import.
+- Each batch gets `capcut-prompt.md`: paste it into the Claude desktop app with Computer use on, and Claude polishes the raw clips in CapCut one at a time while you watch, without posting or logging in anywhere.
+
 ## 0.16.0 · Agents cut and edit your clips
 
 - **Editing steps in plans:** after one YES, Agentdex downloads only the moments your agents found and makes each clip twice: a ready 9:16 version with the hook and captions, and the raw moment for CapCut, plus posts.md with titles and captions.

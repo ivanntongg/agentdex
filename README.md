@@ -188,7 +188,9 @@ Tick **This step cuts and edits the clips** on a plan step (the *Daily GTA 6 cli
 
 - `NN-title-ready.mp4`: 9:16, with the hook in the first seconds and captions (the streamer's facecam on top and the gameplay below, or the whole frame over a blurred background);
 - `NN-title-raw.mp4`: the untouched moment, to edit your own way in CapCut;
-- `posts.md`: every clip's title and caption with the campaign's tags.
+- `NN-title.srt`: the captions, which CapCut can import (Captions, Import), when the video has them;
+- `posts.md`: every clip's title and caption with the campaign's tags;
+- `capcut-prompt.md`: a ready prompt for the Claude desktop app with **Computer use** on, which opens CapCut and polishes the raw clips one by one while you watch (Settings, System, Computer use; or Settings, Capabilities, Computer use).
 
 It uses two free tools on your computer, **ffmpeg** and **yt-dlp**; SETUP, part 4 shows whether they are installed and the one-line install for Windows (`winget install Gyan.FFmpeg`, `winget install yt-dlp.yt-dlp`) and Mac (`brew install ffmpeg yt-dlp`). Agents never run programs themselves: Agentdex runs these two with fixed settings, only downloads from YouTube, Twitch and Kick (or uses footage you put in the workspace inbox), and you post the clips yourself. Download only footage you are allowed to use, such as a clipping campaign's.
 

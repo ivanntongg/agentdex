@@ -146,6 +146,13 @@ export function parseVtt(text) {
   return out;
 }
 
+// Captions as an .srt file, which CapCut can import (Captions, Import), timed to the clip.
+export function toSrt(cues, duration) {
+  const t = (s) => { const ms = Math.max(0, Math.round(s * 1000)); return `${String(Math.floor(ms / 3600000)).padStart(2, '0')}:${String(Math.floor(ms / 60000) % 60).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`; };
+  return cues.filter((c) => c.end > 0 && c.start < duration)
+    .map((c, i) => `${i + 1}\n${t(Math.max(0, c.start))} --> ${t(Math.min(duration, c.end))}\n${c.text}\n`).join('\n');
+}
+
 const assTime = (s) => { const t = Math.max(0, s); const cs = Math.round(t * 100); return `${Math.floor(cs / 360000)}:${String(Math.floor(cs / 6000) % 60).padStart(2, '0')}:${String(Math.floor(cs / 100) % 60).padStart(2, '0')}.${String(cs % 100).padStart(2, '0')}`; };
 const assText = (t) => String(t).replace(/[{}\\]/g, '').replace(/\n/g, ' ').trim();
 
@@ -240,7 +247,9 @@ export function createVideo({ workspaceRoot, tools = null, runImpl = run }) {
       await writeFile(path.join(work, 'clip.ass'), assFile({ hook, cues, duration, layout }), 'utf8');
       const out = path.join(dir, `${name}-ready.mp4`);
       await runImpl(t.ffmpeg, renderArgs({ input, out, layout: LAYOUTS.includes(layout) ? layout : 'fit', corner: CORNERS.includes(corner) ? corner : 'top-right', size, seek, duration }), { cwd: work, timeoutMs: 5 * 60_000, signal });
-      return { file: out, raw, captions: cues.length > 0, duration };
+      let srt = null;
+      if (cues.length) { srt = path.join(dir, `${name}.srt`); await writeFile(srt, toSrt(cues, duration), 'utf8'); }
+      return { file: out, raw, srt, captions: cues.length > 0, duration };
     } finally {
       await rm(work, { recursive: true, force: true }).catch(() => {});
     }
