@@ -439,6 +439,7 @@ header.top{position:relative;display:flex;flex-wrap:wrap;align-items:center;just
 .setup-head p{margin:2px 0 0;color:var(--muted);font-size:15px}
 .scard{padding:18px;display:grid;gap:12px;min-width:0}
 .scard h3{margin:0;font-weight:700;font-size:16px;color:var(--head);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.scard h3.subh{font-size:14.5px;margin-top:10px}
 .scard h3 .num{background:var(--tab-on);color:var(--tab-on-ink);min-width:26px;height:26px;padding:0 8px;border-radius:999px;display:inline-grid;place-items:center;font-size:13px}
 .scard p{margin:0;font-size:15px;line-height:1.5;color:var(--ink);max-width:64ch}
 .scard a{color:var(--sel);font-weight:600}
@@ -1321,11 +1322,15 @@ let activeProject='';try{activeProject=localStorage.getItem('agentdex-project')|
 const DAY_OPTS=[['mon','Every Monday'],['tue','Every Tuesday'],['wed','Every Wednesday'],['thu','Every Thursday'],['fri','Every Friday'],['sat','Every Saturday'],['sun','Every Sunday'],['daily','Every day'],['manual','Only when I press RUN']];
 const DAY_IDX={sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
 const PROJECT_TEMPLATES=[
+  {key:'highlights',name:'Streamer clips',brief:'Shorts, TikToks and Reels of the funniest, craziest and most talked-about moments from big streamers, posted every day. Audience: teens and young adults who missed the stream. Style: fast, loud, funny, never mean. Rules: only clip streamers who allow clipping or run a clipping campaign; when a streamer has a campaign on Whop, follow its rules exactly so the clips get paid; credit the streamer in every caption; 15 to 60 seconds, starting right at the action; big captions.',streamers:'youtube.com/@IShowSpeed\ntwitch.tv/kaicenat\nkick.com/xqc\nkick.com/adinross\ntwitch.tv/jynxzi'},
   {key:'clipping',name:'GTA 6 clipping',brief:'Clipping GTA 6 streams into Shorts, TikToks and Reels, paid per 1,000 views through clipping campaigns on Whop Content Rewards and Clipping.net. Target mid-tier campaigns paying $1 to $3 per 1,000 views that have already paid out. Rules: only clip streamers who allow clipping or run a campaign; follow each campaign\'s rules exactly (hashtags, length, account age, tags); vertical 9:16 with facecam on top and gameplay below; 20 to 60 seconds; start right at the peak; cut every silent gap; big captions. Clip formula: captivating hook, supporting hook, tension, payoff. Volume: 10 to 20 clips a day.'},
   {key:'streamers',name:'Streamer highlights',brief:'A YouTube channel with the funniest and most talked-about moments from big streamers each week (IShowSpeed, Kai Cenat, xQc and whoever is trending), with my own commentary between clips. Audience: teens and young adults who missed the streams. Style: fast, funny, never mean. Rules: only use streamers who allow clipping or who gave permission, keep each clip short, always credit and link the streamer, and add my own commentary so the video is mine.'},
   {key:'gta6',name:'GTA 6 channel',brief:'A YouTube channel about GTA 6: news, map guides, theories and first looks. Audience: GTA fans. Style: clear, excited and accurate. Rules: separate confirmed facts from rumours, and link every source.'},
 ];
 const PLAN_TEMPLATES=[
+  {name:'Daily streamer clips',project:'highlights',schedule:{day:'daily',time:'08:00'},steps:[
+    {kind:'RESEARCH',find:true,title:"Find the streamers' top moments",text:"Check every streamer in the project: their top Twitch and Kick clips of the last 24 hours, and the most replayed and most commented moments of their latest YouTube streams. Save {folder}/moments.md."},
+    {kind:'VIDEO',edit:true,title:'Cut the funniest clips',text:"From moments.md, cut the 10 moments people will most want to watch: funny, shocking, chaotic or wholesome. Keep whole Twitch and Kick clips as they are. Use the split layout with the facecam on top when the streamer has a facecam, otherwise fit. Hooks of at most 7 words that make people stay, titles under 60 characters, and captions that credit the streamer with 3 to 5 hashtags like #shorts #streamer #funny."}]},
   {name:'Daily GTA 6 clipping',project:'clipping',schedule:{day:'daily',time:'08:00'},steps:[
     {kind:'RESEARCH',title:"Today's open clipping campaigns",text:"Find open GTA 6 and big-streamer clipping campaigns on Whop Content Rewards and Clipping.net. For each: the streamer or brand, pay per 1,000 views, how much of the budget is already paid out and how much is left, the full rules (required hashtags or tags, clip length, platforms, account age, anything that gets clips rejected), and the link to its stream sources or resources tab. Prefer mid-tier campaigns paying $1 to $3 per 1,000 views that have already paid out; skip ones with almost no budget left. Rank the best 5. Save {folder}/campaigns.md."},
     {kind:'RESEARCH',title:"Yesterday's best GTA 6 moments",text:"For the streamers in campaigns.md, plus any big streamer who allows clipping and streamed GTA 6 in the last 24 hours, find the 12 best moments: chaos, huge reactions, funny fails, plot twists. Use Twitch top clips (last 24 hours), Reddit (r/LivestreamFail and the streamers' subreddits), X, and stream comments with timestamps. For each: streamer, what happens in one line, a link to the VOD or clip, start and end time, why it will hit, and which campaign it fits. Only streamers who allow clipping. Save {folder}/moments.md."},
@@ -1378,7 +1383,7 @@ function planEvent(ev){
 }
 function plansHTML(){
   if(plans.edit)return plans.edit.kind==='project'?projectEditorHTML():planEditorHTML();
-  const proj=plans.projects.length?plans.projects.map(p=>`<div class="sk"><div class="sk-h"><b>${esc(p.name)}</b><small>${esc(p.folder)}</small></div><p>${esc(p.brief)}</p><div class="acts"><button class="btn" type="button" data-editproj="${esc(p.id)}">EDIT</button></div></div>`).join('')
+  const proj=plans.projects.length?plans.projects.map(p=>`<div class="sk"><div class="sk-h"><b>${esc(p.name)}</b><small>${esc(p.folder)}</small></div><p>${esc(p.brief)}</p>${(p.streamers||[]).length?`<div class="sk-meta">Clips ${p.streamers.length} streamer${p.streamers.length===1?'':'s'}: ${esc(p.streamers.map(u=>u.replace(/^https:\/\/(www\.)?/,'')).join(', '))}</div>`:''}<div class="acts"><button class="btn" type="button" data-editproj="${esc(p.id)}">EDIT</button></div></div>`).join('')
     :`<p class="boxnote">A project keeps one channel's brief and files together. Start from one:</p><div class="tmpls">${PROJECT_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-projtmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`;
   const list=plans.pipelines.length?plans.pipelines.map(planCardHTML).join('')
     :`<p class="boxnote">A weekly plan gives a chain of jobs to your agents on a schedule. Each step hands its work to the next. Start from one:</p><div class="tmpls">${PLAN_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-plantmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`;
@@ -1390,7 +1395,7 @@ function plansHTML(){
 function planCardHTML(pl){
   const r=pl.running,lr=pl.lastRun,nx=pl.enabled?nextRun(pl.schedule):null;
   const steps=pl.steps.map((st,i)=>{const a=byId(st.agentId)||box.find(x=>x.id===st.agentId);const on=r&&r.step===i;const done=r&&r.step>i;
-    return`<li class="${on?'on':done?'done':''}">${a?`<img class="spr" alt="" src="${sprURL(a.sp)}">`:'<span></span>'}<span><b>${a?esc(a.nick):'?'}</b> ${esc(st.title)}${st.edit?' <span class="pchip">cuts clips</span>':''}</span></li>`}).join('');
+    return`<li class="${on?'on':done?'done':''}">${a?`<img class="spr" alt="" src="${sprURL(a.sp)}">`:'<span></span>'}<span><b>${a?esc(a.nick):'?'}</b> ${esc(st.title)}${st.edit?' <span class="pchip">cuts clips</span>':st.find?' <span class="pchip">finds clips</span>':''}</span></li>`}).join('');
   const status=r?`<div class="pstat run">Running: step ${Math.max(1,r.step+1)} of ${pl.steps.length}. Files go in ${esc(r.folder)}</div>`
     :lr?`<div class="pstat ${lr.status==='done'?'ok':lr.status==='failed'?'bad':''}">Last run ${fmtWhen(new Date(lr.at))}: ${lr.status==='done'?`done, open ${esc(lr.folder)}`:esc(lr.reason||lr.status)}</div>`:'';
   return`<div class="plan"><div class="sk-h"><b>${esc(pl.name)}</b>${pill(r?'ok':pl.enabled?'wait':'no',r?'RUNNING':pl.enabled?(pl.schedule.day==='manual'?'BY HAND':'ON'):'PAUSED')}</div>
@@ -1407,6 +1412,9 @@ function projectEditorHTML(){
     <label class="rl" for="pjBrief">What is it about?</label>
     <textarea id="pjBrief" rows="6" maxlength="3000" placeholder="What the channel is, who it is for, the style, and any rules your agents must follow.">${esc(d.brief)}</textarea>
     <small class="rhint">Every job in this project gets this brief, and its files go in their own folder.</small>
+    <label class="rl" for="pjStreamers">Streamers to clip <small>(optional)</small></label>
+    <textarea id="pjStreamers" rows="5" maxlength="3000" placeholder="One link per line, like:&#10;twitch.tv/kaicenat&#10;youtube.com/@IShowSpeed&#10;kick.com/xqc">${esc(d.streamers||'')}</textarea>
+    <small class="rhint">Twitch, Kick or YouTube channel links. A plan step that finds clips checks these every day.</small>
     ${e.error?`<div class="result no">${esc(e.error)}</div>`:''}
     <div class="acts"><button class="btn primary" type="submit">SAVE PROJECT</button><button class="btn" type="button" id="pjCancel">CANCEL</button>${e.id?'<button class="btn" type="button" id="pjDelete">DELETE</button>':''}</div>
   </form>`;
@@ -1418,8 +1426,9 @@ function planEditorHTML(){
       <select data-sa="${i}" aria-label="Agent for step ${i+1}">${workers.map(a=>`<option value="${a.id}" ${a.id===st.agentId?'selected':''}>${esc(a.nick)}</option>`).join('')}</select>
       <span class="pmove"><button type="button" class="btn" data-up="${i}" ${i?'':'disabled'} aria-label="Move up">↑</button><button type="button" class="btn" data-down="${i}" ${i<d.steps.length-1?'':'disabled'} aria-label="Move down">↓</button><button type="button" class="btn" data-rm="${i}" ${d.steps.length>1?'':'disabled'} aria-label="Remove step">✕</button></span></div>
       <input data-st="${i}" maxlength="120" value="${esc(st.title)}" placeholder="Short title, like: Write the script">
-      <textarea data-sx="${i}" rows="4" maxlength="3000" placeholder="${st.edit?'Which clips to cut, how long, and which layout (split with the facecam on top, or fit).':'What this agent should do and which files to save.'}">${esc(st.text)}</textarea>
-      <label class="chk"><input type="checkbox" data-se="${i}" ${st.edit?'checked':''}> This step cuts and edits the clips (needs the video tools in SETUP)</label></div>`).join('');
+      <select data-sk="${i}" aria-label="What step ${i+1} does"><option value="agent" ${!st.edit&&!st.find?'selected':''}>The agent does the job (research, writing)</option><option value="find" ${st.find?'selected':''}>Agentdex finds the streamers' top clips</option><option value="edit" ${st.edit?'selected':''}>Agentdex cuts and edits the clips</option></select>
+      <textarea data-sx="${i}" rows="4" maxlength="3000" placeholder="${st.edit?'Which clips to cut, how long, and which layout (split with the facecam on top, or fit).':st.find?'What to look for. Agentdex checks the streamers listed in the project.':'What this agent should do and which files to save.'}">${esc(st.text)}</textarea>
+      ${st.edit||st.find?'<small class="rhint">Needs the video tools in SETUP.</small>':''}</div>`).join('');
   return`<form class="card role-ed" id="planForm" novalidate>
     <div><div class="sum-sp">${e.id?'Edit weekly plan':'New weekly plan'}</div><div class="sum-name">${esc(d.name||'Your plan')}</div></div>
     ${e.id?'':`<div class="tmpls"><span class="rl">Start from</span>${PLAN_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-plantmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`}
@@ -1438,9 +1447,11 @@ function planEditorHTML(){
 }
 function planFromTemplate(t){
   const pt=PROJECT_TEMPLATES.find(x=>x.key===t.project);const have=plans.projects.find(p=>p.name===pt.name);
-  return{name:t.name,projectId:have?have.id:'new',newProject:have?null:{name:pt.name,brief:pt.brief},schedule:{...t.schedule},review:false,
-    steps:t.steps.map(st=>{const a=agentForKind(st.kind);return{agentId:a?a.id:null,title:st.title,text:st.text,edit:Boolean(st.edit)}}).filter(st=>st.agentId!=null)};
+  return{name:t.name,projectId:have?have.id:'new',newProject:have?null:{name:pt.name,brief:pt.brief,streamers:streamerList(pt.streamers)},schedule:{...t.schedule},review:false,
+    steps:t.steps.map(st=>{const a=agentForKind(st.kind);return{agentId:a?a.id:null,title:st.title,text:st.text,edit:Boolean(st.edit),find:Boolean(st.find)}}).filter(st=>st.agentId!=null)};
 }
+const streamerList=t=>String(t||'').split(/[\s,]+/).map(x=>x.trim()).filter(Boolean);
+const STREAMER_RE=/^(https?:\/\/)?((www|m)\.)?(twitch\.tv\/[a-z0-9_]{2,25}|kick\.com\/[a-z0-9_-]{2,40}|youtube\.com\/(@[\w.-]{2,60}|channel\/UC[\w-]{22}|c\/[\w.-]+|user\/[\w.-]+))\/?$/i;
 const blankPlan=()=>{const a=agentForKind('RESEARCH');return{name:'',projectId:plans.projects[0]?plans.projects[0].id:'',newProject:null,schedule:{day:'mon',time:'09:00'},review:false,steps:[{agentId:a?a.id:null,title:'',text:''}]}};
 async function savePlanBits(kind,body){
   if(LIVE){const r=await setupCall('POST',kind==='project'?'api/projects':'api/plans',body);if(!r.ok)throw new Error(r.data.error||'Could not save.');return r.data.event}
@@ -1448,17 +1459,18 @@ async function savePlanBits(kind,body){
 }
 function demoSave(kind,body){
   if(kind==='project'){const p=body.project;const name=String(p.name||'').trim();if(name.length<2)throw new Error('Give the project a name.');if(String(p.brief||'').trim().length<20)throw new Error('Describe the project in a sentence or two.');
-    const id=p.id||'p-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');const x={id,name,brief:p.brief.trim(),folder:'drafts/'+id.slice(2)};upsert(plans.projects,x);log(`New project: ${name}.`,'ok');return{data:{project:x}}}
+    const id=p.id||'p-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');const sl=streamerList(p.streamers);const bad=sl.filter(u=>!STREAMER_RE.test(u));if(bad.length)throw new Error(`These are not Twitch, Kick or YouTube channel links: ${bad.slice(0,3).join(', ')}.`);
+    const x={id,name,brief:p.brief.trim(),streamers:sl.map(u=>'https://'+u.replace(/^https?:\/\//,'').replace(/\/$/,'')),folder:'drafts/'+id.slice(2)};upsert(plans.projects,x);log(`New project: ${name}.`,'ok');return{data:{project:x}}}
   const p=body.pipeline;if(!p.name||p.name.trim().length<2)throw new Error('Give the plan a name.');if(!p.steps.length||p.steps.some(st=>st.title.trim().length<3||st.text.trim().length<10))throw new Error('Every step needs a short title and what to do.');
   const old=plans.pipelines.find(x=>x.id===p.id);const x={...p,id:p.id||'w'+(plans.pipelines.length+1),enabled:p.enabled!==false,running:null,lastRun:old?old.lastRun:null};upsert(plans.pipelines,x);log(`Plan saved: ${x.name}, ${whenLabel(x.schedule).toLowerCase()}.`,'ok');return{data:{pipeline:x}};
 }
 function bindPlans(){
   const pane=$('#pane'),e=plans.edit;
-  pane.querySelectorAll('[data-projtmpl]').forEach(b=>b.onclick=()=>{const t=PROJECT_TEMPLATES[+b.dataset.projtmpl];plans.edit={kind:'project',id:e&&e.id,draft:{name:t.name,brief:t.brief}};renderPane()});
+  pane.querySelectorAll('[data-projtmpl]').forEach(b=>b.onclick=()=>{const t=PROJECT_TEMPLATES[+b.dataset.projtmpl];plans.edit={kind:'project',id:e&&e.id,draft:{name:t.name,brief:t.brief,streamers:t.streamers||''}};renderPane()});
   pane.querySelectorAll('[data-plantmpl]').forEach(b=>b.onclick=()=>{plans.edit={kind:'plan',draft:planFromTemplate(PLAN_TEMPLATES[+b.dataset.plantmpl])};renderPane()});
-  const np=$('#newProj');if(np)np.onclick=()=>{plans.edit={kind:'project',draft:{name:'',brief:''}};renderPane()};
+  const np=$('#newProj');if(np)np.onclick=()=>{plans.edit={kind:'project',draft:{name:'',brief:'',streamers:''}};renderPane()};
   const nl=$('#newPlan');if(nl)nl.onclick=()=>{plans.edit={kind:'plan',draft:blankPlan()};renderPane()};
-  pane.querySelectorAll('[data-editproj]').forEach(b=>b.onclick=()=>{const p=plans.projects.find(x=>x.id===b.dataset.editproj);plans.edit={kind:'project',id:p.id,draft:{name:p.name,brief:p.brief}};renderPane()});
+  pane.querySelectorAll('[data-editproj]').forEach(b=>b.onclick=()=>{const p=plans.projects.find(x=>x.id===b.dataset.editproj);plans.edit={kind:'project',id:p.id,draft:{name:p.name,brief:p.brief,streamers:(p.streamers||[]).map(u=>u.replace(/^https:\/\/(www\.)?/,'')).join('\n')}};renderPane()});
   pane.querySelectorAll('[data-editplan]').forEach(b=>b.onclick=()=>{const p=plans.pipelines.find(x=>x.id===b.dataset.editplan);plans.edit={kind:'plan',id:p.id,draft:{name:p.name,projectId:p.projectId,schedule:{...p.schedule},review:p.review,enabled:p.enabled,steps:p.steps.map(st=>({...st}))}};renderPane()});
   pane.querySelectorAll('[data-run]').forEach(b=>b.onclick=async()=>{b.disabled=true;
     if(LIVE){const r=await setupCall('POST','api/plans/run',{id:b.dataset.run});if(!r.ok){convoSystem(r.data.error||'Could not start it.',true);b.disabled=false}return}
@@ -1470,19 +1482,20 @@ function bindPlans(){
     try{await savePlanBits('plan',body)}catch(err){convoSystem(err.message,true)}renderPane()});
   if(!e)return;
   if(e.kind==='project'){
-    const f=$('#projForm'),d=e.draft;const keep=()=>{d.name=$('#pjName').value;d.brief=$('#pjBrief').value};
+    const f=$('#projForm'),d=e.draft;const keep=()=>{d.name=$('#pjName').value;d.brief=$('#pjBrief').value;d.streamers=$('#pjStreamers').value};
     $('#pjCancel').onclick=()=>{plans.edit=null;renderPane()};
     const del=$('#pjDelete');if(del)del.onclick=async()=>{if(!confirm(`Delete the project ${d.name}? Its files stay in the workspace.`))return;
       if(LIVE){const r=await setupCall('POST','api/projects/delete',{id:e.id});if(!r.ok){e.error=r.data.error;return renderPane()}}
       else{if(plans.pipelines.some(x=>x.projectId===e.id)){e.error='Delete or move its weekly plans first.';return renderPane()}plans.projects=plans.projects.filter(x=>x.id!==e.id)}
       plans.edit=null;renderProjSel();renderPane()};
     f.onsubmit=async ev=>{ev.preventDefault();keep();
-      try{await savePlanBits('project',{project:{id:e.id,name:d.name.trim(),brief:d.brief.trim()}});plans.edit=null;renderProjSel();renderPane()}catch(err){e.error=err.message;renderPane()}};
+      try{await savePlanBits('project',{project:{id:e.id,name:d.name.trim(),brief:d.brief.trim(),streamers:streamerList(d.streamers)}});plans.edit=null;renderProjSel();renderPane()}catch(err){e.error=err.message;renderPane()}};
     return;
   }
   const f=$('#planForm'),d=e.draft;
   const keep=()=>{d.name=$('#plName').value;const pj=$('#plProj');if(pj)d.projectId=pj.value;d.schedule={day:$('#plDay').value,time:$('#plTime').value||'09:00'};d.review=$('#plReview').checked;
-    d.steps.forEach((st,i)=>{const a=f.querySelector(`[data-sa="${i}"]`);if(a)st.agentId=+a.value;st.title=f.querySelector(`[data-st="${i}"]`).value;st.text=f.querySelector(`[data-sx="${i}"]`).value;st.edit=f.querySelector(`[data-se="${i}"]`).checked})};
+    d.steps.forEach((st,i)=>{const a=f.querySelector(`[data-sa="${i}"]`);if(a)st.agentId=+a.value;st.title=f.querySelector(`[data-st="${i}"]`).value;st.text=f.querySelector(`[data-sx="${i}"]`).value;const k=f.querySelector(`[data-sk="${i}"]`).value;st.edit=k==='edit';st.find=k==='find'})};
+  f.querySelectorAll('[data-sk]').forEach(x=>x.onchange=()=>{keep();renderPane()});
   $('#plDay').onchange=()=>{keep();renderPane()};
   $('#plAdd').onclick=()=>{keep();const a=agentForKind('WRITE');d.steps.push({agentId:a?a.id:null,title:'',text:''});renderPane()};
   f.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{keep();const i=+b.dataset.up;[d.steps[i-1],d.steps[i]]=[d.steps[i],d.steps[i-1]];renderPane()});
@@ -1495,7 +1508,7 @@ function bindPlans(){
   f.onsubmit=async ev=>{ev.preventDefault();keep();e.error=null;
     try{
       if(d.projectId==='new'&&d.newProject){const r=await savePlanBits('project',{project:d.newProject});d.projectId=r.data.project.id;d.newProject=null;renderProjSel()}
-      await savePlanBits('plan',{pipeline:{id:e.id,name:d.name.trim(),projectId:d.projectId,schedule:d.schedule,review:d.review,enabled:d.enabled!==false,steps:d.steps.map(st=>({agentId:st.agentId,title:st.title.trim(),text:st.text.trim(),edit:Boolean(st.edit)}))}});
+      await savePlanBits('plan',{pipeline:{id:e.id,name:d.name.trim(),projectId:d.projectId,schedule:d.schedule,review:d.review,enabled:d.enabled!==false,steps:d.steps.map(st=>({agentId:st.agentId,title:st.title.trim(),text:st.text.trim(),edit:Boolean(st.edit),find:Boolean(st.find)}))}});
       plans.edit=null;renderPane();
     }catch(err){e.error=err.message;renderPane()}};
 }
@@ -2049,9 +2062,30 @@ function renderSetup(note){
     <span class="flabel">Windows (PowerShell)</span>${copyBtn('winget install Gyan.FFmpeg')}${copyBtn('winget install yt-dlp.yt-dlp')}
     <span class="flabel">Mac (Terminal)</span>${copyBtn('brew install ffmpeg yt-dlp')}`}
     <div class="acts"><button class="btn" type="button" id="vtCheck">CHECK AGAIN</button></div>
+    ${vt.ffmpeg?captionsHTML(vt.captions||{}):''}
     <p class="setup-note">Agentdex only downloads from YouTube, Twitch and Kick, only the moments in your plan, and asks you YES or NO before each batch. Footage a campaign gives you can go in the workspace inbox instead.</p>
   </div>`;
   bindSetup();
+}
+// Whisper captions: built into the full ffmpeg build; the model is a one-time download.
+function captionsHTML(c){
+  const mb=n=>Math.round(n/1e6);
+  let body;
+  if(c.ready)body=`<ul class="checks"><li class="ok">Whisper captions are ready: every clip gets captions, Twitch and Kick clips too.</li></ul>`;
+  else if(c.checking){body='<p class="setup-note">Checking your ffmpeg for Whisper...</p>';setTimeout(watchCaptions,0)}
+  else if(!c.whisper)body=`<ul class="checks"><li class="wait">Your ffmpeg has no Whisper, so only videos with their own subtitles get captions.</li></ul>
+    <p>Update to the full ffmpeg build (version 8 or newer), then press CHECK AGAIN.</p>
+    <span class="flabel">Windows (PowerShell)</span>${copyBtn('winget upgrade Gyan.FFmpeg')}
+    <span class="flabel">Mac (Terminal)</span>${copyBtn('brew upgrade ffmpeg')}`;
+  else if(c.downloading)body=`<ul class="checks"><li class="wait">Downloading the caption model: ${mb(c.downloading.got)} of ${mb(c.downloading.total)} MB. You can keep using Agentdex.</li></ul>`;
+  else body=`<ul class="checks"><li class="wait">Whisper is in your ffmpeg. It needs its caption model once (${c.sizeMB||490} MB).</li></ul>
+    <div class="acts"><button class="btn primary" type="button" id="capGet">GET CAPTIONS</button></div>${c.error?`<div class="result no">${esc(c.error)}</div>`:''}`;
+  return`<h3 class="subh">Captions <small>(Whisper, free, runs on this computer)</small></h3>${body}`;
+}
+let capPoll=null;
+function watchCaptions(){
+  if(capPoll)return;
+  capPoll=setInterval(async()=>{await checkSetup(false);const c=((setupState||{}).video||{}).captions||{};if(!c.downloading&&!c.checking){clearInterval(capPoll);capPoll=null}if(!$('#setupBody form:focus-within'))renderSetup()},2000);
 }
 function bindSetup(){
   const body=$('#setupBody');
@@ -2081,6 +2115,7 @@ function bindSetup(){
     const r=await setupCall('POST','api/setup',patch);
     await checkSetup(false);renderSetup(r.ok?null:{wa:r.data.error||'Could not save.'});
   };
+  const cg=$('#capGet');if(cg)cg.onclick=async()=>{cg.disabled=true;cg.textContent='STARTING...';const r=await setupCall('POST','api/setup/captions');if(!r.ok){cg.disabled=false;cg.textContent='GET CAPTIONS';convoSystem(r.data.error||'Could not start the download.',true);return}await checkSetup(false);renderSetup();watchCaptions()};
   const vc=$('#vtCheck');if(vc)vc.onclick=async()=>{vc.disabled=true;vc.textContent='CHECKING...';await checkSetup(false);renderSetup()};
   const wt=$('#waTest');
   if(wt)wt.onclick=async()=>{wt.disabled=true;wt.textContent='SENDING...';

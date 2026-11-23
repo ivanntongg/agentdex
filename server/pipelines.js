@@ -72,7 +72,15 @@ export function createPipelines({ store, assign, now = () => new Date(), tickMs 
     const a = agentFor(step);
     if (!a) return finish(pl, 'failed', `Nobody can do step ${i + 1}: the agent is in the box or fainted. Move it to the party or edit the plan.`);
     store.apply({ type: 'pipeline.stepped', agentId: a.id, data: { id: pl.id, step: i, title: step.title, result } });
-    assign(a, step.title, step.edit ? false : pl.review && reviewerFree(), details(pl, i), null, step.edit ? { edit: { folder: pl.running.folder } } : null);
+    give(a, pl, i);
+  }
+
+  // Finding and cutting steps are Agentdex's own tools, so they skip the reviewer.
+  function give(a, pl, i) {
+    const step = pl.steps[i];
+    const folder = pl.running.folder;
+    const extra = step.edit ? { edit: { folder } } : step.find ? { find: { folder, streamers: store.projects.get(pl.projectId)?.streamers || [] } } : null;
+    assign(a, step.title, extra ? false : pl.review && reviewerFree(), details(pl, i), null, extra);
   }
 
   function finish(pl, status, reason = null) {
@@ -122,8 +130,7 @@ export function createPipelines({ store, assign, now = () => new Date(), tickMs 
         } else {
           r.retried = true; r.waiting = false;
           store.note(`${pl.name}: ${nick} is back, so step ${r.step + 1} starts again.`);
-          const st = pl.steps[r.step];
-          assign(a, st.title, st.edit ? false : pl.review && reviewerFree(), details(pl, r.step), null, st.edit ? { edit: { folder: r.folder } } : null);
+          give(a, pl, r.step);
         }
       }
     }

@@ -172,3 +172,26 @@ test('an editing step gets the run folder; if it fails, the plan stops with its 
   assert.match(t.store.pipelines.get(pl.id).lastRun.reason, /^Step 2: Cutting clips needs ffmpeg/);
   t.plans.close();
 });
+
+test('a project keeps its streamers; a finding step gets them with the run folder', async () => {
+  const t = town();
+  assert.throws(() => t.store.apply({ type: 'project.saved', data: { project: { id: 'p-streamer-highlights', name: 'Streamer highlights', brief: BRIEF, streamers: ['twitch.tv/kaicenat', 'tiktok.com/@x'] } } }), /not Twitch, Kick or YouTube channel links: tiktok\.com\/@x/);
+  t.store.apply({ type: 'project.saved', data: { project: { id: 'p-streamer-highlights', name: 'Streamer highlights', brief: BRIEF, streamers: ['twitch.tv/KaiCenat', 'youtube.com/@IShowSpeed/streams', 'twitch.tv/kaicenat'] } } });
+  assert.deepEqual(t.store.projects.get('p-streamer-highlights').streamers, ['https://www.twitch.tv/kaicenat', 'https://www.youtube.com/@IShowSpeed']);
+  t.store.apply({ type: 'project.saved', data: { project: { id: 'p-streamer-highlights', name: 'Streamer highlights', brief: `${BRIEF} Daily.` } } });
+  assert.equal(t.store.projects.get('p-streamer-highlights').streamers.length, 2, 'editing the brief keeps the streamers');
+  const pl = t.plan({ steps: [
+    { agentId: t.scout, title: "Find the streamers' top moments", text: 'Top clips of the last day.', find: true },
+    { agentId: t.quill, title: 'Cut the funniest clips', text: 'The 10 funniest.', edit: true, find: true },
+  ] });
+  assert.deepEqual(t.store.pipelines.get(pl.id).steps.map((s) => [s.find, s.edit]), [[true, false], [false, true]], 'a step is one or the other');
+  t.plans.start(pl.id);
+  assert.deepEqual(t.assigned[0].extra, { find: { folder: 'drafts/streamer-highlights/2026-11-23', streamers: ['https://www.twitch.tv/kaicenat', 'https://www.youtube.com/@IShowSpeed'] } });
+  assert.equal(t.assigned[0].review, false);
+  const ev = t.store.snapshot().log.filter((e) => e.type === 'task.assigned').at(-1);
+  assert.deepEqual(ev.data.find.streamers, ['https://www.twitch.tv/kaicenat', 'https://www.youtube.com/@IShowSpeed']);
+  t.finish(t.scout, { note: 'Found 9 real moments.', files: ['drafts/streamer-highlights/2026-11-23/moments.md'] });
+  await tick();
+  assert.deepEqual(t.assigned[1].extra, { edit: { folder: 'drafts/streamer-highlights/2026-11-23' } });
+  t.plans.close();
+});

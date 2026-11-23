@@ -87,3 +87,11 @@ test('one broken clip does not stop the rest', async () => {
   assert.match(r.summary, /^Made 1 of 2 clips.*Skipped 1: 01-boom: download failed/);
   assert.ok(r.files.includes(`${FOLDER}/clips/02-fine-ready.mp4`));
 });
+
+test('cut moments are remembered in the project folder, so tomorrow brings new ones', async () => {
+  const t = await setup();
+  await t.editor.run(agent, task);
+  assert.equal(await readFile(path.join(t.workspace.root, 'drafts/gta-6-clipping/used-clips.txt'), 'utf8'), 'https://www.youtube.com/watch?v=abc 3723\n');
+  await t.editor.run(agent, task);
+  assert.equal((await readFile(path.join(t.workspace.root, 'drafts/gta-6-clipping/used-clips.txt'), 'utf8')).split('\n').filter(Boolean).length, 2, 'added to, never replaced');
+});

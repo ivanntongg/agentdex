@@ -11,6 +11,7 @@
 //   AGENTDEX_CONFIG (./agentdex.config.json), AGENTDEX_STATE (./agentdex.state.json, the saved town), WHATSAPP_PORT (8788),
 //   AGENTDEX_BRAIN (api | claude-code), AGENTDEX_CLAUDE_BIN (path to the claude command, default "claude"),
 //   AGENTDEX_SKILLS_DIR (./skills, installed community skills), AGENTDEX_SKILL_SCOUT (on | off)
+import path from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import { fileURLToPath } from 'node:url';
 import { createAgentdexClient } from './agentdex.js';
@@ -48,7 +49,8 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
   const config = createConfig({ path: env.AGENTDEX_CONFIG || 'agentdex.config.json', env });
   const workspace = await createWorkspace(env.AGENTDEX_WORKSPACE || 'workspace');
   const skillLib = createSkills({ dir: env.AGENTDEX_SKILLS_DIR || 'skills' });
-  const video = createVideo({ workspaceRoot: workspace.root });
+  // The caption model lives next to the app (like skills), not in the agents' workspace.
+  const video = createVideo({ workspaceRoot: workspace.root, modelsDir: path.resolve(env.AGENTDEX_MODELS_DIR || 'models') });
   let runtime = null;
 
   // One Claude client, rebuilt when the key changes.
@@ -156,6 +158,10 @@ export async function main({ argv = process.argv, env = process.env } = {}) {
         lastClaudeCheck = { ok: false, message: claudeError(err, config.model()), at: new Date().toISOString() };
       }
       return lastClaudeCheck;
+    },
+    // SETUP, Video tools: the one-time download of the Whisper caption model.
+    async getCaptions() {
+      try { const { done, ...state } = video.getCaptionModel(); done.catch(() => {}); return state; } catch (err) { throw new StoreError(400, err.message); }
     },
     async testWhatsApp() {
       if (!config.whatsapp()) return { ok: false, message: 'Fill in all four WhatsApp boxes and save first.' };

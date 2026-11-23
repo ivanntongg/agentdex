@@ -10,6 +10,7 @@ import { skillsPrompt } from './skills.js';
 import { createSkillScout } from './skill-scout.js';
 import { createGuide } from './guide.js';
 import { createEditor } from './editor.js';
+import { createFinder } from './finder.js';
 
 const WEB_SEARCH = { type: 'web_search_20260209', name: 'web_search', max_uses: 5 };
 const MOVE_FOR_TOOL = { list_files: 'READ', read_file: 'READ', write_file: 'EDIT' };
@@ -180,6 +181,21 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
   });
 
   const editor = video ? createEditor({ video, workspace, ask, waitForApproval: waitForApprovalData, dex, log }) : null;
+  const finder = video ? createFinder({ video, workspace, dex, log }) : null;
+
+  // A plan's finding step: Agentdex lists the streamers' top clips and replay peaks itself.
+  async function runFind(agent, task, signal) {
+    await dex.emit('task.started', agent.id, { title: task.title, review: false });
+    log(`[${agent.nick}] finding moments: ${task.title}`);
+    let r;
+    try {
+      r = finder ? await finder.run(agent, task, signal) : { failed: true, summary: 'Finding clips works when Agentdex runs with real agents.', files: [] };
+    } catch (err) {
+      r = { failed: true, summary: `Finding clips stopped: ${err.message}`, files: [] };
+    }
+    await dex.emit('task.finished', agent.id, { xp: r.failed ? 10 : 40, note: r.summary, files: r.files, failed: Boolean(r.failed) });
+    log(`[${agent.nick}] ${r.summary}`);
+  }
 
   // A plan's editing step: Agentdex cuts the clips itself; no tool-use loop.
   async function runEdit(agent, task, signal) {
@@ -269,6 +285,7 @@ export function createRuntime({ anthropic, dex, workspace, model = 'claude-opus-
     const species = SPECIES[agent.species];
     const cfg = current();
     if (task.edit) return runEdit(agent, task, signal);
+    if (task.find) return runFind(agent, task, signal);
     if (cfg.engine === 'claude-code') return runWithClaudeCode(agent, task, species, cfg, signal);
     if (!cfg.anthropic) {
       await dex.emit('agent.interacted', agentId, { action: 'poke', tone: 'bad', message: `${agent.nick} can't start "${task.title}" yet: add your Claude API key on the SETUP screen, then give the task again.` });
