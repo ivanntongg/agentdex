@@ -182,9 +182,20 @@ Open the **PLANS** tab.
 - **Start from a ready-made plan:** *Daily GTA 6 clipping* (every morning: today's open clipping campaigns on Whop and Clipping.net with their pay and rules, yesterday's best GTA 6 moments with timestamps, and a hook, title and caption for each clip), *Weekly streamer highlights* (find the week's funniest moments with links and each streamer's clipping policy, write the script and titles with your own commentary, make the shot list and captions, then thumbnail ideas) or *Weekly GTA 6 video*.
 - **RUN NOW** any time, **STOP**, **PAUSE**, or send `run weekly streamer highlights` from the command box or WhatsApp.
 
+### Daily streamer clips: real moments, every morning
+
+Put your streamers in a project (PLANS, edit project, **Streamers to clip**): links like `twitch.tv/kaicenat`, `kick.com/xqc` or `youtube.com/@IShowSpeed`. Then use the ready-made plan **Daily streamer clips**, or set any plan step to **Agentdex finds the streamers' top clips**. Every day Agentdex itself checks:
+
+- **Twitch and Kick:** each streamer's top clips of the last 24 hours, ranked by views. Viewers already cut these around the peak, so the times are exact.
+- **YouTube:** their latest streams' **Most replayed** peaks (for videos up to about an hour) and top comments that point to a time, like "2:14:07 he lost it".
+
+It writes `moments.md` with real links and times, and the next step cuts the funniest. Moments cut on earlier days are skipped (`used-clips.txt` in the project folder). This only reads public lists with yt-dlp; nothing is downloaded until the cutting step, which asks you first.
+
+**Captions on every clip:** the full ffmpeg build (version 8 or newer, which `winget install Gyan.FFmpeg` gives you) has Whisper built in. Press **GET CAPTIONS** in SETUP, part 4 once (a 488 MB download, checked against its published checksum), and every clip gets captions, even Twitch and Kick clips that have none. It runs on your computer and is free.
+
 ### Plans can cut your clips
 
-Tick **This step cuts and edits the clips** on a plan step (the *Daily GTA 6 clipping* plan has one). After one YES from you, Agentdex downloads only the moments your agents found and makes, for each clip:
+Set a plan step to **Agentdex cuts and edits the clips** (the *Daily streamer clips* and *Daily GTA 6 clipping* plans have one). After one YES from you, Agentdex downloads only the moments your agents found and makes, for each clip:
 
 - `NN-title-ready.mp4`: 9:16, with the hook in the first seconds and captions (the streamer's facecam on top and the gameplay below, or the whole frame over a blurred background);
 - `NN-title-raw.mp4`: the untouched moment, to edit your own way in CapCut;

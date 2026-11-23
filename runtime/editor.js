@@ -6,12 +6,15 @@
 // 4. For each clip, Agentdex itself downloads only those seconds and renders two files:
 //    NN-name-raw.mp4 (the moment, for CapCut) and NN-name-ready.mp4 (9:16, hook and captions).
 // 5. Writes posts.md with each clip's title and caption, ready to paste.
-import { mkdir, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, writeFile } from 'node:fs/promises';
 import { LAYOUTS, CORNERS, parseTime, checkSource, VideoError } from './video.js';
+import { usedLine } from './finder.js';
 
 export const EDIT_SYSTEM = `You turn a list of stream moments into an exact cut list for an automatic video editor.
 Use only moments that have a link to a YouTube, Twitch or Kick video or clip (or a file path in the workspace) and clear times. Never invent links or times.
-For each clip: the source link exactly as written, start and end as h:mm:ss or seconds (20 to 60 seconds long, starting right at the peak), a hook of at most 7 words shown in the first seconds, a title under 60 characters, and a caption with the campaign's required hashtags or tags.
+Moments that Agentdex found itself (moments.md starting "Moments found") are real: use their links and times. For a whole Twitch or Kick clip keep its start and end as given. For a YouTube moment you may tighten the window around the peak.
+Pick what people want to watch: funny, shocking, chaotic or wholesome moments. Prefer more views, likes and replays, and titles or comments that promise a reaction. Skip moments that look boring, sponsored, or the same as another pick.
+For each clip: the source link exactly as written, start and end as h:mm:ss or seconds (usually 15 to 60 seconds, starting right at the action), a hook of at most 7 words shown in the first seconds, a title under 60 characters, and a caption with the campaign's required hashtags or tags.
 Layout: "split" when the streamer has a facecam (say which corner it is in, if the notes say), otherwise "fit". Follow any layout the instructions ask for.
 Order clips from most to least likely to go viral. At most 12.`;
 
@@ -121,8 +124,8 @@ export function createEditor({ video, workspace, ask, waitForApproval, dex, log 
       try {
         const r = await video.makeClip({ source: c.source, start: c.start, end: c.end, hook: c.hook, layout: c.layout, corner: c.corner, dir, name, signal });
         files.push(`${dirRel}/${name}-ready.mp4`, `${dirRel}/${name}-raw.mp4`, ...(r.srt ? [`${dirRel}/${name}.srt`] : []));
-        posts.push(`## ${i + 1}. ${c.title}\nFiles: ${name}-ready.mp4 (post as is) and ${name}-raw.mp4 (edit in CapCut)${r.srt ? `, captions in ${name}.srt (CapCut: Captions, Import)` : ''}\nSource: ${c.source} from ${c.start} to ${c.end}${r.captions ? '' : '\nNo captions came with this video: turn on Auto captions in CapCut.'}\n\nHook: ${c.hook}\nTitle: ${c.title}\n\nCaption:\n${c.caption}\n`);
-        made.push({ name, hook: c.hook, srt: Boolean(r.srt) });
+        posts.push(`## ${i + 1}. ${c.title}\nFiles: ${name}-ready.mp4 (post as is) and ${name}-raw.mp4 (edit in CapCut)${r.srt ? `, captions in ${name}.srt (CapCut: Captions, Import)` : ''}\nSource: ${c.source} from ${c.start} to ${c.end}${r.captions ? '' : `\nNo captions${r.captionError ? ` (Whisper: ${r.captionError})` : ''}: turn on Auto captions in CapCut, or get Whisper captions in SETUP.`}\n\nHook: ${c.hook}\nTitle: ${c.title}\n\nCaption:\n${c.caption}\n`);
+        made.push({ name, hook: c.hook, srt: Boolean(r.srt), source: c.source, start: parseTime(c.start), whisper: r.captionSource === 'whisper' });
         await dex.emit('task.progress', agent.id, { tokens: 0.5, tool: 'EDIT' }).catch(() => {});
       } catch (err) {
         if (signal?.aborted) break;
@@ -135,6 +138,11 @@ export function createEditor({ video, workspace, ask, waitForApproval, dex, log 
       files.push(`${dirRel}/posts.md`);
       await writeFile((await workspace.resolve(`${dirRel}/capcut-prompt.md`)).abs, capcutPrompt(dir, made), 'utf8');
       files.push(`${dirRel}/capcut-prompt.md`);
+      // So tomorrow's finding step does not bring back the same moments.
+      const projectFolder = folder.split('/').slice(0, -1).join('/');
+      if (projectFolder) {
+        try { await appendFile((await workspace.resolve(`${projectFolder}/used-clips.txt`)).abs, made.map((m) => usedLine(m.source, m.start)).join('\n') + '\n', 'utf8'); } catch (err) { log(`[${agent.nick}] could not update used-clips.txt: ${err.message}`); }
+      }
     }
     const problems = [...failed, ...skipped];
     return {

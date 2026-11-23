@@ -5,7 +5,9 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { findTool, parseTime, checkSource, downloadArgs, filterGraph, renderArgs, parseVtt, assFile, toSrt, createVideo, VideoError } from '../video.js';
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { findTool, parseTime, checkSource, downloadArgs, filterGraph, renderArgs, parseVtt, parseSrt, assFile, toSrt, transcribeArgs, isClipLink, createVideo, VideoError, CAPTION_MODEL } from '../video.js';
 
 test('times in every shape people write them', () => {
   assert.equal(parseTime('1:02:03'), 3723);
@@ -83,4 +85,89 @@ test('a real clip from workspace footage: a raw moment for CapCut and a ready 9:
   }
   assert.ok(!existsSync(path.join(out, '.work-01-fit')), 'scratch files are cleaned up');
   await assert.rejects(video.makeClip({ source: 'https://www.youtube.com/watch?v=x', start: 0, end: 10, dir: out, name: 'x' }), /yt-dlp is not installed/);
+});
+
+test('Twitch and Kick clips download whole; Whisper runs inside ffmpeg with plain file names', () => {
+  assert.ok(isClipLink('https://clips.twitch.tv/FunnyClip-abc'));
+  assert.ok(isClipLink('https://www.twitch.tv/kaicenat/clip/FunnyClip-abc'));
+  assert.ok(isClipLink('https://kick.com/xqc/clips/clip_01ABC'));
+  assert.ok(!isClipLink('https://www.youtube.com/watch?v=abc'));
+  const whole = downloadArgs({ url: 'https://clips.twitch.tv/x', start: 0, end: 30, whole: true });
+  assert.ok(!whole.includes('--download-sections'), 'a short clip is not cut on download');
+  const a = transcribeArgs({ input: 'C:\\Users\\me\\clip-raw.mp4', out: '.01-x-1.srt' });
+  assert.deepEqual(a.slice(-6), ['-vn', '-af', `whisper=model=${CAPTION_MODEL.file}:language=en:queue=10:destination=.01-x-1.srt:format=srt`, '-f', 'null', '-']);
+  assert.equal(a[a.indexOf('-i') + 1], 'C:\\Users\\me\\clip-raw.mp4', 'the input is an argument, never inside the filter, so Windows paths need no escaping');
+  assert.deepEqual(parseSrt('1\n00:00:00,500 --> 00:00:02,000\nNO WAY\n\n2\n00:00:02,000 --> 00:00:03,250\nhe actually did it\n').map((c) => [c.start, c.end, c.text]), [[0.5, 2, 'NO WAY'], [2, 3.25, 'he actually did it']]);
+  assert.equal(CAPTION_MODEL.url, 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin');
+});
+
+async function fakeVideo({ whisper = true, model = true, srt = '1\n00:00:00,000 --> 00:00:01,500\nCHAT HE DID IT\n\n2\n00:00:02,000 --> 00:00:03,000\n[Music]\n' } = {}) {
+  const ws = await mkdtemp(path.join(os.tmpdir(), 'agentdex-cap-'));
+  const models = path.join(ws, 'models');
+  await mkdir(models, { recursive: true });
+  if (model) await writeFile(path.join(models, CAPTION_MODEL.file), 'model');
+  const calls = [];
+  const runImpl = async (cmd, args, { cwd }) => {
+    calls.push({ cmd, args, cwd });
+    if (cmd === '/x/yt-dlp') return writeFile(path.join(cwd, 'src.mp4'), 'video');
+    const af = args[args.indexOf('-af') + 1] || '';
+    if (af.startsWith('whisper=')) { if (srt === null) throw new VideoError('ffmpeg failed: whisper'); return writeFile(path.join(cwd, /destination=([^:]+)/.exec(af)[1]), srt); }
+    return writeFile(args[args.length - 1], 'mp4');
+  };
+  const video = createVideo({ workspaceRoot: ws, tools: { ffmpeg: '/x/ffmpeg', ytdlp: '/x/yt-dlp' }, runImpl, modelsDir: models, whisperCheck: async () => whisper });
+  await video.checkWhisper();
+  const dir = path.join(ws, 'clips');
+  await mkdir(dir);
+  return { video, calls, dir, models };
+}
+
+test('Whisper captions every clip, even Twitch clips with no subtitles', async () => {
+  const t = await fakeVideo();
+  assert.equal(t.video.tools().captions.ready, true);
+  const r = await t.video.makeClip({ source: 'https://clips.twitch.tv/scream', start: 0, end: 28, hook: 'NO WAY', dir: t.dir, name: '01-scream' });
+  assert.equal(r.captionSource, 'whisper');
+  const dl = t.calls.find((c) => c.cmd === '/x/yt-dlp').args;
+  assert.ok(!dl.includes('--download-sections'), 'the whole clip is downloaded');
+  const w = t.calls.find((c) => (c.args[c.args.indexOf('-af') + 1] || '').startsWith('whisper='));
+  assert.equal(w.cwd, t.models, 'runs in the models folder');
+  assert.equal(w.args[w.args.indexOf('-i') + 1], path.join(t.dir, '01-scream-raw.mp4'), 'listens to the raw moment');
+  assert.equal(await readFile(path.join(t.dir, '01-scream.srt'), 'utf8'), '1\n00:00:00,000 --> 00:00:01,500\nCHAT HE DID IT\n', '[Music] is not a caption');
+  assert.deepEqual((await import('node:fs')).readdirSync(t.models), [CAPTION_MODEL.file], 'the temporary captions file is removed');
+});
+
+test('without the model or Whisper, clips still get made; a Whisper error is reported, not fatal', async () => {
+  let t = await fakeVideo({ model: false });
+  let r = await t.video.makeClip({ source: 'https://clips.twitch.tv/scream', start: 0, end: 28, dir: t.dir, name: '01-a' });
+  assert.deepEqual([r.captions, r.captionSource, r.captionError], [false, null, null]);
+  assert.ok(!t.calls.some((c) => (c.args[c.args.indexOf('-af') + 1] || '').startsWith('whisper=')));
+  assert.equal(t.video.tools().captions.ready, false);
+  t = await fakeVideo({ whisper: false });
+  assert.deepEqual([t.video.tools().captions.whisper, t.video.tools().captions.model], [false, true]);
+  t = await fakeVideo({ srt: null });
+  r = await t.video.makeClip({ source: 'https://clips.twitch.tv/scream', start: 0, end: 28, dir: t.dir, name: '01-b' });
+  assert.equal(r.captionSource, null);
+  assert.match(r.captionError, /whisper/);
+  assert.ok(existsSync(path.join(t.dir, '01-b-ready.mp4')));
+});
+
+test('the caption model is downloaded once and checked before it is used', async () => {
+  const body = Buffer.from('pretend whisper model');
+  const good = { file: 'm.bin', url: 'https://huggingface.co/m.bin', size: body.length, sha256: createHash('sha256').update(body).digest('hex') };
+  const ws = await mkdtemp(path.join(os.tmpdir(), 'agentdex-model-'));
+  const models = path.join(ws, 'models');
+  const fetched = [];
+  const fetchImpl = async (url) => { fetched.push(url); return new Response(body); };
+  let video = createVideo({ workspaceRoot: ws, tools: { ffmpeg: '/x/ffmpeg', ytdlp: null }, modelsDir: models, whisperCheck: async () => true, fetchImpl, captionModel: good });
+  const first = video.getCaptionModel();
+  assert.ok(first.downloading, 'starts in the background');
+  await first.done;
+  assert.equal(await readFile(path.join(models, 'm.bin'), 'utf8'), 'pretend whisper model');
+  await video.getCaptionModel().done;
+  assert.equal(fetched.length, 1, 'not downloaded twice');
+
+  video = createVideo({ workspaceRoot: ws, tools: { ffmpeg: '/x/ffmpeg', ytdlp: null }, modelsDir: path.join(ws, 'other'), whisperCheck: async () => true, fetchImpl, captionModel: { ...good, sha256: '0'.repeat(64) } });
+  await video.getCaptionModel().done;
+  assert.match(video.tools().captions.error, /did not match its checksum/);
+  assert.ok(!existsSync(path.join(ws, 'other', 'm.bin')) && !existsSync(path.join(ws, 'other', 'm.bin.part')), 'a bad file is deleted');
+  assert.throws(() => createVideo({ workspaceRoot: ws }).getCaptionModel(), /real agents/);
 });

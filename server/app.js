@@ -279,6 +279,10 @@ export function createApp({ store, adapter = null, token = null, indexPath = nul
       await setup.save(await readJSON(req));
       send(res, 200, await setup.status());
     }],
+    ['POST', /^\/api\/setup\/captions$/, async (req, res) => {
+      if (!setup?.getCaptions) throw new StoreError(404, 'Captions work when Agentdex runs with real agents (npm run real).');
+      send(res, 200, await setup.getCaptions());
+    }],
     ['POST', /^\/api\/setup\/test-(claude|whatsapp)$/, async (req, res, [, what]) => {
       if (!setup) throw new StoreError(404, 'Setup is available when Agentdex runs with real agents (npm run real).');
       send(res, 200, what === 'claude' ? await setup.testClaude() : await setup.testWhatsApp());

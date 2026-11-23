@@ -22,9 +22,9 @@ The simulator only uses the public event API, so anything it does, your runtime 
 | POST | `/api/files?name=report.pdf` | the file's bytes | Saves into `workspace/inbox` (real mode, up to 25 MB). Returns `{ path }`. Pass paths as `files: [...]` to `/api/command`, `/api/agents/:id/chat` or `/tasks` |
 | POST | `/api/command` | `{"text":"compare 3 note apps"}` | One sentence from the command bar: routes a task to the best agent, or runs status / yes / no / reset / rename. Returns `{ reply }` |
 | POST | `/api/agents` | `{"species":"fennook","nick":"SCOUT"}` | Spawn into the party |
-| POST | `/api/projects` | `{"project":{"id?","name","brief"}}` | Creates or edits a project (folder `drafts/<name>`) |
+| POST | `/api/projects` | `{"project":{"id?","name","brief","streamers?":["twitch.tv/kaicenat"]}}` | Creates or edits a project (folder `drafts/<name>`). `streamers` are Twitch, Kick or YouTube channel links, up to 20 |
 | POST | `/api/projects/delete` | `{"id"}` | Deletes a project with no plans; its files stay |
-| POST | `/api/plans` | `{"pipeline":{"id?","name","projectId","schedule":{"day","time"},"steps":[{"agentId","title","text"}],"review","enabled"}}` | Creates or edits a weekly plan. `day` is `mon`..`sun`, `daily` or `manual` |
+| POST | `/api/plans` | `{"pipeline":{"id?","name","projectId","schedule":{"day","time"},"steps":[{"agentId","title","text","find?","edit?"}],"review","enabled"}}` | Creates or edits a weekly plan. `day` is `mon`..`sun`, `daily` or `manual` |
 | POST | `/api/plans/run`, `/api/plans/stop`, `/api/plans/delete` | `{"id"}` | Runs, stops or deletes a plan |
 | POST | `/api/roles` | `{"role":{"name","job","web","home","look":{"base","hue"}}}` or `{"type":"CODE","job","web"}` | Creates or edits a custom role (add `id` to edit), or rewrites a built-in role |
 | POST | `/api/roles/delete` | `{"id":"c-video-editor"}` or `{"type":"CODE"}` | Deletes an unused custom role, or resets a built-in role |
@@ -51,7 +51,7 @@ The server adds `id` (sequence number), `ts`, a human `message` for the field lo
 
 | Type | data | Effect |
 |---|---|---|
-| `task.assigned` | `title`, `details?`, `review?`, `project?`, `edit?: { folder }` (a plan's editing step) | The player gave this agent work (`POST /api/agents/:id/tasks`). Your runtime should start it |
+| `task.assigned` | `title`, `details?`, `review?`, `project?`, `edit?: { folder }` (a plan's editing step), `find?: { folder, streamers }` (a plan's finding step) | The player gave this agent work (`POST /api/agents/:id/tasks`). Your runtime should start it |
 | `agent.spawned` | `species`, `nick?`, `ref?`, `lv?`, `boxed?` | New agent. Fails with 409 when the party has 6 |
 | `agent.moved` | `to` (LAB, MART, WORKSHOP, CENTER, GYM), `reason?` | The agent walks there. Logged only with a `reason` |
 | `task.started` | `title`, `review?`, `approval?: {tool, target}` | Status OK, phase work |

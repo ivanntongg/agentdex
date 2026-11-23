@@ -2,6 +2,15 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.17.0 · Daily streamer clips
+
+- **Streamers in a project:** paste Twitch, Kick or YouTube channel links into a project (PLANS, edit project).
+- **Finding steps in plans:** Agentdex itself checks every streamer each day: the top Twitch and Kick clips of the last 24 hours (ranked by views), and the most replayed moments and timestamped top comments of their latest YouTube streams. Every link and time in `moments.md` is real, not guessed. Moments already cut on earlier days are skipped (`used-clips.txt`).
+- **New ready-made plan, Daily streamer clips:** find the top moments, then cut the 10 funniest. Starts with IShowSpeed, Kai Cenat, xQc, Adin Ross and Jynxzi; edit the list to taste.
+- **Whisper captions:** with the full ffmpeg build (version 8 or newer) and a one-time 488 MB model download from SETUP, every clip gets captions, including Twitch and Kick clips that have none. Runs on your computer, free. The model is checked against its published SHA-256 before use.
+- Captions now show 3 words at a time, and short Twitch and Kick clips download whole for better quality.
+- A plan step is now one of three kinds: the agent does the job, Agentdex finds clips, or Agentdex cuts clips.
+
 ## 0.16.1 · CapCut-ready clips
 
 - Each clip also gets an `.srt` captions file that CapCut can import.
