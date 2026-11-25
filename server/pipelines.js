@@ -79,7 +79,8 @@ export function createPipelines({ store, assign, now = () => new Date(), tickMs 
   function give(a, pl, i) {
     const step = pl.steps[i];
     const folder = pl.running.folder;
-    const extra = step.edit ? { edit: { folder } } : step.find ? { find: { folder, streamers: store.projects.get(pl.projectId)?.streamers || [] } } : null;
+    const proj = store.projects.get(pl.projectId);
+    const extra = step.edit ? { edit: { folder, ...(proj?.channel ? { channel: proj.channel } : {}) } } : step.find ? { find: { folder, streamers: proj?.streamers || [] } } : null;
     assign(a, step.title, extra ? false : pl.review && reviewerFree(), details(pl, i), null, extra);
   }
 

@@ -166,7 +166,9 @@ export function createStore() {
         if (!data.title) throw new StoreError(400, 'task.assigned needs data.title');
         if (a.boxed) throw new StoreError(409, `${a.nick} is in the box. Move it to the party first.`);
         event.data.title = String(data.title).slice(0, 200);
-        event.data.edit = data.edit?.folder ? { folder: String(data.edit.folder).slice(0, 200) } : undefined; // a plan's editing step
+        event.data.edit = data.edit?.folder // a plan's editing step, and the channel name for the clips' tag
+          ? { folder: String(data.edit.folder).slice(0, 200), ...(data.edit.channel ? { channel: String(data.edit.channel).slice(0, 30) } : {}) }
+          : undefined;
         event.data.find = data.find?.folder // a plan's finding step
           ? { folder: String(data.find.folder).slice(0, 200), streamers: parseStreamers(data.find.streamers || []).streamers.map((x) => x.url) }
           : undefined;
@@ -299,7 +301,10 @@ export function createStore() {
         const sl = parseStreamers(p.streamers ?? editing?.streamers ?? []);
         if (sl.bad.length) throw new StoreError(400, `These are not Twitch, Kick or YouTube channel links: ${sl.bad.slice(0, 3).join(', ')}. Paste links like twitch.tv/kaicenat or youtube.com/@IShowSpeed.`);
         if (sl.streamers.length > MAX_STREAMERS) throw new StoreError(400, `Pick up to ${MAX_STREAMERS} streamers.`);
-        const proj = { id, name, brief, streamers: sl.streamers.map((x) => x.url), folder: editing ? editing.folder : `drafts/${id.slice(2)}`, createdAt: editing ? editing.createdAt : event.ts };
+        // The channel's name, shown as a tag on every clip (optional).
+        const channel = String(p.channel ?? editing?.channel ?? '').replace(/[{}\\*]/g, '').replace(/\s+/g, ' ').trim();
+        if (channel.length > 30) throw new StoreError(400, 'Keep the channel name under 30 characters.');
+        const proj = { id, name, brief, channel, streamers: sl.streamers.map((x) => x.url), folder: editing ? editing.folder : `drafts/${id.slice(2)}`, createdAt: editing ? editing.createdAt : event.ts };
         projects.set(id, proj);
         event.data = { project: clone(proj) };
         event.message = editing ? `You updated the project ${name}.` : `New project: ${name}. Its files go in ${proj.folder}.`;

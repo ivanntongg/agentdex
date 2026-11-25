@@ -194,7 +194,7 @@ const assTime = (s) => { const t = Math.max(0, s); const cs = Math.round(t * 100
 const assText = (t) => String(t).replace(/[{}\\]/g, '').replace(/\n/g, ' ').trim();
 
 // The channel's colours. ASS writes colours as &HAABBGGRR.
-export const ACCENT = '#FFD60A';
+export const ACCENT = '#22D3EE'; // cyan
 const assColor = (hex) => `&H00${hex.slice(5, 7)}${hex.slice(3, 5)}${hex.slice(1, 3)}`.toUpperCase();
 // "He did *NOT* see it coming": the word in stars is painted in the accent colour.
 export function hookMarkup(hook, accent = ACCENT) {
@@ -210,7 +210,10 @@ export function creditLine(credit, source = '') {
 
 // The hook and captions (Anton, 3 words at a time), styled for 9:16.
 // headline: the hook stays on screen the whole clip, with the credit above it.
-export function assFile({ hook = '', cues = [], duration, layout = 'fit', credit = '', source = '' }) {
+// The channel's name as a small cyan tag next to the credit: "CHAT WENT CRAZY".
+export const brandText = (brand) => assText(brand).replace(/\*/g, '').toUpperCase().slice(0, 30);
+
+export function assFile({ hook = '', cues = [], duration, layout = 'fit', credit = '', source = '', brand = '' }) {
   const headline = layout === 'headline';
   const capY = headline ? FRAME.top + FRAME.h + 56 : layout === 'split' ? 700 : 520; // under the moment (from the top); under the facecam for split
   const events = [];
@@ -222,8 +225,18 @@ export function assFile({ hook = '', cues = [], duration, layout = 'fit', credit
     const lines = Math.max(1, Math.ceil((plain.length * size * 0.25) / 940));
     const bottom = FRAME.top - 44;
     events.push(`Dialogue: 1,${assTime(0)},${assTime(duration)},Head,,0,0,0,,{\\an2\\pos(540,${bottom})\\fs${size}}${hookMarkup(hook)}`);
+    // The channel tag and the credit share one row just above the headline, clear of the apps' top bars.
+    // Anton capitals are about a quarter of the font size wide, plus the letter spacing.
     const line = creditLine(credit, source);
-    if (line) events.push(`Dialogue: 1,${assTime(0)},${assTime(duration)},Credit,,0,0,0,,{\\an2\\pos(540,${bottom - lines * size - 22})}${line}`);
+    const tag = brandText(brand);
+    const rowMid = bottom - lines * size - 22 - 26;
+    const tagW = tag ? tag.length * (50 * 0.25 + 5) + 28 : 0;
+    const lineW = line ? line.length * (54 * 0.25 + 4) : 0;
+    const gap = tag && line ? 26 : 0;
+    const t0 = 540 - (tagW + gap + lineW) / 2;
+    const one = tagW + gap + lineW <= 940;
+    if (tag) events.push(`Dialogue: 2,${assTime(0)},${assTime(duration)},Brand,,0,0,0,,{\\an4\\pos(${Math.round(one ? t0 + 14 : 540 - tagW / 2 + 14)},${one || !line ? rowMid : rowMid - 84})}${tag}`);
+    if (line) events.push(`Dialogue: 1,${assTime(0)},${assTime(duration)},Credit,,0,0,0,,{\\an4\\pos(${Math.round(one ? t0 + tagW + gap : 540 - lineW / 2)},${rowMid})}${line}`);
   } else if (hook) events.push(`Dialogue: 1,${assTime(0)},${assTime(Math.min(3, duration))},Hook,,0,0,0,,${hookMarkup(hook)}`);
   for (const c of cues) {
     const words = c.text.split(' ');
@@ -246,7 +259,8 @@ ScaledBorderAndShadow: yes
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Hook,Anton,124,&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,0,0,0,0,100,100,1,0,1,7,3,8,60,60,210,1
 Style: Head,Anton,150,&H00FFFFFF,&H00FFFFFF,&H00000000,&H78000000,0,0,0,0,100,100,1,0,1,0,4,2,70,70,0,1
-Style: Credit,Anton,58,${assColor(ACCENT)},${assColor(ACCENT)},&H00000000,&H78000000,0,0,0,0,100,100,4,0,1,0,2,2,70,70,0,1
+Style: Credit,Anton,54,&H30FFFFFF,&H30FFFFFF,&H00000000,&H78000000,0,0,0,0,100,100,4,0,1,0,2,2,70,70,0,1
+Style: Brand,Anton,50,&H00140F0B,&H00140F0B,${assColor(ACCENT)},&H00000000,0,0,0,0,100,100,5,0,3,14,0,8,70,70,0,1
 Style: Cap,Anton,${headline ? 116 : 108},&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,0,0,0,0,100,100,1,0,1,${headline ? 0 : 8},${headline ? 3 : 2},${headline ? 8 : 2},60,60,${capY},1
 
 [Events]
@@ -359,7 +373,7 @@ export function createVideo({ workspaceRoot, tools = null, runImpl = run, models
   }
 
   // One finished clip: download (or read) the moment, write captions, render 9:16 into dir/name.mp4.
-  async function makeClip({ source, start, end, hook, credit = '', layout = 'fit', corner = 'top-right', size = 0.28, dir, name, signal }) {
+  async function makeClip({ source, start, end, hook, credit = '', brand = '', layout = 'fit', corner = 'top-right', size = 0.28, dir, name, signal }) {
     const t = found();
     if (!t.ffmpeg) throw new VideoError('ffmpeg is not installed. See SETUP, Video tools.');
     const a = parseTime(start);
@@ -413,7 +427,7 @@ export function createVideo({ workspaceRoot, tools = null, runImpl = run, models
       }
 
       // The ready version: 9:16 with the hook and captions burned in.
-      await writeFile(path.join(work, 'clip.ass'), assFile({ hook, cues, duration, layout, credit, source }), 'utf8');
+      await writeFile(path.join(work, 'clip.ass'), assFile({ hook, cues, duration, layout, credit, source, brand }), 'utf8');
       // The channel font travels with Agentdex, so clips look the same on every computer.
       await mkdir(path.join(work, 'fonts'), { recursive: true });
       await copyFile(FONT_FILE, path.join(work, 'fonts', path.basename(FONT_FILE)));

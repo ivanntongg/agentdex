@@ -95,3 +95,11 @@ test('cut moments are remembered in the project folder, so tomorrow brings new o
   await t.editor.run(agent, task);
   assert.equal((await readFile(path.join(t.workspace.root, 'drafts/gta-6-clipping/used-clips.txt'), 'utf8')).split('\n').filter(Boolean).length, 2, 'added to, never replaced');
 });
+
+test('the channel name and the streamer credit reach every clip', async () => {
+  const t = await setup({ cut: { clips: [{ source: 'https://clips.twitch.tv/scream', start: '0', end: '28', hook: 'Kai did *NOT* see it', credit: 'KaiCenat', title: 'Kai jumpscare', caption: '#kaicenat', layout: 'headline', corner: 'top-right' }] } });
+  await t.editor.run(agent, { ...task, edit: { folder: FOLDER, channel: 'Chat Went Crazy' } });
+  assert.deepEqual([t.made[0].brand, t.made[0].credit, t.made[0].layout], ['Chat Went Crazy', 'KaiCenat', 'headline']);
+  const posts = await readFile(path.join(t.workspace.root, FOLDER, 'clips', 'posts.md'), 'utf8');
+  assert.match(posts, /Hook: Kai did NOT see it\n/, 'the stars only mark the colour on the clip');
+});

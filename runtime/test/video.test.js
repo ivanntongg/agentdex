@@ -174,13 +174,19 @@ test('the caption model is downloaded once and checked before it is used', async
 });
 
 test('headline frame: the key word in the accent colour, the credit above, captions under the moment', () => {
-  assert.equal(hookMarkup('Kai did *not* see {it} coming'), 'KAI DID {\\c&H000AD6FF&}NOT{\\c&H00FFFFFF&} SEE IT COMING', 'stars become the accent; typed braces never style anything');
+  assert.equal(hookMarkup('Kai did *not* see {it} coming'), 'KAI DID {\\c&H00EED322&}NOT{\\c&H00FFFFFF&} SEE IT COMING', 'stars become cyan; typed braces never style anything');
   assert.equal(creditLine('@Kai Cenat', 'https://clips.twitch.tv/x'), '@KAICENAT ON TWITCH');
   assert.equal(creditLine('xQc', 'https://kick.com/xqc/clips/clip_1'), '@XQC ON KICK');
   assert.equal(creditLine(''), '');
   const ass = assFile({ hook: 'Kai did *NOT* see the cops coming', cues: [{ start: 0, end: 2, text: 'chat he really did' }], duration: 20, layout: 'headline', credit: 'KaiCenat', source: 'https://clips.twitch.tv/x' });
-  assert.match(ass, /Dialogue: 1,0:00:00\.00,0:00:20\.00,Head,,0,0,0,,\{\\an2\\pos\(540,596\)\\fs150\}KAI DID \{\\c&H000AD6FF&\}NOT/, 'the headline stays the whole clip, just above the moment');
-  assert.match(ass, /Credit,,0,0,0,,\{\\an2\\pos\(540,274\)\}@KAICENAT ON TWITCH/, 'two lines of headline, the credit above them');
+  assert.match(ass, /Dialogue: 1,0:00:00\.00,0:00:20\.00,Head,,0,0,0,,\{\\an2\\pos\(540,596\)\\fs150\}KAI DID \{\\c&H00EED322&\}NOT/, 'the headline stays the whole clip, just above the moment');
+  assert.match(ass, /Credit,,0,0,0,,\{\\an4\\pos\(\d+,248\)\}@KAICENAT ON TWITCH/, 'two lines of headline, the credit above them');
+  assert.doesNotMatch(ass, /,Brand,/, 'no channel name, no tag');
+  const branded = assFile({ hook: 'Kai did *NOT* see the cops coming', duration: 20, layout: 'headline', credit: 'KaiCenat', source: 'https://clips.twitch.tv/x', brand: 'Chat {Went} Crazy' });
+  const tagX = Number(/Brand,,0,0,0,,\{\\an4\\pos\((\d+),248\)\}CHAT WENT CRAZY\n/.exec(branded)[1]);
+  const creditX = Number(/Credit,,0,0,0,,\{\\an4\\pos\((\d+),248\)\}@KAICENAT/.exec(branded)[1]);
+  assert.ok(tagX < 540 && creditX > tagX + 250, 'the cyan tag and the credit share one centred row');
+  assert.match(branded, /Style: Brand,Anton,50,&H00140F0B,&H00140F0B,&H00EED322,.*,3,14,0,8,/, 'dark letters on a cyan box');
   assert.match(ass, /Style: Cap,Anton,116,.*,8,60,60,1304,1/, 'captions start just under the moment, clear of the buttons and titles at the bottom');
   assert.match(assFile({ hook: 'x'.repeat(70), duration: 5, layout: 'headline' }), /\\fs118\}/, 'a long hook gets smaller instead of a third line');
   assert.ok(existsSync(FONT_FILE), 'the font ships with Agentdex');

@@ -122,7 +122,7 @@ export function createEditor({ video, workspace, ask, waitForApproval, dex, log 
       const c = clips[i];
       const name = `${String(i + 1).padStart(2, '0')}-${slug(c.title)}`;
       try {
-        const r = await video.makeClip({ source: c.source, start: c.start, end: c.end, hook: c.hook, credit: c.credit, layout: c.layout, corner: c.corner, dir, name, signal });
+        const r = await video.makeClip({ source: c.source, start: c.start, end: c.end, hook: c.hook, credit: c.credit, brand: task.edit?.channel || '', layout: c.layout, corner: c.corner, dir, name, signal });
         files.push(`${dirRel}/${name}-ready.mp4`, `${dirRel}/${name}-raw.mp4`, ...(r.srt ? [`${dirRel}/${name}.srt`] : []));
         posts.push(`## ${i + 1}. ${c.title}\nFiles: ${name}-ready.mp4 (post as is) and ${name}-raw.mp4 (edit in CapCut)${r.srt ? `, captions in ${name}.srt (CapCut: Captions, Import)` : ''}\nSource: ${c.source} from ${c.start} to ${c.end}${r.captions ? '' : `\nNo captions${r.captionError ? ` (Whisper: ${r.captionError})` : ''}: turn on Auto captions in CapCut, or get Whisper captions in SETUP.`}\n\nHook: ${c.hook.replace(/\*/g, '')}\nTitle: ${c.title}\n\nCaption:\n${c.caption}\n`);
         made.push({ name, hook: c.hook.replace(/\*/g, ''), srt: Boolean(r.srt), source: c.source, start: parseTime(c.start), whisper: r.captionSource === 'whisper' });
