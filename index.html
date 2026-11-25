@@ -1322,7 +1322,7 @@ let activeProject='';try{activeProject=localStorage.getItem('agentdex-project')|
 const DAY_OPTS=[['mon','Every Monday'],['tue','Every Tuesday'],['wed','Every Wednesday'],['thu','Every Thursday'],['fri','Every Friday'],['sat','Every Saturday'],['sun','Every Sunday'],['daily','Every day'],['manual','Only when I press RUN']];
 const DAY_IDX={sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
 const PROJECT_TEMPLATES=[
-  {key:'highlights',name:'Streamer clips',brief:'Shorts, TikToks and Reels of the funniest, craziest and most talked-about moments from big streamers, posted every day. Audience: teens and young adults who missed the stream. Style: fast, loud, funny, never mean. Rules: only clip streamers who allow clipping or run a clipping campaign; when a streamer has a campaign on Whop, follow its rules exactly so the clips get paid; credit the streamer in every caption; 15 to 60 seconds, starting right at the action; big captions.',streamers:'youtube.com/@IShowSpeed\ntwitch.tv/kaicenat\nkick.com/xqc\nkick.com/adinross\ntwitch.tv/jynxzi'},
+  {key:'highlights',name:'Streamer clips',channel:'Chat Went Crazy',brief:'Shorts, TikToks and Reels of the funniest, craziest and most talked-about moments from big streamers, posted every day. Audience: teens and young adults who missed the stream. Style: fast, loud, funny, never mean. Rules: only clip streamers who allow clipping or run a clipping campaign; when a streamer has a campaign on Whop, follow its rules exactly so the clips get paid; credit the streamer in every caption; 15 to 60 seconds, starting right at the action; big captions.',streamers:'youtube.com/@IShowSpeed\ntwitch.tv/kaicenat\nkick.com/xqc\nkick.com/adinross\ntwitch.tv/jynxzi'},
   {key:'clipping',name:'GTA 6 clipping',brief:'Clipping GTA 6 streams into Shorts, TikToks and Reels, paid per 1,000 views through clipping campaigns on Whop Content Rewards and Clipping.net. Target mid-tier campaigns paying $1 to $3 per 1,000 views that have already paid out. Rules: only clip streamers who allow clipping or run a campaign; follow each campaign\'s rules exactly (hashtags, length, account age, tags); vertical 9:16 with facecam on top and gameplay below; 20 to 60 seconds; start right at the peak; cut every silent gap; big captions. Clip formula: captivating hook, supporting hook, tension, payoff. Volume: 10 to 20 clips a day.'},
   {key:'streamers',name:'Streamer highlights',brief:'A YouTube channel with the funniest and most talked-about moments from big streamers each week (IShowSpeed, Kai Cenat, xQc and whoever is trending), with my own commentary between clips. Audience: teens and young adults who missed the streams. Style: fast, funny, never mean. Rules: only use streamers who allow clipping or who gave permission, keep each clip short, always credit and link the streamer, and add my own commentary so the video is mine.'},
   {key:'gta6',name:'GTA 6 channel',brief:'A YouTube channel about GTA 6: news, map guides, theories and first looks. Audience: GTA fans. Style: clear, excited and accurate. Rules: separate confirmed facts from rumours, and link every source.'},
@@ -1383,7 +1383,7 @@ function planEvent(ev){
 }
 function plansHTML(){
   if(plans.edit)return plans.edit.kind==='project'?projectEditorHTML():planEditorHTML();
-  const proj=plans.projects.length?plans.projects.map(p=>`<div class="sk"><div class="sk-h"><b>${esc(p.name)}</b><small>${esc(p.folder)}</small></div><p>${esc(p.brief)}</p>${(p.streamers||[]).length?`<div class="sk-meta">Clips ${p.streamers.length} streamer${p.streamers.length===1?'':'s'}: ${esc(p.streamers.map(u=>u.replace(/^https:\/\/(www\.)?/,'')).join(', '))}</div>`:''}<div class="acts"><button class="btn" type="button" data-editproj="${esc(p.id)}">EDIT</button></div></div>`).join('')
+  const proj=plans.projects.length?plans.projects.map(p=>`<div class="sk"><div class="sk-h"><b>${esc(p.name)}</b><small>${esc(p.folder)}</small></div><p>${esc(p.brief)}</p>${p.channel?`<div class="sk-meta">Channel: ${esc(p.channel)}</div>`:''}${(p.streamers||[]).length?`<div class="sk-meta">Clips ${p.streamers.length} streamer${p.streamers.length===1?'':'s'}: ${esc(p.streamers.map(u=>u.replace(/^https:\/\/(www\.)?/,'')).join(', '))}</div>`:''}<div class="acts"><button class="btn" type="button" data-editproj="${esc(p.id)}">EDIT</button></div></div>`).join('')
     :`<p class="boxnote">A project keeps one channel's brief and files together. Start from one:</p><div class="tmpls">${PROJECT_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-projtmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`;
   const list=plans.pipelines.length?plans.pipelines.map(planCardHTML).join('')
     :`<p class="boxnote">A weekly plan gives a chain of jobs to your agents on a schedule. Each step hands its work to the next. Start from one:</p><div class="tmpls">${PLAN_TEMPLATES.map((t,i)=>`<button class="btn" type="button" data-plantmpl="${i}">${esc(t.name)}</button>`).join('')}</div>`;
@@ -1412,6 +1412,8 @@ function projectEditorHTML(){
     <label class="rl" for="pjBrief">What is it about?</label>
     <textarea id="pjBrief" rows="6" maxlength="3000" placeholder="What the channel is, who it is for, the style, and any rules your agents must follow.">${esc(d.brief)}</textarea>
     <small class="rhint">Every job in this project gets this brief, and its files go in their own folder.</small>
+    <label class="rl" for="pjChannel">Channel name <small>(optional)</small></label><input id="pjChannel" maxlength="30" value="${esc(d.channel||'')}" placeholder="e.g. Chat Went Crazy" autocomplete="off">
+    <small class="rhint">Shown as a cyan tag on every clip, next to the streamer's name.</small>
     <label class="rl" for="pjStreamers">Streamers to clip <small>(optional)</small></label>
     <textarea id="pjStreamers" rows="5" maxlength="3000" placeholder="One link per line, like:&#10;twitch.tv/kaicenat&#10;youtube.com/@IShowSpeed&#10;kick.com/xqc">${esc(d.streamers||'')}</textarea>
     <small class="rhint">Twitch, Kick or YouTube channel links. A plan step that finds clips checks these every day.</small>
@@ -1447,7 +1449,7 @@ function planEditorHTML(){
 }
 function planFromTemplate(t){
   const pt=PROJECT_TEMPLATES.find(x=>x.key===t.project);const have=plans.projects.find(p=>p.name===pt.name);
-  return{name:t.name,projectId:have?have.id:'new',newProject:have?null:{name:pt.name,brief:pt.brief,streamers:streamerList(pt.streamers)},schedule:{...t.schedule},review:false,
+  return{name:t.name,projectId:have?have.id:'new',newProject:have?null:{name:pt.name,brief:pt.brief,channel:pt.channel||'',streamers:streamerList(pt.streamers)},schedule:{...t.schedule},review:false,
     steps:t.steps.map(st=>{const a=agentForKind(st.kind);return{agentId:a?a.id:null,title:st.title,text:st.text,edit:Boolean(st.edit),find:Boolean(st.find)}}).filter(st=>st.agentId!=null)};
 }
 const streamerList=t=>String(t||'').split(/[\s,]+/).map(x=>x.trim()).filter(Boolean);
@@ -1460,17 +1462,17 @@ async function savePlanBits(kind,body){
 function demoSave(kind,body){
   if(kind==='project'){const p=body.project;const name=String(p.name||'').trim();if(name.length<2)throw new Error('Give the project a name.');if(String(p.brief||'').trim().length<20)throw new Error('Describe the project in a sentence or two.');
     const id=p.id||'p-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');const sl=streamerList(p.streamers);const bad=sl.filter(u=>!STREAMER_RE.test(u));if(bad.length)throw new Error(`These are not Twitch, Kick or YouTube channel links: ${bad.slice(0,3).join(', ')}.`);
-    const x={id,name,brief:p.brief.trim(),streamers:sl.map(u=>'https://'+u.replace(/^https?:\/\//,'').replace(/\/$/,'')),folder:'drafts/'+id.slice(2)};upsert(plans.projects,x);log(`New project: ${name}.`,'ok');return{data:{project:x}}}
+    const x={id,name,brief:p.brief.trim(),channel:String(p.channel||'').trim().slice(0,30),streamers:sl.map(u=>'https://'+u.replace(/^https?:\/\//,'').replace(/\/$/,'')),folder:'drafts/'+id.slice(2)};upsert(plans.projects,x);log(`New project: ${name}.`,'ok');return{data:{project:x}}}
   const p=body.pipeline;if(!p.name||p.name.trim().length<2)throw new Error('Give the plan a name.');if(!p.steps.length||p.steps.some(st=>st.title.trim().length<3||st.text.trim().length<10))throw new Error('Every step needs a short title and what to do.');
   const old=plans.pipelines.find(x=>x.id===p.id);const x={...p,id:p.id||'w'+(plans.pipelines.length+1),enabled:p.enabled!==false,running:null,lastRun:old?old.lastRun:null};upsert(plans.pipelines,x);log(`Plan saved: ${x.name}, ${whenLabel(x.schedule).toLowerCase()}.`,'ok');return{data:{pipeline:x}};
 }
 function bindPlans(){
   const pane=$('#pane'),e=plans.edit;
-  pane.querySelectorAll('[data-projtmpl]').forEach(b=>b.onclick=()=>{const t=PROJECT_TEMPLATES[+b.dataset.projtmpl];plans.edit={kind:'project',id:e&&e.id,draft:{name:t.name,brief:t.brief,streamers:t.streamers||''}};renderPane()});
+  pane.querySelectorAll('[data-projtmpl]').forEach(b=>b.onclick=()=>{const t=PROJECT_TEMPLATES[+b.dataset.projtmpl];plans.edit={kind:'project',id:e&&e.id,draft:{name:t.name,brief:t.brief,channel:t.channel||'',streamers:t.streamers||''}};renderPane()});
   pane.querySelectorAll('[data-plantmpl]').forEach(b=>b.onclick=()=>{plans.edit={kind:'plan',draft:planFromTemplate(PLAN_TEMPLATES[+b.dataset.plantmpl])};renderPane()});
-  const np=$('#newProj');if(np)np.onclick=()=>{plans.edit={kind:'project',draft:{name:'',brief:'',streamers:''}};renderPane()};
+  const np=$('#newProj');if(np)np.onclick=()=>{plans.edit={kind:'project',draft:{name:'',brief:'',channel:'',streamers:''}};renderPane()};
   const nl=$('#newPlan');if(nl)nl.onclick=()=>{plans.edit={kind:'plan',draft:blankPlan()};renderPane()};
-  pane.querySelectorAll('[data-editproj]').forEach(b=>b.onclick=()=>{const p=plans.projects.find(x=>x.id===b.dataset.editproj);plans.edit={kind:'project',id:p.id,draft:{name:p.name,brief:p.brief,streamers:(p.streamers||[]).map(u=>u.replace(/^https:\/\/(www\.)?/,'')).join('\n')}};renderPane()});
+  pane.querySelectorAll('[data-editproj]').forEach(b=>b.onclick=()=>{const p=plans.projects.find(x=>x.id===b.dataset.editproj);plans.edit={kind:'project',id:p.id,draft:{name:p.name,brief:p.brief,channel:p.channel||'',streamers:(p.streamers||[]).map(u=>u.replace(/^https:\/\/(www\.)?/,'')).join('\n')}};renderPane()});
   pane.querySelectorAll('[data-editplan]').forEach(b=>b.onclick=()=>{const p=plans.pipelines.find(x=>x.id===b.dataset.editplan);plans.edit={kind:'plan',id:p.id,draft:{name:p.name,projectId:p.projectId,schedule:{...p.schedule},review:p.review,enabled:p.enabled,steps:p.steps.map(st=>({...st}))}};renderPane()});
   pane.querySelectorAll('[data-run]').forEach(b=>b.onclick=async()=>{b.disabled=true;
     if(LIVE){const r=await setupCall('POST','api/plans/run',{id:b.dataset.run});if(!r.ok){convoSystem(r.data.error||'Could not start it.',true);b.disabled=false}return}
@@ -1482,14 +1484,14 @@ function bindPlans(){
     try{await savePlanBits('plan',body)}catch(err){convoSystem(err.message,true)}renderPane()});
   if(!e)return;
   if(e.kind==='project'){
-    const f=$('#projForm'),d=e.draft;const keep=()=>{d.name=$('#pjName').value;d.brief=$('#pjBrief').value;d.streamers=$('#pjStreamers').value};
+    const f=$('#projForm'),d=e.draft;const keep=()=>{d.name=$('#pjName').value;d.brief=$('#pjBrief').value;d.channel=$('#pjChannel').value;d.streamers=$('#pjStreamers').value};
     $('#pjCancel').onclick=()=>{plans.edit=null;renderPane()};
     const del=$('#pjDelete');if(del)del.onclick=async()=>{if(!confirm(`Delete the project ${d.name}? Its files stay in the workspace.`))return;
       if(LIVE){const r=await setupCall('POST','api/projects/delete',{id:e.id});if(!r.ok){e.error=r.data.error;return renderPane()}}
       else{if(plans.pipelines.some(x=>x.projectId===e.id)){e.error='Delete or move its weekly plans first.';return renderPane()}plans.projects=plans.projects.filter(x=>x.id!==e.id)}
       plans.edit=null;renderProjSel();renderPane()};
     f.onsubmit=async ev=>{ev.preventDefault();keep();
-      try{await savePlanBits('project',{project:{id:e.id,name:d.name.trim(),brief:d.brief.trim(),streamers:streamerList(d.streamers)}});plans.edit=null;renderProjSel();renderPane()}catch(err){e.error=err.message;renderPane()}};
+      try{await savePlanBits('project',{project:{id:e.id,name:d.name.trim(),brief:d.brief.trim(),channel:String(d.channel||'').trim(),streamers:streamerList(d.streamers)}});plans.edit=null;renderProjSel();renderPane()}catch(err){e.error=err.message;renderPane()}};
     return;
   }
   const f=$('#planForm'),d=e.draft;

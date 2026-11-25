@@ -197,7 +197,7 @@ It writes `moments.md` with real links and times, and the next step cuts the fun
 
 Set a plan step to **Agentdex cuts and edits the clips** (the *Daily streamer clips* and *Daily GTA 6 clipping* plans have one). After one YES from you, Agentdex downloads only the moments your agents found and makes, for each clip:
 
-- `NN-title-ready.mp4`: 9:16 in the channel frame: a big headline with its key word in yellow, the streamer's credit, the whole moment with the facecam, and captions below it, all clear of the platform's buttons. Other layouts: the facecam on top with the gameplay below, or the whole frame over a blurred background;
+- `NN-title-ready.mp4`: 9:16 in the channel frame: a big headline with its key word in cyan, your channel's name as a cyan tag (set it in the project) next to the streamer's credit, the whole moment with the facecam, and captions below it, all clear of the platform's buttons. Other layouts: the facecam on top with the gameplay below, or the whole frame over a blurred background;
 - `NN-title-raw.mp4`: the untouched moment, to edit your own way in CapCut;
 - `NN-title.srt`: the captions, which CapCut can import (Captions, Import), when the video has them;
 - `posts.md`: every clip's title and caption with the campaign's tags;

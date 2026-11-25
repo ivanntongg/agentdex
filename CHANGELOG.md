@@ -2,6 +2,11 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.18.1 · Your channel's name, in cyan
+
+- **Channel name** in each project (PLANS, edit project). It shows on every clip as a cyan tag, on one row with the streamer's credit, below the apps' top bars.
+- The frame's accent is now cyan: the tag and the hook's key word.
+
 ## 0.18.0 · The channel frame
 
 - **New default layout, headline:** a big headline on top for the whole clip, its key word in yellow, the streamer's credit above it (`@KAICENAT ON TWITCH`), the whole moment in the middle with the facecam, and captions on clean space below. Everything sits clear of the buttons and titles Shorts and TikTok draw on top.

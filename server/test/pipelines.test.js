@@ -178,8 +178,10 @@ test('a project keeps its streamers; a finding step gets them with the run folde
   assert.throws(() => t.store.apply({ type: 'project.saved', data: { project: { id: 'p-streamer-highlights', name: 'Streamer highlights', brief: BRIEF, streamers: ['twitch.tv/kaicenat', 'tiktok.com/@x'] } } }), /not Twitch, Kick or YouTube channel links: tiktok\.com\/@x/);
   t.store.apply({ type: 'project.saved', data: { project: { id: 'p-streamer-highlights', name: 'Streamer highlights', brief: BRIEF, streamers: ['twitch.tv/KaiCenat', 'youtube.com/@IShowSpeed/streams', 'twitch.tv/kaicenat'] } } });
   assert.deepEqual(t.store.projects.get('p-streamer-highlights').streamers, ['https://www.twitch.tv/kaicenat', 'https://www.youtube.com/@IShowSpeed']);
-  t.store.apply({ type: 'project.saved', data: { project: { id: 'p-streamer-highlights', name: 'Streamer highlights', brief: `${BRIEF} Daily.` } } });
+  t.store.apply({ type: 'project.saved', data: { project: { id: 'p-streamer-highlights', name: 'Streamer highlights', brief: `${BRIEF} Daily.`, channel: ' Chat  Went {Crazy} ' } } });
   assert.equal(t.store.projects.get('p-streamer-highlights').streamers.length, 2, 'editing the brief keeps the streamers');
+  assert.equal(t.store.projects.get('p-streamer-highlights').channel, 'Chat Went Crazy');
+  assert.throws(() => t.store.apply({ type: 'project.saved', data: { project: { id: 'p-streamer-highlights', name: 'Streamer highlights', brief: BRIEF, channel: 'x'.repeat(31) } } }), /under 30 characters/);
   const pl = t.plan({ steps: [
     { agentId: t.scout, title: "Find the streamers' top moments", text: 'Top clips of the last day.', find: true },
     { agentId: t.quill, title: 'Cut the funniest clips', text: 'The 10 funniest.', edit: true, find: true },
@@ -192,6 +194,7 @@ test('a project keeps its streamers; a finding step gets them with the run folde
   assert.deepEqual(ev.data.find.streamers, ['https://www.twitch.tv/kaicenat', 'https://www.youtube.com/@IShowSpeed']);
   t.finish(t.scout, { note: 'Found 9 real moments.', files: ['drafts/streamer-highlights/2026-11-23/moments.md'] });
   await tick();
-  assert.deepEqual(t.assigned[1].extra, { edit: { folder: 'drafts/streamer-highlights/2026-11-23' } });
+  assert.deepEqual(t.assigned[1].extra, { edit: { folder: 'drafts/streamer-highlights/2026-11-23', channel: 'Chat Went Crazy' } }, 'the cutting step gets the channel name for the tag');
+  assert.equal(t.store.snapshot().log.filter((e) => e.type === 'task.assigned').at(-1).data.edit.channel, 'Chat Went Crazy');
   t.plans.close();
 });
