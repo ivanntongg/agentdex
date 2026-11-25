@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { findTool, parseTime, checkSource, downloadArgs, filterGraph, renderArgs, parseVtt, parseSrt, assFile, toSrt, transcribeArgs, isClipLink, createVideo, VideoError, CAPTION_MODEL } from '../video.js';
+import { hookMarkup, creditLine, FONT_FILE, findTool, parseTime, checkSource, downloadArgs, filterGraph, renderArgs, parseVtt, parseSrt, assFile, toSrt, transcribeArgs, isClipLink, createVideo, VideoError, CAPTION_MODEL } from '../video.js';
 
 test('times in every shape people write them', () => {
   assert.equal(parseTime('1:02:03'), 3723);
@@ -36,11 +36,12 @@ test('yt-dlp downloads only the moment, with subtitles; the arguments never come
   assert.equal(a[a.indexOf('--ffmpeg-location') + 1], '/opt/ff');
 });
 
-test('the three layouts make a 1080x1920 picture', () => {
-  assert.match(filterGraph({ layout: 'fit' }), /boxblur.*overlay=\(W-w\)\/2:\(H-h\)\/2,subtitles=clip\.ass\[v\]$/);
+test('the four layouts make a 1080x1920 picture, with the channel font', () => {
+  assert.match(filterGraph({ layout: 'fit' }), /boxblur.*overlay=\(W-w\)\/2:\(H-h\)\/2,subtitles=clip\.ass:fontsdir=fonts\[v\]$/);
+  assert.match(filterGraph({ layout: 'headline' }), /\[b\]scale=1080:608:force_original_aspect_ratio=increase,crop=1080:608,setsar=1\[fg\];\[bg\]\[fg\]overlay=0:640,subtitles=clip\.ass:fontsdir=fonts\[v\]$/, 'the whole 16:9 moment, facecam included');
   const split = filterGraph({ layout: 'split', corner: 'bottom-left', size: 0.3 });
   assert.match(split, /crop=iw\*0\.3:ih\*0\.3:0:ih-ih\*0\.3,scale=1080:608/);
-  assert.match(split, /vstack=inputs=2,subtitles=clip\.ass\[v\]$/);
+  assert.match(split, /vstack=inputs=2,subtitles=clip\.ass:fontsdir=fonts\[v\]$/);
   assert.match(filterGraph({ layout: 'center', captions: null }), /^\[0:v\]crop=ih\*9\/16:ih,scale=1080:1920,setsar=1\[v\]$/);
   const r = renderArgs({ input: 'src.mp4', out: '/d/01-ready.mp4', layout: 'fit', seek: 12, duration: 30 });
   assert.deepEqual(r.slice(r.indexOf('-ss'), r.indexOf('-ss') + 6), ['-ss', '12', '-i', 'src.mp4', '-t', '30']);
@@ -74,8 +75,8 @@ test('a real clip from workspace footage: a raw moment for CapCut and a ready 9:
   const out = path.join(ws, 'drafts', 'clips');
   await mkdir(out, { recursive: true });
   const video = createVideo({ workspaceRoot: ws, tools: { ffmpeg, ytdlp: null } });
-  for (const layout of ['fit', 'split', 'center']) {
-    const r = await video.makeClip({ source: 'inbox/stream.mp4', start: '0:02', end: '0:06', hook: 'He did not expect this', layout, corner: 'top-right', dir: out, name: `01-${layout}` });
+  for (const layout of ['headline', 'fit', 'split', 'center']) {
+    const r = await video.makeClip({ source: 'inbox/stream.mp4', start: '0:02', end: '0:06', hook: 'He did *NOT* expect this', credit: 'KaiCenat', layout, corner: 'top-right', dir: out, name: `01-${layout}` });
     const dims = execFileSync(ffprobe, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', r.file], { encoding: 'utf8' }).trim();
     assert.equal(dims, '1080,1920', `${layout} is 9:16`);
     const rawDims = execFileSync(ffprobe, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', r.raw], { encoding: 'utf8' }).trim();
@@ -170,4 +171,17 @@ test('the caption model is downloaded once and checked before it is used', async
   assert.match(video.tools().captions.error, /did not match its checksum/);
   assert.ok(!existsSync(path.join(ws, 'other', 'm.bin')) && !existsSync(path.join(ws, 'other', 'm.bin.part')), 'a bad file is deleted');
   assert.throws(() => createVideo({ workspaceRoot: ws }).getCaptionModel(), /real agents/);
+});
+
+test('headline frame: the key word in the accent colour, the credit above, captions under the moment', () => {
+  assert.equal(hookMarkup('Kai did *not* see {it} coming'), 'KAI DID {\\c&H000AD6FF&}NOT{\\c&H00FFFFFF&} SEE IT COMING', 'stars become the accent; typed braces never style anything');
+  assert.equal(creditLine('@Kai Cenat', 'https://clips.twitch.tv/x'), '@KAICENAT ON TWITCH');
+  assert.equal(creditLine('xQc', 'https://kick.com/xqc/clips/clip_1'), '@XQC ON KICK');
+  assert.equal(creditLine(''), '');
+  const ass = assFile({ hook: 'Kai did *NOT* see the cops coming', cues: [{ start: 0, end: 2, text: 'chat he really did' }], duration: 20, layout: 'headline', credit: 'KaiCenat', source: 'https://clips.twitch.tv/x' });
+  assert.match(ass, /Dialogue: 1,0:00:00\.00,0:00:20\.00,Head,,0,0,0,,\{\\an2\\pos\(540,596\)\\fs150\}KAI DID \{\\c&H000AD6FF&\}NOT/, 'the headline stays the whole clip, just above the moment');
+  assert.match(ass, /Credit,,0,0,0,,\{\\an2\\pos\(540,274\)\}@KAICENAT ON TWITCH/, 'two lines of headline, the credit above them');
+  assert.match(ass, /Style: Cap,Anton,116,.*,8,60,60,1304,1/, 'captions start just under the moment, clear of the buttons and titles at the bottom');
+  assert.match(assFile({ hook: 'x'.repeat(70), duration: 5, layout: 'headline' }), /\\fs118\}/, 'a long hook gets smaller instead of a third line');
+  assert.ok(existsSync(FONT_FILE), 'the font ships with Agentdex');
 });

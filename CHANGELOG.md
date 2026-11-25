@@ -2,6 +2,12 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.18.0 · The channel frame
+
+- **New default layout, headline:** a big headline on top for the whole clip, its key word in yellow, the streamer's credit above it (`@KAICENAT ON TWITCH`), the whole moment in the middle with the facecam, and captions on clean space below. Everything sits clear of the buttons and titles Shorts and TikTok draw on top.
+- **One font everywhere:** Anton (SIL Open Font License) ships with Agentdex, so clips look the same on every computer.
+- The editor writes a credit for every clip and marks the hook's key word.
+
 ## 0.17.0 · Daily streamer clips
 
 - **Streamers in a project:** paste Twitch, Kick or YouTube channel links into a project (PLANS, edit project).
