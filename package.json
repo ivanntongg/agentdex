@@ -1,6 +1,6 @@
 {
   "name": "agentdex-town",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "A pixel town where your AI agents live, work, and ask before they act. Real Claude agents, YES/NO approvals, WhatsApp remote control.",
   "keywords": [
     "agent-dashboard",
@@ -30,6 +30,7 @@
     "index.html",
     "server/*.js",
     "runtime/*.js",
+    "runtime/fonts/",
     "bridges/*.js",
     "docs/icon.svg",
     "CHANGELOG.md"

@@ -14,8 +14,8 @@ export const EDIT_SYSTEM = `You turn a list of stream moments into an exact cut 
 Use only moments that have a link to a YouTube, Twitch or Kick video or clip (or a file path in the workspace) and clear times. Never invent links or times.
 Moments that Agentdex found itself (moments.md starting "Moments found") are real: use their links and times. For a whole Twitch or Kick clip keep its start and end as given. For a YouTube moment you may tighten the window around the peak.
 Pick what people want to watch: funny, shocking, chaotic or wholesome moments. Prefer more views, likes and replays, and titles or comments that promise a reaction. Skip moments that look boring, sponsored, or the same as another pick.
-For each clip: the source link exactly as written, start and end as h:mm:ss or seconds (usually 15 to 60 seconds, starting right at the action), a hook of at most 7 words shown in the first seconds, a title under 60 characters, and a caption with the campaign's required hashtags or tags.
-Layout: "split" when the streamer has a facecam (say which corner it is in, if the notes say), otherwise "fit". Follow any layout the instructions ask for.
+For each clip: the source link exactly as written, start and end as h:mm:ss or seconds (usually 15 to 60 seconds, starting right at the action), a hook of at most 8 words with its one key word wrapped in stars (like: Kai did *NOT* see the cops coming), the streamer's name as credit, a title under 60 characters, and a caption with the campaign's required hashtags or tags.
+Layout: "headline" by default (the hook stays on top as a headline over the whole moment, facecam included). "split" when the streamer's facecam reaction is the whole point (say which corner the facecam is in, if the notes say). "fit" for footage with no streamer. Follow any layout the instructions ask for.
 Order clips from most to least likely to go viral. At most 12.`;
 
 export const CUTLIST_SCHEMA = {
@@ -27,10 +27,10 @@ export const CUTLIST_SCHEMA = {
         type: 'object',
         properties: {
           source: { type: 'string' }, start: { type: 'string' }, end: { type: 'string' },
-          hook: { type: 'string' }, title: { type: 'string' }, caption: { type: 'string' },
+          hook: { type: 'string' }, credit: { type: 'string' }, title: { type: 'string' }, caption: { type: 'string' },
           layout: { type: 'string', enum: LAYOUTS }, corner: { type: 'string', enum: CORNERS },
         },
-        required: ['source', 'start', 'end', 'hook', 'title', 'caption', 'layout', 'corner'],
+        required: ['source', 'start', 'end', 'hook', 'credit', 'title', 'caption', 'layout', 'corner'],
         additionalProperties: false,
       },
     },
@@ -122,10 +122,10 @@ export function createEditor({ video, workspace, ask, waitForApproval, dex, log 
       const c = clips[i];
       const name = `${String(i + 1).padStart(2, '0')}-${slug(c.title)}`;
       try {
-        const r = await video.makeClip({ source: c.source, start: c.start, end: c.end, hook: c.hook, layout: c.layout, corner: c.corner, dir, name, signal });
+        const r = await video.makeClip({ source: c.source, start: c.start, end: c.end, hook: c.hook, credit: c.credit, layout: c.layout, corner: c.corner, dir, name, signal });
         files.push(`${dirRel}/${name}-ready.mp4`, `${dirRel}/${name}-raw.mp4`, ...(r.srt ? [`${dirRel}/${name}.srt`] : []));
-        posts.push(`## ${i + 1}. ${c.title}\nFiles: ${name}-ready.mp4 (post as is) and ${name}-raw.mp4 (edit in CapCut)${r.srt ? `, captions in ${name}.srt (CapCut: Captions, Import)` : ''}\nSource: ${c.source} from ${c.start} to ${c.end}${r.captions ? '' : `\nNo captions${r.captionError ? ` (Whisper: ${r.captionError})` : ''}: turn on Auto captions in CapCut, or get Whisper captions in SETUP.`}\n\nHook: ${c.hook}\nTitle: ${c.title}\n\nCaption:\n${c.caption}\n`);
-        made.push({ name, hook: c.hook, srt: Boolean(r.srt), source: c.source, start: parseTime(c.start), whisper: r.captionSource === 'whisper' });
+        posts.push(`## ${i + 1}. ${c.title}\nFiles: ${name}-ready.mp4 (post as is) and ${name}-raw.mp4 (edit in CapCut)${r.srt ? `, captions in ${name}.srt (CapCut: Captions, Import)` : ''}\nSource: ${c.source} from ${c.start} to ${c.end}${r.captions ? '' : `\nNo captions${r.captionError ? ` (Whisper: ${r.captionError})` : ''}: turn on Auto captions in CapCut, or get Whisper captions in SETUP.`}\n\nHook: ${c.hook.replace(/\*/g, '')}\nTitle: ${c.title}\n\nCaption:\n${c.caption}\n`);
+        made.push({ name, hook: c.hook.replace(/\*/g, ''), srt: Boolean(r.srt), source: c.source, start: parseTime(c.start), whisper: r.captionSource === 'whisper' });
         await dex.emit('task.progress', agent.id, { tokens: 0.5, tool: 'EDIT' }).catch(() => {});
       } catch (err) {
         if (signal?.aborted) break;
