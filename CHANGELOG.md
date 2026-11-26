@@ -2,6 +2,10 @@
 
 All notable changes to Agentdex. Newest first.
 
+## 0.18.2 · Agents start each job rested
+
+- An agent below half HP gets its HP back when it starts a new job, since every job starts with a fresh context. Daily plans no longer stall at 08:00 waiting for you to reset a tired agent. Only one very large job can still make an agent faint. The same goes for the reviewer when a review starts.
+
 ## 0.18.1 · Your channel's name, in cyan
 
 - **Channel name** in each project (PLANS, edit project). It shows on every clip as a cyan tag, on one row with the streamer's credit, below the apps' top bars.

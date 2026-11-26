@@ -5,6 +5,9 @@ import { parseStreamers, MAX_STREAMERS } from './streamers.js';
 import { SPECIES, BUILDINGS, PARTY_MAX, hpMaxFor, xpToNext } from './species.js';
 import { normalizeRole, defineRole, removeRole, editBuiltin, resetBuiltin, rolesState, loadRoles, customIdFor, RoleError } from './roles.js';
 
+// Agents below this share of their HP start a new job rested.
+export const REST_BELOW = 0.5;
+
 export const EVENT_TYPES = [
   'agent.spawned', 'agent.moved', 'agent.status', 'agent.fainted', 'agent.reset',
   'agent.boxed', 'agent.unboxed', 'agent.interacted', 'agent.leveled', 'agent.renamed',
@@ -187,6 +190,8 @@ export function createStore() {
         a.phase = 'work';
         if (a.status !== 'PSN') a.status = 'OK';
         event.message = `${a.nick} took a task: "${a.task.title}".`;
+        // Every job starts with a fresh context, so a tired agent starts it rested instead of fainting halfway.
+        if (freshStart(a)) event.message += ` It started fresh: HP back to ${a.hpMax}.`;
         break;
       }
 
@@ -212,6 +217,7 @@ export function createStore() {
         r.reviewingId = a.id; r.status = 'OK'; touched.add(r);
         a.phase = 'review';
         event.message = `${r.nick} is reviewing "${a.task.title}".`;
+        if (freshStart(r)) event.message += ` ${r.nick} started fresh: HP back to ${r.hpMax}.`;
         break;
       }
 
@@ -649,6 +655,13 @@ export function createStore() {
     }
     for (const f of followUps) apply(f);
     return clone(event);
+  }
+
+  // Below half HP when a new job starts: refill. A job's context is new, so only one huge job can faint an agent.
+  function freshStart(a) {
+    if (a.hp >= a.hpMax * REST_BELOW) return false;
+    a.hp = a.hpMax;
+    return true;
   }
 
   function faint(a, event, touched, reason) {

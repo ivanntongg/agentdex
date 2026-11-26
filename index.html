@@ -948,7 +948,8 @@ function tick(){
 function startTask(a,given){
   const s=SPEC[a.sp];const t=given?{...given}:{...pick(POOL[s.types[0]]||POOL.WRITE)};
   a.task=t;a.status='OK';
-  log(`${a.nick} took a task: "${t.t}".`);
+  const fresh=a.hp<a.hpMax*0.5;if(fresh){a.hp=a.hpMax;a.moves.forEach(m=>m.pp=m.max)}
+  log(`${a.nick} took a task: "${t.t}".${fresh?` It started fresh: HP back to ${a.hpMax}.`:''}`);
   goTo(a,s.home,'work');
 }
 function faint(a){

@@ -47,8 +47,11 @@ test('tool approval paralyzes the agent until resolved', () => {
 test('running out of tokens faints the agent', () => {
   const store = createStore();
   const { agentId } = spawn(store, { species: 'chromoth', hp: 10 });
-  store.apply({ type: 'task.started', agentId, data: { title: 'Redesign settings screen' } });
-  const e = store.apply({ type: 'task.progress', agentId, data: { tokens: 25, tool: 'SKETCH' } });
+  const started = store.apply({ type: 'task.started', agentId, data: { title: 'Redesign settings screen' } });
+  const max = store.resolveAgent(agentId).hpMax;
+  assert.equal(store.resolveAgent(agentId).hp, max, 'a tired agent starts a new job rested');
+  assert.match(started.message, new RegExp(`It started fresh: HP back to ${max}\\.$`));
+  const e = store.apply({ type: 'task.progress', agentId, data: { tokens: max + 25, tool: 'SKETCH' } });
   const a = store.resolveAgent(agentId);
   assert.equal(a.hp, 0);
   assert.equal(a.status, 'FNT');
@@ -56,6 +59,22 @@ test('running out of tokens faints the agent', () => {
   store.apply({ type: 'agent.reset', agentId });
   assert.equal(store.resolveAgent(agentId).hp, a.hpMax);
   assert.equal(store.resolveAgent(agentId).status, 'SLP');
+});
+
+test('only tired agents are refilled: above half HP, a new job keeps the HP it has', () => {
+  const store = createStore();
+  const { agentId } = spawn(store, { species: 'chromoth' });
+  const max = store.resolveAgent(agentId).hpMax;
+  store.apply({ type: 'task.started', agentId, data: { title: 'First' } });
+  store.apply({ type: 'task.progress', agentId, data: { tokens: max * 0.4, tool: 'SKETCH' } });
+  store.apply({ type: 'task.finished', agentId, data: { note: 'done' } });
+  const e = store.apply({ type: 'task.started', agentId, data: { title: 'Second' } });
+  assert.equal(store.resolveAgent(agentId).hp, Math.round(max * 0.6 * 10) / 10);
+  assert.doesNotMatch(e.message, /started fresh/);
+  store.apply({ type: 'task.progress', agentId, data: { tokens: max * 0.2, tool: 'SKETCH' } });
+  store.apply({ type: 'task.finished', agentId, data: { note: 'done' } });
+  store.apply({ type: 'task.started', agentId, data: { title: 'Third' } });
+  assert.equal(store.resolveAgent(agentId).hp, max, 'under half: rested for the third job');
 });
 
 test('levelling past the threshold asks to evolve, and yes changes species', () => {
