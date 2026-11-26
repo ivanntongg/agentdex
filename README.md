@@ -205,7 +205,7 @@ Set a plan step to **Agentdex cuts and edits the clips** (the *Daily streamer cl
 
 It uses two free tools on your computer, **ffmpeg** and **yt-dlp**; SETUP, part 4 shows whether they are installed and the one-line install for Windows (`winget install Gyan.FFmpeg`, `winget install yt-dlp.yt-dlp`) and Mac (`brew install ffmpeg yt-dlp`). Agents never run programs themselves: Agentdex runs these two with fixed settings, only downloads from YouTube, Twitch and Kick (or uses footage you put in the workspace inbox), and you post the clips yourself. Download only footage you are allowed to use, such as a clipping campaign's.
 
-Plans run while Agentdex is open. If the computer was off at the planned time, the plan runs once as soon as Agentdex starts again. If an agent faints mid-step, the step starts again once it is reset; a second failure stops the run and says why. Agents can't download or edit video, so a plan prepares everything and you record, edit and upload.
+Plans run while Agentdex is open. If the computer was off at the planned time, the plan runs once as soon as Agentdex starts again. An agent below half HP starts each new job rested (every job is a fresh context), so a daily plan doesn't stall on a tired agent. If an agent still faints mid-step, the step starts again once it is reset; a second failure stops the run and says why. Agents can't download or edit video, so a plan prepares everything and you record, edit and upload.
 
 ## Ask the Guide
 
